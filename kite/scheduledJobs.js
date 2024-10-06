@@ -20,6 +20,9 @@ const getDateStringIND = (date) => {
     return date[0] + ' ' + date[1].split('.')[0]
 }
 
+const MAX_ORDER_VALUE = 110000
+const MIN_ORDER_VALUE = 50000
+
 async function setupSellOrdersFromSheet() {
     sendMessageToChannel('⌛️ Executing MIS Sell Jobs')
 
@@ -33,6 +36,14 @@ async function setupSellOrdersFromSheet() {
             return console.log('IGNORING', stock.stockSymbol)
 
         try {
+
+            let order_value = await kiteSession.kc.getLTP([`NSE:${stockSymbol}`]);
+            order_value = order_value.last_price
+            order_value = Number(stock.quantity.trim()) * Number(order_value)
+
+            if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
+                throw new Error('Order value not within limits!')
+
             // console.log(stock.targetPrice, stock.stockSymbol)
             if (stock.sellPrice.trim() == 'MKT') {
                 await kiteSession.kc.placeOrder("regular", {
@@ -61,8 +72,8 @@ async function setupSellOrdersFromSheet() {
                 sendMessageToChannel('✅ Successfully placed target sell order', stock.stockSymbol, stock.quantity)
             }
         } catch (error) {
-            sendMessageToChannel('‼️ Error placing target sell order', stock.stockSymbol, stock.quantity. stock.sellPrice, error?.message)
-            console.error("‼️ Error placing target sell order: ", stock.stockSymbol, stock.quantity. stock.sellPrice, error?.message);
+            sendMessageToChannel('🚨 Error placing target sell order', stock.stockSymbol, stock.quantity. stock.sellPrice, error?.message)
+            console.error("🚨 Error placing target sell order: ", stock.stockSymbol, stock.quantity. stock.sellPrice, error?.message);
         }
 
     })
@@ -102,8 +113,8 @@ const scheduleMISJobs = () => {
                 sendMessageToChannel('✅ Successfully placed market buy order', stock.stockSymbol, stock.quantity)
     
             } catch (error) {
-                sendMessageToChannel('‼️ Error placing market sell order', stock.stockSymbol, stock.quantity, error?.message)
-                console.error("‼️ Error placing market sell order: ", stock.stockSymbol, stock.quantity, error?.message);
+                sendMessageToChannel('🚨 Error placing market sell order', stock.stockSymbol, stock.quantity, error?.message)
+                console.error("🚨 Error placing market sell order: ", stock.stockSymbol, stock.quantity, error?.message);
             }
         })
 

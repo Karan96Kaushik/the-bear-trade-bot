@@ -5,8 +5,6 @@ const { kiteSession } = require("./setup")
 const createBuyLimSLOrders = async (stock) => {
     await kiteSession.authenticate()
 
-    await kiteSession.kc.getInstruments('NSE')
-
     await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol.trim(),

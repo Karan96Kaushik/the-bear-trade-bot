@@ -5,7 +5,18 @@ const run = async () => {
 
     try {
         await kiteSession.authenticate()
-        const orders = await kiteSession.kc.getOrders()
+        // const orders = await kiteSession.kc.getOrders()
+
+        // await kiteSession.kc.getInstruments('NSE')
+        const stockSymbol = 'JPPOWER'
+        let ltp = await kiteSession.kc.getLTP([`NSE:${stockSymbol}`]);
+        ltp = ltp.last_price
+
+        console.log(ltp)
+
+
+        return 
+
         console.log(orders)
 
         let stockData = await readSheetData('MIS-D!A2:W100')

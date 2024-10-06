@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon index.js",
-    "deployprod": "ssh the-bear -t \"cd Stock-Analysis && git stash && git pull && pm2 restart slack-bot && pm2 log\"",
+    "deployprod": "ssh the-bear -t \"cd the-bear-trade-bot && git stash && git pull && pm2 restart trade-bot && pm2 log\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
