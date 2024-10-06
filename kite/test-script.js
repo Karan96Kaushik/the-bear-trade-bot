@@ -1,5 +1,11 @@
+// console.error = console.trace
+
 const { readSheetData, processMISSheetData, getStockLoc } = require("../gsheets")
 const { kiteSession } = require("./setup")
+
+// console.debug = console.trace
+// console.warn = console.trace
+// console.info = console.trace
 
 const run = async () => {
 
@@ -8,7 +14,7 @@ const run = async () => {
         // const orders = await kiteSession.kc.getOrders()
 
         // await kiteSession.kc.getInstruments('NSE')
-        const stockSymbol = 'JPPOWER'
+        const stockSymbol = 'MOIL'
         const sym = `NSE:${stockSymbol}`
         let order_value = await kiteSession.kc.getLTP([sym]);
         order_value = order_value[sym].last_price

@@ -258,6 +258,10 @@ const slack_channel_ids = {
 
 async function sendMessageToChannel(channel_name='bot-status-updates', ...message) {
 	try {
+
+        if (!slack_app)
+            return
+
         let channelId = slack_channel_ids[channel_name]
 
         if (!channelId) {
