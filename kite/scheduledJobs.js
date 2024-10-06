@@ -37,8 +37,9 @@ async function setupSellOrdersFromSheet() {
 
         try {
 
-            let order_value = await kiteSession.kc.getLTP([`NSE:${stockSymbol}`]);
-            order_value = order_value.last_price
+            const sym = `NSE:${stockSymbol}`
+            let order_value = await kiteSession.kc.getLTP([sym]);
+            order_value = order_value[sym].last_price
             order_value = Number(stock.quantity.trim()) * Number(order_value)
 
             if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)

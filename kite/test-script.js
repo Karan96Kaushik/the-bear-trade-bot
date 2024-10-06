@@ -9,10 +9,11 @@ const run = async () => {
 
         // await kiteSession.kc.getInstruments('NSE')
         const stockSymbol = 'JPPOWER'
-        let ltp = await kiteSession.kc.getLTP([`NSE:${stockSymbol}`]);
-        ltp = ltp.last_price
+        const sym = `NSE:${stockSymbol}`
+        let order_value = await kiteSession.kc.getLTP([sym]);
+        order_value = order_value[sym].last_price
+        console.log(order_value)
 
-        console.log(ltp)
 
 
         return 
