@@ -1,1 +1,1 @@
-# the-bear-trade-bot
+# The Bear Trade Bot
