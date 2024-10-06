@@ -1,0 +1,24 @@
+{
+  "name": "slack_chatbot_node",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon index.js",
+    "deployprod": "ssh the-bear -t \"cd Stock-Analysis && git stash && git pull && pm2 restart slack-bot && pm2 log\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@slack/bolt": "^3.22.0",
+    "axios": "^1.7.7",
+    "axios-cookiejar-support": "^5.0.3",
+    "googleapis": "^144.0.0",
+    "kiteconnect": "^5.0.1",
+    "node-schedule": "^2.1.1",
+    "nodemon": "^3.1.7",
+    "otplib": "^12.0.1",
+    "tough-cookie": "^5.0.0"
+  }
+}
