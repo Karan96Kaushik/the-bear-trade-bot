@@ -4,7 +4,7 @@ const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
-                    '0 5 * * 1-5' : 
+                    '5 5 * * 1-5' : 
                     // '46 3 * * 1-5' : 
                     // '11 7 * * 1-5' : 
                     '17 6 * * 1-5'
@@ -88,8 +88,8 @@ async function setupSellOrdersFromSheet() {
                 sendMessageToChannel('✅ Successfully placed target sell order', stock.stockSymbol, stock.quantity)
             }
         } catch (error) {
-            sendMessageToChannel('🚨 Error placing target sell order', stock.stockSymbol, stock.quantity. stock.sellPrice, error?.message)
-            console.error("🚨 Error placing target sell order: ", stock.stockSymbol, stock.quantity. stock.sellPrice, error?.message);
+            sendMessageToChannel('🚨 Error placing target sell order', stock?.stockSymbol, stock?.quantity. stock?.sellPrice, error?.message)
+            console.error("🚨 Error placing target sell order: ", stock?.stockSymbol, stock?.quantity. stock?.sellPrice, error?.message);
         }
 
     })
