@@ -87,10 +87,11 @@ const processSuccessfulOrder = async (order) => {
                     console.error("💥 Error buy orders: ", stock.stockSymbol, stock.quantity, error?.message);
                 }
             }
-            else if (order.transaction_type == 'BUY') {
+            // Check if it was a buy order and not placed by Admin Squareoff
+            else if (order.transaction_type == 'BUY' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
                 let orders = await kiteSession.kc.getOrders()
-                orders = orders.find(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'BUY')
+                orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'BUY')
 
                 /* TODO
                     use order guid to find the order to cancel
@@ -98,7 +99,7 @@ const processSuccessfulOrder = async (order) => {
 
                 if (orders.length > 1)
                     sendMessageToChannel('😱 Multiple pending buy orders found!!')
-                else if (orders.length == 1)
+                else if (orders.length < 1)
                     sendMessageToChannel('😱 Pending order not found!!')
                 else {
                     await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
@@ -109,6 +110,7 @@ const processSuccessfulOrder = async (order) => {
         
     } catch (error) {
         console.error('Error processing message', error)
+        sendMessageToChannel('📛 Error processing order update', error.message)
     }
 }
 
