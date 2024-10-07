@@ -260,7 +260,7 @@ async function sendMessageToChannel(channel_name='bot-status-updates', ...messag
 	try {
 
         if (!slack_app)
-            return
+            return console.log('[SLACK MSG]', channel_name, ...message)
 
         let channelId = slack_channel_ids[channel_name]
 
@@ -273,11 +273,11 @@ async function sendMessageToChannel(channel_name='bot-status-updates', ...messag
         message = message.map(s => typeof(s) == 'object' ? JSON.stringify(s, null, 4) : String(s))
         message = message.join(' ')
     
-		const result = await slack_app.client.chat.postMessage({
+		await slack_app.client.chat.postMessage({
 			channel: channelId,
 			text: message
 		});
-		console.info(`Message sent to channel ${channelId}`);
+		// console.info(`Message sent to channel ${channelId}`);
 	} catch (error) {
 		console.error(`Error sending message: ${error}`);
 	}

@@ -24,8 +24,6 @@ const getDateStringIND = (date) => {
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 50000
 
-let sellJob
-
 async function setupSellOrdersFromSheet() {
     sendMessageToChannel('⌛️ Executing MIS Sell Jobs')
 
@@ -39,73 +37,58 @@ async function setupSellOrdersFromSheet() {
             return console.log('IGNORING', stock.stockSymbol)
 
         try {
-            console.debug({
-                exchange: "NSE",
-                tradingsymbol: stock.stockSymbol,
-                transaction_type: "SELL",
-                quantity: stock.quantity,
-                order_type: "SL-M",
-                trigger_price: stock.sellPrice,  // Stop-loss trigger price
-                // price: Number(stock.targetPrice),
-                product: "MIS",
-                validity: "DAY",
-                guid: 'x' + stock.id,
-            })
 
             const sym = `NSE:${stock.stockSymbol}`
-            let order_value = await kiteSession.kc.getLTP([sym]);
-            order_value = order_value[sym].last_price
-            order_value = Number(stock.quantity.trim()) * Number(order_value)
+            let ltp = await kiteSession.kc.getLTP([sym]);
+            ltp = ltp[sym].last_price
+            let order_value = Number(stock.quantity) * Number(ltp)
 
             if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
                 throw new Error('Order value not within limits!')
 
             // console.log(stock.targetPrice, stock.stockSymbol)
-            if (stock.sellPrice.trim() == 'MKT') {
+            if (stock.sellPrice?.trim() == 'MKT' || Number(stock.sellPrice) < ltp) {
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: "NSE",
                     tradingsymbol: stock.stockSymbol.trim(),
                     transaction_type: "SELL",
-                    quantity: Number(stock.quantity.trim()),
+                    quantity: Number(stock.quantity),
                     order_type: "MARKET",
                     product: "MIS",
                     validity: "DAY"
                 });
+                sendMessageToChannel('✅ Successfully placed Market SELL order', stock.stockSymbol, stock.quantity)
             }
             else {
-                /* 
-                    TODO
-                    add LTP check before placing orders to handle
-                    errors of trigger price too low
-                */
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: "NSE",
                     tradingsymbol: stock.stockSymbol.trim(),
                     transaction_type: "SELL",
-                    quantity: Number(stock.quantity.trim()),
+                    quantity: Number(stock.quantity),
                     order_type: "SL-M",
-                    trigger_price: Number(stock.sellPrice.trim()),  // Stop-loss trigger price
+                    trigger_price: Number(stock.sellPrice),  // Stop-loss trigger price
                     // price: Number(stock.targetPrice),
                     product: "MIS",
                     validity: "DAY",
                     guid: 'x' + stock.id,
                 });
-                sendMessageToChannel('✅ Successfully placed target sell order', stock.stockSymbol, stock.quantity)
+                sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
             }
         } catch (error) {
-            sendMessageToChannel('🚨 Error placing target sell order', stock?.stockSymbol, stock?.quantity. stock?.sellPrice, error?.message)
-            console.error("🚨 Error placing target sell order: ", stock?.stockSymbol, stock?.quantity. stock?.sellPrice, error?.message);
+            sendMessageToChannel('🚨 Error placing target sell order', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
+            console.error("🚨 Error placing target sell order: ", stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message);
         }
 
     })
 
-    sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
 }
 
 const scheduleMISJobs = () => {
 
-    sellJob = schedule.scheduleJob(sellSch, setupSellOrdersFromSheet);
-
+    const sellJob = schedule.scheduleJob(sellSch, () => {
+        setupSellOrdersFromSheet()
+        sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
+    });
     sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
 
 
@@ -148,4 +131,5 @@ const scheduleMISJobs = () => {
 
 module.exports = {
     scheduleMISJobs,
+    setupSellOrdersFromSheet,
 }
