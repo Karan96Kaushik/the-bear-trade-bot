@@ -6,12 +6,7 @@ const { kiteSession } = require('./setup');
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
                     '46 3 * * 1-5' : 
-                    // '11 7 * * 1-5' : 
                     '17 6 * * 1-5'
-
-// const buySch = process.env.NODE_ENV === 'production' ? 
-//                     '30 9 * * 1-5' : 
-//                     '1 5 * * 1-5'
 
 const IND_OFFSET = 3600*1000*5.5
 const getDateStringIND = (date) => {
@@ -45,7 +40,7 @@ async function setupSellOrdersFromSheet() {
 
             if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
                 throw new Error('Order value not within limits!')
-            
+
             if (Number(stock.sellPrice) < ltp)
                 return sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
 
@@ -93,43 +88,7 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
     sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
-
-
-
-    return 
-    /** Closing since not necessary **/
-    const buyJob = schedule.scheduleJob(buySch, async function(){
-        let stockData = await readSheetData('MIS-D!A2:W100')
-        stockData = stockData.map(s => ({stockSymbol: s[0], targetPrice: s[1], quantity: s[2]}))
     
-        sendMessageToChannel('⌛️ Executing MIS Buy Jobs')
-
-        await kiteSession.authenticate()
-
-        stockData.map(async (stock) => {
-            try {
-                await kiteSession.kc.placeOrder("regular", {
-                    exchange: "NSE",
-                    tradingsymbol: stock.stockSymbol,
-                    transaction_type: "BUY",
-                    quantity: Number(stock.quantity),
-                    order_type: "MARKET",
-                    product: "MIS",
-                    validity: "DAY"
-                });
-                sendMessageToChannel('✅ Successfully placed market buy order', stock.stockSymbol, stock.quantity)
-    
-            } catch (error) {
-                sendMessageToChannel('🚨 Error placing market sell order', stock.stockSymbol, stock.quantity, error?.message)
-                console.error("🚨 Error placing market sell order: ", stock.stockSymbol, stock.quantity, error?.message);
-            }
-        })
-
-        sendMessageToChannel('⏰ MIS Buy Scheduled - ', getDateStringIND(buyJob.nextInvocation()))
-    });
-
-    sendMessageToChannel('⏰ MIS Buy Scheduled - ', getDateStringIND(buyJob.nextInvocation()))
-
 }
 
 module.exports = {
