@@ -24,6 +24,8 @@ const getDateStringIND = (date) => {
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 50000
 
+let sellJob
+
 async function setupSellOrdersFromSheet() {
     sendMessageToChannel('⌛️ Executing MIS Sell Jobs')
 
@@ -85,7 +87,7 @@ async function setupSellOrdersFromSheet() {
 
 const scheduleMISJobs = () => {
 
-    const sellJob = schedule.scheduleJob(sellSch, setupSellOrdersFromSheet);
+    sellJob = schedule.scheduleJob(sellSch, setupSellOrdersFromSheet);
 
     sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
 
