@@ -4,7 +4,7 @@ const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
-                    '48 4 * * 1-5' : 
+                    '58 4 * * 1-5' : 
                     // '46 3 * * 1-5' : 
                     // '11 7 * * 1-5' : 
                     '17 6 * * 1-5'
@@ -41,11 +41,11 @@ async function setupSellOrdersFromSheet() {
         try {
             console.debug({
                 exchange: "NSE",
-                tradingsymbol: stock.stockSymbol.trim(),
+                tradingsymbol: stock.stockSymbol,
                 transaction_type: "SELL",
-                quantity: Number(stock.quantity.trim()),
+                quantity: stock.quantity,
                 order_type: "SL-M",
-                trigger_price: Number(stock.sellPrice.trim()),  // Stop-loss trigger price
+                trigger_price: stock.sellPrice,  // Stop-loss trigger price
                 // price: Number(stock.targetPrice),
                 product: "MIS",
                 validity: "DAY",
