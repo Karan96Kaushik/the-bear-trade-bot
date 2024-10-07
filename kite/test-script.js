@@ -14,6 +14,15 @@ const run = async () => {
         let stockData = await readSheetData('MIS-D!A2:W100')
         stockData = processMISSheetData(stockData)
 
+        // let stockData = await readSheetData('MIS-D!A2:W100')
+        // stockData = processMISSheetData(stockData)
+    
+    
+        stockData.map(async (stock) => {
+            console.log(stock)
+        })
+    
+
         // await kiteSession.authenticate()
         // // const orders = await kiteSession.kc.getOrders()
 

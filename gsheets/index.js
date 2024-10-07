@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const path = require('path');
 
 // Path to your service account key file
-const SERVICE_ACCOUNT_FILE = path.join(__dirname, '../../top-glass-226920-ff9fb14e6f4f.json');
+const SERVICE_ACCOUNT_FILE = path.join(__dirname, '../top-glass-226920-ff9fb14e6f4f.json');
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive'];
 const SPREADSHEET_ID = '14FUaVzQfXqeGTd2HEKXMBwtofQNOebqiSdCK02GAYkA';
 const READ_RANGE = 'Sheet1!A1:D50';
