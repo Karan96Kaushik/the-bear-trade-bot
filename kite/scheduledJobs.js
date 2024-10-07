@@ -4,7 +4,7 @@ const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
-                    '58 4 * * 1-5' : 
+                    '0 5 * * 1-5' : 
                     // '46 3 * * 1-5' : 
                     // '11 7 * * 1-5' : 
                     '17 6 * * 1-5'
