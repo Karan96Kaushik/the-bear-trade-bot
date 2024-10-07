@@ -11,40 +11,17 @@ const run = async () => {
 
     try {
 
-        let stockData = await readSheetData('MIS-D!A2:W100')
-        stockData = processMISSheetData(stockData)
+        await kiteSession.authenticate()
 
-        // let stockData = await readSheetData('MIS-D!A2:W100')
-        // stockData = processMISSheetData(stockData)
-    
-    
-        stockData.map(async (stock) => {
-            console.log({
-                exchange: "NSE",
-                tradingsymbol: stock.stockSymbol.trim(),
-                transaction_type: "SELL",
-                quantity: Number(stock.quantity.trim()),
-                order_type: "SL-M",
-                trigger_price: Number(stock.sellPrice.trim()),  // Stop-loss trigger price
-                // price: Number(stock.targetPrice),
-                product: "MIS",
-                validity: "DAY",
-                guid: 'x' + stock.id,
-            })
-        })
-    
+        let pos = await kiteSession.kc.getPositions()
+        console.log(pos.net.map(c=> [c.tradingsymbol, c.pnl]))
+        console.log(pos.net.reduce((p,c) => p+c.pnl,0))
 
-        // await kiteSession.authenticate()
-        // // const orders = await kiteSession.kc.getOrders()
+        // let pos = await kiteSession.kc.getHoldings()
+        // console.log(pos.map(c=> [c.tradingsymbol, c.pnl]))
+        // console.log(pos.reduce((p,c) => p+c.pnl,0))
 
-        // // await kiteSession.kc.getInstruments('NSE')
-        // const stockSymbol = 'MOIL'
-        // const sym = `NSE:${stockSymbol}`
-        // let order_value = await kiteSession.kc.getLTP([sym]);
-        // order_value = order_value[sym].last_price
-        // console.log(order_value)
-
-
+        // console.log(pos)
 
         return 
 

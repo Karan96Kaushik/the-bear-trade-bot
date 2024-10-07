@@ -73,6 +73,11 @@ async function setupSellOrdersFromSheet() {
                 });
             }
             else {
+                /* 
+                    TODO
+                    add LTP check before placing orders to handle
+                    errors of trigger price too low
+                */
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: "NSE",
                     tradingsymbol: stock.stockSymbol.trim(),
