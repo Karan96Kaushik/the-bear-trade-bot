@@ -45,9 +45,11 @@ async function setupSellOrdersFromSheet() {
 
             if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
                 throw new Error('Order value not within limits!')
+            if (Number(stock.sellPrice) < ltp)
+                return sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
 
             // console.log(stock.targetPrice, stock.stockSymbol)
-            if (stock.sellPrice?.trim() == 'MKT' || Number(stock.sellPrice) < ltp) {
+            if (stock.sellPrice?.trim() == 'MKT') {
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: "NSE",
                     tradingsymbol: stock.stockSymbol.trim(),
