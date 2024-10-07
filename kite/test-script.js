@@ -10,15 +10,19 @@ const { kiteSession } = require("./setup")
 const run = async () => {
 
     try {
-        await kiteSession.authenticate()
-        // const orders = await kiteSession.kc.getOrders()
 
-        // await kiteSession.kc.getInstruments('NSE')
-        const stockSymbol = 'MOIL'
-        const sym = `NSE:${stockSymbol}`
-        let order_value = await kiteSession.kc.getLTP([sym]);
-        order_value = order_value[sym].last_price
-        console.log(order_value)
+        let stockData = await readSheetData('MIS-D!A2:W100')
+        stockData = processMISSheetData(stockData)
+
+        // await kiteSession.authenticate()
+        // // const orders = await kiteSession.kc.getOrders()
+
+        // // await kiteSession.kc.getInstruments('NSE')
+        // const stockSymbol = 'MOIL'
+        // const sym = `NSE:${stockSymbol}`
+        // let order_value = await kiteSession.kc.getLTP([sym]);
+        // order_value = order_value[sym].last_price
+        // console.log(order_value)
 
 
 
@@ -26,7 +30,7 @@ const run = async () => {
 
         console.log(orders)
 
-        let stockData = await readSheetData('MIS-D!A2:W100')
+        stockData = await readSheetData('MIS-D!A2:W100')
         stockData = processMISSheetData(stockData)
         console.log(stockData)
 
