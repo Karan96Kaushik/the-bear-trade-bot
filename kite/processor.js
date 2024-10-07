@@ -2,7 +2,7 @@ const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrd
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 
-const createBuyLimSLOrders = async (stock) => {
+const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
     await kiteSession.kc.placeOrder("regular", {
@@ -14,7 +14,7 @@ const createBuyLimSLOrders = async (stock) => {
         product: "MIS",        // Intraday
         validity: "DAY",
         trigger_price: Number(stock.stopLossPrice.trim()),  // Stop-loss trigger price
-        guid: 'x' + stock.id + 'xSL',
+        guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     });
     sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
@@ -28,7 +28,7 @@ const createBuyLimSLOrders = async (stock) => {
         product: "MIS",        // Intraday
         validity: "DAY",
         price: Number(stock.targetPrice.trim()),  // Stop-loss trigger price
-        guid: 'x' + stock.id + 'xLIM',
+        guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
         // price: stock.targetPrice  // Stop-loss trigger price
     });
     sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
@@ -80,7 +80,7 @@ const processSuccessfulOrder = async (order) => {
                     stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
 
                     if (stock.lastAction.includes('SELL')) {
-                        await createBuyLimSLOrders(stock)
+                        await createBuyLimSLOrders(stock, order)
                     }
                 } catch (error) {
                     sendMessageToChannel('💥 Error buy orders', stock.stockSymbol, stock.quantity, error?.message)
