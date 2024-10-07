@@ -7,20 +7,26 @@ const { kiteSession } = require("./setup")
 // console.warn = console.trace
 // console.info = console.trace
 
+const checkValue = async () => {
+
+    let pos = await kiteSession.kc.getPositions()
+    console.log(pos.net.map(c=> [c.tradingsymbol, c.pnl]))
+    console.log(pos.net.reduce((p,c) => p+c.pnl,0))
+
+    let hol = await kiteSession.kc.getHoldings()
+    console.log(hol.map(c=> [c.tradingsymbol, c.pnl]))
+    console.log(hol.reduce((p,c) => p+c.pnl,0))
+
+}
+
 const run = async () => {
 
     try {
 
         await kiteSession.authenticate()
 
-        let pos = await kiteSession.kc.getPositions()
-        console.log(pos.net.map(c=> [c.tradingsymbol, c.pnl]))
-        console.log(pos.net.reduce((p,c) => p+c.pnl,0))
-
-        // let pos = await kiteSession.kc.getHoldings()
-        // console.log(pos.map(c=> [c.tradingsymbol, c.pnl]))
-        // console.log(pos.reduce((p,c) => p+c.pnl,0))
-
+        await checkValue()
+        
         // console.log(pos)
 
         return 
