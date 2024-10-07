@@ -19,7 +19,18 @@ const run = async () => {
     
     
         stockData.map(async (stock) => {
-            console.log(stock)
+            console.log({
+                exchange: "NSE",
+                tradingsymbol: stock.stockSymbol.trim(),
+                transaction_type: "SELL",
+                quantity: Number(stock.quantity.trim()),
+                order_type: "SL-M",
+                trigger_price: Number(stock.sellPrice.trim()),  // Stop-loss trigger price
+                // price: Number(stock.targetPrice),
+                product: "MIS",
+                validity: "DAY",
+                guid: 'x' + stock.id,
+            })
         })
     
 

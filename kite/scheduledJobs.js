@@ -39,6 +39,18 @@ async function setupSellOrdersFromSheet() {
             return console.log('IGNORING', stock.stockSymbol)
 
         try {
+            console.debug({
+                exchange: "NSE",
+                tradingsymbol: stock.stockSymbol.trim(),
+                transaction_type: "SELL",
+                quantity: Number(stock.quantity.trim()),
+                order_type: "SL-M",
+                trigger_price: Number(stock.sellPrice.trim()),  // Stop-loss trigger price
+                // price: Number(stock.targetPrice),
+                product: "MIS",
+                validity: "DAY",
+                guid: 'x' + stock.id,
+            })
 
             const sym = `NSE:${stock.stockSymbol}`
             let order_value = await kiteSession.kc.getLTP([sym]);
