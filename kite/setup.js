@@ -34,7 +34,7 @@ class KiteSetup {
         fs.writeFileSync(STATE_FILE, JSON.stringify(this.state));
     }
 
-    async authenticate(re_authenticate) {
+    async authenticate(re_authenticate, silent=false) {
         try {
 
 
@@ -44,7 +44,10 @@ class KiteSetup {
                 // console.log(holdings)
                 let profile = await this.kc.getProfile()
                 console.log('🪪 Authenticated for ', profile.user_name)
-                sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
+                // if (!silent) {
+                //     console.log(sendMessageToChannel)
+                    await sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
+                // }
                 return true
             }
 

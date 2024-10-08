@@ -28,7 +28,30 @@ const initialize_slack = (app) => {
     
     app.event('app_mention', async ({ event, say, logger }) => {
         logger.info(`Received an app mention: ${event.text}`);
+        if (event.text.toLowerCase().includes('p&l')) {
+            const { kiteSession } = require("../kite/setup");
+            await kiteSession.authenticate(false, true)
+
+            let pos = await kiteSession.kc.getPositions()
+            pos = pos.net.map(s => ({
+                'SYMBOL': s.tradingsymbol,
+                'QTY': s.quantity,
+                'LTP': s.last_price.toFixed(2),
+                'P&L': s.pnl.toFixed(2),
+            }))
+            await sendMessageCSVToChannel('Positions', pos, event.channel)
         
+            let hol = await kiteSession.kc.getHoldings()
+            hol = hol.map(s => ({
+                'SYMBOL': s.tradingsymbol,
+                'QTY': s.quantity,
+                'LTP': s.last_price.toFixed(2),
+                'P&L': s.pnl.toFixed(2),
+            }))
+        
+            await sendMessageCSVToChannel('Holdings', hol, event.channel)
+            console.log(event.channel)
+        }
         if (event.text.toLowerCase().includes('urgent')) {
             logger.info('Mention contains "urgent"');
             await say({
@@ -247,6 +270,39 @@ const initialize_slack = (app) => {
     
 }
 
+
+async function sendMessageCSVToChannel(title, data, channelId) {
+	try {
+        if (!slack_app)
+            return console.log('[SLACK CSV]', data)
+
+        if (Object.values(slack_channel_ids).includes(channelId)) console.log(channelId)
+        else if (!channelId) channelId = slack_channel_ids['bot-status-updates']
+        else if (process.env.NODE_ENV !== 'production') channelId = slack_channel_ids['dev-test']
+
+        let headers = new Set(data.flatMap(d => Object.keys(d)))
+        headers = [...headers]
+        let csv_content = headers.join(',')
+        csv_content = csv_content + '\n' + data.map(d => headers.map(h => d[h] || '').join(',')).join('\n')
+
+        try {
+          await slack_app.client.files.uploadV2({
+            channels: channelId,
+            content: csv_content,
+            filename: title + '.csv',
+            title
+          });
+      
+        } catch (error) {
+            console.log(error)
+          await respond('An error occurred while uploading the CSV file.');
+        }
+
+	} catch (error) {
+		console.error(`Error sending message: ${error}`);
+	}
+}
+
 const slack_channel_ids = {
 	'dev-test': 'C07NC9XSRU5',
 	'action-alerts': 'C07Q5T2KFH6',
@@ -283,40 +339,10 @@ async function sendMessageToChannel(channel_name='bot-status-updates', ...messag
 	}
 }
 
-async function sendMessageCSVToChannel(title, data, channelId) {
-	try {
-        if (!slack_app)
-            return console.log('[SLACK CSV]', data)
-
-        if (!channelId) channelId = slack_channel_ids['bot-status-updates']
-        if (process.env.NODE_ENV !== 'production') channelId = slack_channel_ids['dev-test']
-
-        let headers = new Set(data.flatMap(d => Object.keys(d)))
-        headers = [...headers]
-        let csv_content = headers.join(',')
-        csv_content = csv_content + '\n' + data.map(d => headers.map(h => d[h] || '').join(',')).join('\n')
-
-        try {
-          await slack_app.client.files.uploadV2({
-            channels: channelId,
-            content: csv_content,
-            filename: title + '.csv',
-            title
-          });
-      
-        } catch (error) {
-            console.log(error)
-          await respond('An error occurred while uploading the CSV file.');
-        }
-
-	} catch (error) {
-		console.error(`Error sending message: ${error}`);
-	}
-}
-
 module.exports = {
     initialize_slack,
     sendMessageToChannel,
     slack_channel_ids,
     sendMessageCSVToChannel
+
 }

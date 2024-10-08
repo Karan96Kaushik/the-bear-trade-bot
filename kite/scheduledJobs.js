@@ -6,7 +6,7 @@ const { kiteSession } = require('./setup');
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
                     '46 3 * * 1-5' : 
-                    '17 6 * * 1-5'
+                    '17 16 * * 1-5'
 
 const IND_OFFSET = 3600*1000*5.5
 const getDateStringIND = (date) => {

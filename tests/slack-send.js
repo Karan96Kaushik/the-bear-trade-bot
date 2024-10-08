@@ -28,7 +28,7 @@ async function sendMessageCSVToChannel(title, data) {
 
         try {
           await slack_app.client.files.uploadV2({
-            channels: channelId,
+            channel_id: channelId,
             content: csv_content,
             filename: title + '.csv',
             title
@@ -61,8 +61,8 @@ async function run() {
 
     let pos = await kiteSession.kc.getPositions()
     pos = pos.net.map(s => ({
-        'Symbol': s.tradingsymbol,
-        'Qty': s.quantity,
+        'SYMBOL': s.tradingsymbol,
+        'QTY': s.quantity,
         'LTP': s.last_price.toFixed(2),
         'P&L': s.pnl.toFixed(2),
     }))
@@ -70,8 +70,8 @@ async function run() {
 
     let hol = await kiteSession.kc.getHoldings()
     hol = hol.map(s => ({
-        'Symbol': s.tradingsymbol,
-        'Qty': s.quantity,
+        'SYMBOL': s.tradingsymbol,
+        'QTY': s.quantity,
         'LTP': s.last_price.toFixed(2),
         'P&L': s.pnl.toFixed(2),
     }))
