@@ -288,7 +288,7 @@ async function sendMessageCSVToChannel(title, data, channelId) {
 
         try {
           await slack_app.client.files.uploadV2({
-            channels: channelId,
+            channel_id: channelId,
             content: csv_content,
             filename: title + '.csv',
             title

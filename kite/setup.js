@@ -46,7 +46,7 @@ class KiteSetup {
                 console.log('🪪 Authenticated for ', profile.user_name)
                 // if (!silent) {
                 //     console.log(sendMessageToChannel)
-                    await sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
+                    // await sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
                 // }
                 return true
             }
@@ -64,14 +64,14 @@ class KiteSetup {
             this.kc.setAccessToken(this.accessToken);
 
             let profile = await this.kc.getProfile()
-            await sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
+            // await sendMessageToChannel('🪪 Authenticated for', profile.user_name)
 
             return true
 
         } catch (error) {
             console.error("❌ Error generating session: ", error?.message);
             if (re_authenticate > 3) {
-                await sendMessageToChannel('💥 Failing Auth')
+                await sendMessageToChannel('💥 Failing Auth', error?.message)
             }
             else {
                 return this.authenticate(re_authenticate + 1)
