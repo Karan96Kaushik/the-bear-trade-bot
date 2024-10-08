@@ -283,7 +283,40 @@ async function sendMessageToChannel(channel_name='bot-status-updates', ...messag
 	}
 }
 
+async function sendMessageCSVToChannel(title, data, channelId) {
+	try {
+        if (!slack_app)
+            return console.log('[SLACK CSV]', data)
+
+        if (!channelId) channelId = slack_channel_ids['bot-status-updates']
+        if (process.env.NODE_ENV !== 'production') channelId = slack_channel_ids['dev-test']
+
+        let headers = new Set(data.flatMap(d => Object.keys(d)))
+        headers = [...headers]
+        let csv_content = headers.join(',')
+        csv_content = csv_content + '\n' + data.map(d => headers.map(h => d[h] || '').join(',')).join('\n')
+
+        try {
+          await slack_app.client.files.uploadV2({
+            channels: channelId,
+            content: csv_content,
+            filename: title + '.csv',
+            title
+          });
+      
+        } catch (error) {
+            console.log(error)
+          await respond('An error occurred while uploading the CSV file.');
+        }
+
+	} catch (error) {
+		console.error(`Error sending message: ${error}`);
+	}
+}
+
 module.exports = {
     initialize_slack,
-    sendMessageToChannel
+    sendMessageToChannel,
+    slack_channel_ids,
+    sendMessageCSVToChannel
 }
