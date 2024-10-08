@@ -28,7 +28,7 @@ const initialize_slack = (app) => {
     
     app.event('app_mention', async ({ event, say, logger }) => {
         logger.info(`Received an app mention: ${event.text}`);
-        if (event.text.toLowerCase().includes('p&l')) {
+        if (event.text.toLowerCase().includes('pnl') || event.text.toLowerCase().includes('p&l')) {
             const { kiteSession } = require("../kite/setup");
             await kiteSession.authenticate(false, true)
 
@@ -63,7 +63,7 @@ const initialize_slack = (app) => {
         else {
             logger.info('Mention does not contain "urgent"');
             await say({
-                text: `Hello <@${event.user}>! How can I help you today?`,
+                text: `Hello <@${event.user}>! How can I help you today? ` + event.text.toLowerCase(),
                 thread_ts: event.ts
             });
         }

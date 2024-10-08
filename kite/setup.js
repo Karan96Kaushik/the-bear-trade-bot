@@ -64,14 +64,14 @@ class KiteSetup {
             this.kc.setAccessToken(this.accessToken);
 
             let profile = await this.kc.getProfile()
-            sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
+            await sendMessageToChannel('🪪 Authenticated for ', profile.user_name)
 
             return true
 
         } catch (error) {
             console.error("❌ Error generating session: ", error?.message);
             if (re_authenticate > 3) {
-                sendMessageToChannel('💥 Failing Auth')
+                await sendMessageToChannel('💥 Failing Auth')
             }
             else {
                 return this.authenticate(re_authenticate + 1)

@@ -16,7 +16,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         trigger_price: Number(stock.stopLossPrice.trim()),  // Stop-loss trigger price
         guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     });
-    sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
+    await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
 
     await kiteSession.kc.placeOrder("regular", {
@@ -31,7 +31,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
         // price: stock.targetPrice  // Stop-loss trigger price
     });
-    sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
+    await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
 }
 
@@ -39,7 +39,7 @@ const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
 
-            sendMessageToChannel('📬 Order update', 
+            await sendMessageToChannel('📬 Order update', 
                 order.transaction_type, 
                 order.tradingsymbol, 
                 order.average_price, 
@@ -67,7 +67,7 @@ const processSuccessfulOrder = async (order) => {
                 await bulkUpdateCells(updates)                
             } catch (error) {
                 console.error(error)
-                sendMessageToChannel('🛑 Error updating sheet!', error.message)
+                await sendMessageToChannel('🛑 Error updating sheet!', error.message)
             }
 
 
@@ -83,7 +83,7 @@ const processSuccessfulOrder = async (order) => {
                         await createBuyLimSLOrders(stock, order)
                     }
                 } catch (error) {
-                    sendMessageToChannel('💥 Error buy orders', stock.stockSymbol, stock.quantity, error?.message)
+                    await sendMessageToChannel('💥 Error buy orders', stock.stockSymbol, stock.quantity, error?.message)
                     console.error("💥 Error buy orders: ", stock.stockSymbol, stock.quantity, error?.message);
                 }
             }
@@ -98,19 +98,19 @@ const processSuccessfulOrder = async (order) => {
                  */
 
                 if (orders.length > 1)
-                    sendMessageToChannel('😱 Multiple pending buy orders found!!')
+                    await sendMessageToChannel('😱 Multiple pending buy orders found!!')
                 else if (orders.length < 1)
-                    sendMessageToChannel('😱 Pending order not found!!')
+                    await sendMessageToChannel('😱 Pending order not found!!')
                 else {
                     await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
-                    sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
+                    await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
                 }
             }
         }
         
     } catch (error) {
         console.error('Error processing message', error)
-        sendMessageToChannel('📛 Error processing order update', error.message)
+        await sendMessageToChannel('📛 Error processing order update', error.message)
     }
 }
 
