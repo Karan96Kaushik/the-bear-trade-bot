@@ -52,14 +52,15 @@ const initialize_slack = (app) => {
             await sendMessageCSVToChannel('Holdings', hol, event.channel)
             console.log(event.channel)
         }
-        if (event.text.toLowerCase().includes('urgent')) {
+        else if (event.text.toLowerCase().includes('urgent')) {
             logger.info('Mention contains "urgent"');
             await say({
                 text: `Hey there <@${event.user}>! I see you mentioned something urgent. How can I assist you?`,
                 // thread_ts: event.ts
                 channel: event.channel
             });
-        } else {
+        } 
+        else {
             logger.info('Mention does not contain "urgent"');
             await say({
                 text: `Hello <@${event.user}>! How can I help you today?`,

@@ -21,10 +21,8 @@ async function sendMessageCSVToChannel(title, data) {
 
         let headers = new Set(data.flatMap(d => Object.keys(d)))
         headers = [...headers]
-        // return console.log(headers)
         let csv_content = headers.join(',')
         csv_content = csv_content + '\n' + data.map(d => headers.map(h => d[h] || '').join(',')).join('\n')
-        console.log(csv_content)
 
         try {
           await slack_app.client.files.uploadV2({
@@ -77,7 +75,16 @@ async function run() {
     }))
 
     await sendMessageCSVToChannel('Holdings', hol)
-      
+
+    let ord = await kiteSession.kc.getOrders()
+    ord = ord.map(s => ({
+        'SYMBOL': s.tradingsymbol,
+        'STATUS': s.status,
+        'TYPE': s.order_type,
+        'S/B': s.transaction_type,
+    }))
+    await sendMessageCSVToChannel('Orders', ord)
+
 }
 
 run()
