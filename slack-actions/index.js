@@ -39,6 +39,12 @@ const initialize_slack = (app) => {
                 'LTP': s.last_price.toFixed(2),
                 'P&L': s.pnl.toFixed(2),
             }))
+            pos.push({
+                'SYMBOL': '',
+                'QTY': '',
+                'LTP': '',
+                'P&L': pos.reduce((p,c) => p+Number(c['P&L']), 0).toFixed(2),
+            })
             await sendMessageCSVToChannel('Positions', pos, event.channel)
         
             let hol = await kiteSession.kc.getHoldings()
@@ -48,6 +54,12 @@ const initialize_slack = (app) => {
                 'LTP': s.last_price.toFixed(2),
                 'P&L': s.pnl.toFixed(2),
             }))
+            hol.push({
+                'SYMBOL': '',
+                'QTY': '',
+                'LTP': '',
+                'P&L': hol.reduce((p,c) => p+Number(c['P&L']), 0).toFixed(2),
+            })
         
             await sendMessageCSVToChannel('Holdings', hol, event.channel)
             console.log(event.channel)
