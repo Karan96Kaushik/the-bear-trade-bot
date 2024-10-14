@@ -8,6 +8,12 @@ const sellSch = process.env.NODE_ENV === 'production' ?
                     '46 3 * * 1-5' : 
                     '17 16 * * 1-5'
 
+const buySch = process.env.NODE_ENV === 'production' ? 
+                    // '16 5 * * 1-5' : 
+                    '50 10 * * 1-5' : 
+                    '17 16 * * 1-5'
+
+
 const IND_OFFSET = 3600*1000*5.5
 const getDateStringIND = (date) => {
     if (typeof(date) == 'string') date = new Date(date)
@@ -84,6 +90,38 @@ async function setupSellOrdersFromSheet() {
 
 }
 
+async function closeNegativePositions() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Close Negative Positions Job');
+
+        await kiteSession.authenticate();
+
+        const positions = await kiteSession.kc.getPositions();
+        const negativePositions = positions.net.filter(position => position.quantity < 0);
+
+        for (const position of negativePositions) {
+            try {
+                await kiteSession.kc.placeOrder("regular", {
+                    exchange: position.exchange,
+                    tradingsymbol: position.tradingsymbol,
+                    transaction_type: "BUY",
+                    quantity: Math.abs(position.quantity),
+                    order_type: "MARKET",
+                    product: "MIS",
+                    validity: "DAY"
+                });
+                await sendMessageToChannel('✅ Successfully placed Market BUY order to close negative position', position.tradingsymbol, Math.abs(position.quantity));
+            } catch (error) {
+                await sendMessageToChannel('🚨 Error placing BUY order to close negative position', position.tradingsymbol, Math.abs(position.quantity), error?.message);
+                console.error("🚨 Error placing BUY order to close negative position: ", position.tradingsymbol, Math.abs(position.quantity), error?.message);
+            }
+        }
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running close negative positions job', error?.message);
+        console.error("🚨 Error running close negative positions job: ", error?.message);
+    }
+}
+
 const scheduleMISJobs = () => {
 
     const sellJob = schedule.scheduleJob(sellSch, () => {
@@ -92,9 +130,15 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
+    const closeNegativePositionsJob = schedule.scheduleJob('0 10 * * 1-5', () => {
+        closeNegativePositions();
+        sendMessageToChannel('⏰ Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+    });
+    sendMessageToChannel('⏰ Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
 }
 
 module.exports = {
     scheduleMISJobs,
     setupSellOrdersFromSheet,
+    closeNegativePositions,
 }
