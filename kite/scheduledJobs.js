@@ -126,15 +126,15 @@ const scheduleMISJobs = () => {
 
     const sellJob = schedule.scheduleJob(sellSch, () => {
         setupSellOrdersFromSheet()
-        sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
+        sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
-    sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
+    sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
     const closeNegativePositionsJob = schedule.scheduleJob(buySch, () => {
         closeNegativePositions();
-        sendMessageToChannel('⏰ Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+        sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
     });
-    sendMessageToChannel('⏰ Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+    sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
 }
 
 module.exports = {
