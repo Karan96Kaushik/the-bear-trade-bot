@@ -10,7 +10,7 @@ const sellSch = process.env.NODE_ENV === 'production' ?
 
 const buySch = process.env.NODE_ENV === 'production' ? 
                     // '50 10 * * 1-5' : 
-                    '35 10 * * 1-5' : 
+                    '35 9 * * 1-5' : 
                     '17 16 * * 1-5'
 
 
@@ -130,7 +130,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ MIS Sell Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
-    const closeNegativePositionsJob = schedule.scheduleJob('0 10 * * 1-5', () => {
+    const closeNegativePositionsJob = schedule.scheduleJob(buySch, () => {
         closeNegativePositions();
         sendMessageToChannel('⏰ Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
     });
