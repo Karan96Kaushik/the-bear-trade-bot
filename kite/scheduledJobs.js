@@ -10,7 +10,7 @@ const sellSch = process.env.NODE_ENV === 'production' ?
 
 const buySch = process.env.NODE_ENV === 'production' ? 
                     // '50 10 * * 1-5' : 
-                    '55 9 * * 1-5' : 
+                    '49 9 * * 1-5' : 
                     '17 16 * * 1-5'
 
 
