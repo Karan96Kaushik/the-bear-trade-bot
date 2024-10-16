@@ -2,6 +2,8 @@ const schedule = require('node-schedule');
 const { sendMessageToChannel } = require('../slack-actions');
 const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
+const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
+const { getDateStringIND } = require('./utils');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
@@ -14,13 +16,7 @@ const buySch = process.env.NODE_ENV === 'production' ?
                     '17 16 * * 1-5'
 
 
-const IND_OFFSET = 3600*1000*5.5
-const getDateStringIND = (date) => {
-    if (typeof(date) == 'string') date = new Date(date)
-    date = new Date(+new Date(date) + IND_OFFSET)
-    date = date.toISOString().split('T')
-    return date[0] + ' ' + date[1].split('.')[0]
-}
+
 
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 50000
@@ -122,6 +118,66 @@ async function closeNegativePositions() {
     }
 }
 
+async function updateStopLossOrders() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Update Stop Loss Orders Job');
+
+        await kiteSession.authenticate();
+
+        let stockData = await readSheetData('MIS-D!A2:W100');
+        stockData = processMISSheetData(stockData);
+
+        for (const stock of stockData) {
+            if (!stock.reviseSL) continue;
+
+            const sym = `NSE:${stock.stockSymbol}`;
+            const instrumentToken = await getInstrumentToken(sym);
+
+            // Get historical data for the last 30 minutes
+            const to = new Date();
+            const from = new Date(to.getTime() - 30 * 60 * 1000);
+            const historicalData = await kiteSession.kc.getHistoricalData(instrumentToken, from, to, "minute");
+
+            // Calculate the highest price in the last 30 minutes
+            const highestPrice = Math.max(...historicalData.map(candle => candle.high));
+
+            // Get open orders for this stock
+            const orders = await kiteSession.kc.getOrders();
+            const existingOrder = orders.find(order => 
+                order.tradingsymbol === stock.stockSymbol && 
+                order.transaction_type === 'SELL' && 
+                order.order_type === 'SL-M' &&
+                order.status === 'TRIGGER PENDING'
+            );
+
+            if (existingOrder && highestPrice < existingOrder.trigger_price) {
+                // Cancel the existing order
+                await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
+
+                // Place a new order with updated stop loss
+                await kiteSession.kc.placeOrder("regular", {
+                    exchange: "NSE",
+                    tradingsymbol: stock.stockSymbol.trim(),
+                    transaction_type: "SELL",
+                    quantity: Number(stock.quantity),
+                    order_type: "SL-M",
+                    trigger_price: highestPrice,
+                    product: "MIS",
+                    validity: "DAY",
+                    guid: 'x' + stock.id,
+                });
+
+                await sendMessageToChannel('🔄 Updated SL-M SELL order', stock.stockSymbol, stock.quantity, 'New trigger price:', highestPrice);
+            }
+        }
+
+        await sendMessageToChannel('✅ Completed Update Stop Loss Orders Job');
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Update Stop Loss Orders job', error?.message);
+        console.error("🚨 Error running Update Stop Loss Orders job: ", error?.message);
+    }
+}
+
 const scheduleMISJobs = () => {
 
     const sellJob = schedule.scheduleJob(sellSch, () => {
@@ -135,10 +191,18 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+
+    // Schedule the new job to run every 15 minutes
+    const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
+        updateStopLossOrders();
+        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
+    });
+    sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - Every 15 minutes');
 }
 
 module.exports = {
     scheduleMISJobs,
     setupSellOrdersFromSheet,
     closeNegativePositions,
+    updateStopLossOrders, // Export the new function
 }

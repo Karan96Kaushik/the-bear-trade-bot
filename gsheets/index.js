@@ -42,6 +42,7 @@ function processMISSheetData (stockData) {
         quantity: s[5], 
         lastAction: s[6],
         ignore: s[7],
+        reviseSL: s[8],
     }))
 }
 
