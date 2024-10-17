@@ -156,6 +156,7 @@ async function updateStopLossOrders() {
                 order.order_type === 'SL-M' &&
                 order.status === 'TRIGGER PENDING'
             );
+            await sendMessageToChannel('🫥', stock.stockSymbol, existingOrder.trigger_price, highestPrice);
 
             if (existingOrder && highestPrice < existingOrder.trigger_price) {
                 // Cancel the existing order
@@ -178,7 +179,7 @@ async function updateStopLossOrders() {
             }
         }
 
-        await sendMessageToChannel('✅ Completed Update Stop Loss Orders Job');
+        // await sendMessageToChannel('✅ Completed Update Stop Loss Orders Job');
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Update Stop Loss Orders job', error?.message);
         console.error("🚨 Error running Update Stop Loss Orders job: ", error?.message);
