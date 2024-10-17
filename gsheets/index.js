@@ -93,6 +93,51 @@ function numberToExcelColumn(n) {
     return column;
 }
 
+async function appendRowToMISD(stock) {
+    try {
+        const newRowData = [
+            stock.stockSymbol,
+            stock.sellPrice,
+            stock.stopLossPrice,
+            stock.targetPrice,
+            stock.quantity,
+            stock.lastAction,
+            stock.ignore,
+            stock.reviseSL
+        ]
+        // Read existing data to determine the last row and ID
+        let existingData = await readSheetData('MIS-D!A2:W');
+        const lastRow = existingData.length + 2; // +2 because we start from A2
+        const lastRowData = existingData[existingData.length - 1]
+        existingData = processMISSheetData(existingData)
+        const newId = 'TMD' + (parseInt(lastRowData[0].split('TMD')[1]) + 1);
+
+        const existingStock = existingData.find(d => d.quantity == stock.quantity && d.stockSymbol == stock.stockSymbol)
+        if (existingStock)
+            throw new Error('Stock already exists with the same quantity!')
+        
+        // Prepare the new row data with the generated ID
+        const rowToAppend = [newId.toString(), ...newRowData];
+        
+        // Append the new row
+        const response = await sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `MIS-D!A${lastRow}`,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            resource: {
+                values: [rowToAppend]
+            }
+        });
+        
+        console.log(`New row appended successfully. ID: ${newId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error appending row to MIS-D sheet:', error);
+        throw error;
+    }
+}
+
 if (false)
 readSheetData()
     .then(async data => {
@@ -138,5 +183,6 @@ module.exports = {
     getStockLoc,
     numberToExcelColumn,
     processMISSheetData,
-    getOrderLoc
+    getOrderLoc,
+    appendRowToMISD
 }

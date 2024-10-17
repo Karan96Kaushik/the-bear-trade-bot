@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { readSheetData, processMISSheetData } = require("../../gsheets");
+const { readSheetData, processMISSheetData, appendRowToMISD } = require("../../gsheets");
 const { createSellOrders } = require("../../kite/processor");
 const { kiteSession } = require("../../kite/setup");
 
@@ -35,6 +35,7 @@ router.get('/kite-orders', async (req, res) => {
 router.post('/create-sell-orders', async (req, res) => {
   try {
     const order = req.body;
+    await appendRowToMISD(order)
     const result = await createSellOrders(order);
     res.status(200).json({ success: true, result });
   } catch (error) {
