@@ -150,9 +150,10 @@ async function updateStopLossOrders() {
 
             // Get open orders for this stock
             const orders = await kiteSession.kc.getOrders();
+            console.log(orders.filter(order => order.tradingsymbol === stock.stockSymbol))
             const existingOrder = orders.find(order => 
                 order.tradingsymbol === stock.stockSymbol && 
-                order.transaction_type === 'SELL' && 
+                order.transaction_type === 'BUY' && 
                 order.order_type === 'SL-M' &&
                 order.status === 'TRIGGER PENDING'
             );
@@ -166,7 +167,7 @@ async function updateStopLossOrders() {
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: "NSE",
                     tradingsymbol: stock.stockSymbol.trim(),
-                    transaction_type: "SELL",
+                    transaction_type: "BUY",
                     quantity: Number(stock.quantity),
                     order_type: "SL-M",
                     trigger_price: highestPrice,
