@@ -19,7 +19,7 @@ const buySch = process.env.NODE_ENV === 'production' ?
 
 
 const MAX_ORDER_VALUE = 110000
-const MIN_ORDER_VALUE = 50000
+const MIN_ORDER_VALUE = 0
 
 async function setupSellOrdersFromSheet() {
     try {
