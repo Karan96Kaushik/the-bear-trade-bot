@@ -43,7 +43,7 @@ function processMISSheetData (stockData) {
         lastAction: s[6],
         ignore: s[7],
         reviseSL: s[8],
-    }))
+    })).filter(s => s.stockSymbol)
 }
 
 async function bulkUpdateCells(updates) {

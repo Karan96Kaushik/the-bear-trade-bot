@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { getDataFromYahoo } = require('../../kite/utils'); // Assuming this module exists
 const { kiteSession } = require('../../kite/setup');
+const { readSheetData, processMISSheetData } = require('../../gsheets');
 
-const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (5.5);
+const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (process.env.NODE_ENV == 'production' ? 5.5 : 4.5);
 
 router.get('/yahoo', async (req, res) => {
     try {
@@ -41,12 +42,21 @@ router.get('/', async (req, res) => {
 
 router.get('/orders', async (req, res) => {
     try {
-      let data = await kiteSession.kc.getOrders();
-      data = data.map(d => ({
+      let sheetData = []
+        try {
+            sheetData = await readSheetData('MIS-D!A2:W100')
+            sheetData = processMISSheetData(sheetData)
+            sheetData = sheetData.reverse()
+        } catch (error) {
+            console.error('Error reading sheet data:', error);
+        }
+
+      let orders = await kiteSession.kc.getOrders();
+      orders = orders.map(d => ({
         ...d,
         order_timestamp: new Date(+new Date(d.order_timestamp) - INDIAN_TIMEZONE_OFFSET)
     }))
-      res.json(data);
+      res.json({orders, sheetData});
     } catch (error) {
       console.error('Error fetching Yahoo Finance data:', error?.response?.data);
       res.status(500).json({ message: 'Server error' });
