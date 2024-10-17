@@ -29,7 +29,11 @@ async function setupSellOrdersFromSheet() {
         await kiteSession.authenticate()
     
         stockData.map(async (stock) => {
-            await createSellOrders(stock)
+            try {
+                await createSellOrders(stock)
+            } catch (error) {
+                console.error(error)
+            }
         })
     } catch (error) {
         await sendMessageToChannel('🚨 Error runnings schedule sell jobs', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
