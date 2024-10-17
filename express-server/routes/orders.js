@@ -35,8 +35,8 @@ router.get('/kite-orders', async (req, res) => {
 router.post('/create-sell-orders', async (req, res) => {
   try {
     const order = req.body;
-    await appendRowToMISD(order)
     const result = await createSellOrders(order);
+    await appendRowToMISD(order)
     res.status(200).json({ success: true, result });
   } catch (error) {
     console.error('Error creating sell orders:', error);
