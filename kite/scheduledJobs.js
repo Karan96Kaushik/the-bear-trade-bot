@@ -132,8 +132,6 @@ async function updateStopLossOrders() {
 
             const sym = stock.stockSymbol;  // No need to append .NS here
 
-            console.log(sym);
-
             // Get historical data for the last 30 minutes
             const data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
             
@@ -143,14 +141,11 @@ async function updateStopLossOrders() {
             const thirtyMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60;
             const last30MinData = historicalData.high.slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
 
-            console.log(last30MinData);
-
             // Calculate the highest price in the last 30 minutes
             const highestPrice = Math.max(...last30MinData);
 
             // Get open orders for this stock
             const orders = await kiteSession.kc.getOrders();
-            console.log(orders.filter(order => order.tradingsymbol === stock.stockSymbol))
             const existingOrder = orders.find(order => 
                 order.tradingsymbol === stock.stockSymbol && 
                 order.transaction_type === 'BUY' && 
