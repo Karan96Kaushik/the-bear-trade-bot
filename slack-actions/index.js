@@ -328,7 +328,7 @@ const slack_channel_ids = {
 async function sendMessageToChannel(channel_name='bot-status-updates', ...message) {
 	try {
 
-        if (!slack_app)
+        if (!slack_app || process.env.DISABLE_SLACK)
             return console.log('[SLACK MSG]', channel_name, ...message)
 
         let channelId = slack_channel_ids[channel_name]

@@ -14,11 +14,17 @@
     "@slack/bolt": "^3.22.0",
     "axios": "^1.7.7",
     "axios-cookiejar-support": "^5.0.3",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
     "googleapis": "^144.0.0",
+    "jsonwebtoken": "^9.0.2",
     "kiteconnect": "^5.0.1",
+    "mongoose": "^8.7.1",
+    "morgan": "^1.10.0",
     "node-schedule": "^2.1.1",
     "nodemon": "^3.1.7",
     "otplib": "^12.0.1",
+    "server-timings": "^2.0.1",
     "tough-cookie": "^5.0.0"
   }
 }

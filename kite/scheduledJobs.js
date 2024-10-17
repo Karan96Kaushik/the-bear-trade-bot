@@ -2,7 +2,7 @@ const schedule = require('node-schedule');
 const { sendMessageToChannel } = require('../slack-actions');
 const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
-const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
+// const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo } = require('./utils');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
@@ -14,8 +14,6 @@ const buySch = process.env.NODE_ENV === 'production' ?
                     // '50 10 * * 1-5' : 
                     '49 9 * * 1-5' : 
                     '17 16 * * 1-5'
-
-
 
 
 const MAX_ORDER_VALUE = 110000

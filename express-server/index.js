@@ -1,9 +1,18 @@
 const bodyParser = require('body-parser');
 const { sendMessageToChannel } = require('../slack-actions');
 const { processSuccessfulOrder } = require('../kite/processor');
+const { users, login, dashboard } = require('./routes');
+const { auth } = require('./modules/auth');
+const timings = require('server-timings')
+const morgan = require('morgan')
+const cors = require('cors')
+
 
 const initialize_server = (app) => {
+    app.use(cors())
 
+    app.use(morgan('dev'));
+    app.use(timings);
     app.use(bodyParser.json());
     app.use(bodyParser.urlencoded({ extended: true }));
 
@@ -23,6 +32,10 @@ const initialize_server = (app) => {
         processSuccessfulOrder(req.body)
         res.send('ok');
     });
+
+    app.use('/api/', login);
+    // app.use(auth);
+    app.use('/api/dashboard', dashboard);
 
 }
 
