@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       message: 'Login successful',
-      user: { id: user._id, email: user.email, role: user.role },
+      user: { id: user._id, email: user.email, role: user.role, username: user.username },
       accessToken,
       refreshToken
     });
@@ -42,6 +42,8 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
+    return res.status(500).json({ message: 'FUCK OFF' });
+
     await connectToDatabase();
     const { email, password, role, username } = req.body;
 

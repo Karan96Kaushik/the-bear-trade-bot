@@ -5,11 +5,7 @@ const auth = (req, res, next) => {
 	if(token) {
 		jwt.verify(token, process.env.JWT_SECRET_KEY || 'JWT_SECRET_KEY', async function(err, decoded) {
 			if(!err && decoded.exp*1000 > +new Date) {
-
 				req.user = decoded
-
-				req.user.isAdmin = req.user.role == 'Admin'
-
 				next()
 			} else {
 				res.status(401).json({message:"Invalid Auth"})
@@ -21,7 +17,7 @@ const auth = (req, res, next) => {
 	}
 }
 
-const generate = (data, expiry = 1 * 60 * 60) => {
+const generate = (data, expiry = 24 * 60 * 60) => {
 	return jwt.sign(data, process.env.JWT_SECRET_KEY || 'JWT_SECRET_KEY', { expiresIn: expiry });
 }
 

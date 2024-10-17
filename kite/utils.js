@@ -103,8 +103,58 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
     }
 }
 
+/**
+ * Search for stocks using the Upstox API
+ * @param {string} query - The search query
+ * @param {number} [records=15] - Number of records to fetch
+ * @param {number} [pageNumber=1] - Page number for pagination
+ * @returns {Promise<Object>} The search results
+ */
+async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
+    try {
+        const requestId = `WUPW-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const url = 'https://service.upstox.com/search/open/v1';
+        
+        const params = {
+            query,
+            segments: 'EQ',
+            records,
+            pageNumber,
+            requestId
+        };
+        
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Referer': 'https://upstox.com/',
+            'Origin': 'https://upstox.com',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-site',
+            'Priority': 'u=4',
+            'TE': 'trailers'
+        };
+        
+        let response = await axios.get(url, { params, headers });
+        console.log(response.data)
+        response = response.data.data.searchList.map(item => ({
+            tradingSymbol: item.attributes.tradingSymbol,
+            name: item.attributes.name,
+            exchange: item.attributes.exchange,
+          })).filter(item => item.exchange == 'NSE')
+        return response;
+    } catch (error) {
+        console.error(`Error searching Upstox stocks:`, error.response?.data || error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     getInstrumentToken,
     getDateStringIND,
-    getDataFromYahoo
+    getDataFromYahoo,
+    searchUpstoxStocks
 };
