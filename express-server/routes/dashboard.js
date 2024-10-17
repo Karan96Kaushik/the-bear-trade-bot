@@ -3,7 +3,7 @@ const router = express.Router();
 const { getDataFromYahoo } = require('../../kite/utils'); // Assuming this module exists
 const { kiteSession } = require('../../kite/setup');
 
-const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (4.5);
+const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (5.5);
 
 router.get('/yahoo', async (req, res) => {
     try {
