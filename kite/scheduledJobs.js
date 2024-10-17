@@ -205,7 +205,7 @@ const scheduleMISJobs = () => {
         updateStopLossOrders();
         sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
     });
-    sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - Every 15 minutes');
+    sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
 }
 
 module.exports = {
