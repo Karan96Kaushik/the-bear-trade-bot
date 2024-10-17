@@ -201,7 +201,7 @@ const scheduleMISJobs = () => {
     sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
-    const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
+    const updateStopLossJob = schedule.scheduleJob('*/15,23 4-9 * * 1-5', () => {
         updateStopLossOrders();
         sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
     });
