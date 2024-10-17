@@ -3,7 +3,7 @@ const { sendMessageToChannel } = require('../slack-actions');
 const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
 const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
-const { getDateStringIND } = require('./utils');
+const { getDateStringIND, getDataFromYahoo } = require('./utils');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
@@ -130,16 +130,23 @@ async function updateStopLossOrders() {
         for (const stock of stockData) {
             if (!stock.reviseSL) continue;
 
-            const sym = `NSE:${stock.stockSymbol}`;
-            const instrumentToken = await getInstrumentToken(sym);
+            const sym = stock.stockSymbol;  // No need to append .NS here
+
+            console.log(sym);
 
             // Get historical data for the last 30 minutes
-            const to = new Date();
-            const from = new Date(to.getTime() - 30 * 60 * 1000);
-            const historicalData = await kiteSession.kc.getHistoricalData(instrumentToken, from, to, "minute");
+            const data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
+            
+            // Extract the last 30 minutes of data
+            const historicalData = data.chart.result[0].indicators.quote[0];
+            const timestamps = data.chart.result[0].timestamp;
+            const thirtyMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60;
+            const last30MinData = historicalData.high.slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
+
+            console.log(last30MinData);
 
             // Calculate the highest price in the last 30 minutes
-            const highestPrice = Math.max(...historicalData.map(candle => candle.high));
+            const highestPrice = Math.max(...last30MinData);
 
             // Get open orders for this stock
             const orders = await kiteSession.kc.getOrders();
