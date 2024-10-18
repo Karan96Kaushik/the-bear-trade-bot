@@ -7,6 +7,8 @@ const { readSheetData, processMISSheetData } = require('../../gsheets');
 
 const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (process.env.NODE_ENV == 'production' ? 5.5 : 4.5);
 
+const yahooDataCache = new Map();
+
 router.get('/yahoo', async (req, res) => {
 	try {
 		let { symbol, days, interval, startDate, endDate } = req.query;
@@ -23,10 +25,17 @@ router.get('/yahoo', async (req, res) => {
 		if (interval.includes('m'))
 			days = 2;
 		
+		const cacheKey = `${symbol}-${days}-${interval}-${startDate}-${endDate}`;
+		
+		if (yahooDataCache.has(cacheKey)) {
+			return res.json(yahooDataCache.get(cacheKey));
+		}
+		
 		const data = await getDataFromYahoo(symbol, days, interval, startDate, endDate);
+		yahooDataCache.set(cacheKey, data);
 		res.json(data);
 	} catch (error) {
-		console.error('Error fetching Yahoo Finance data:', error?.response?.data);
+		console.error('Error fetching Yahoo Finance data:', error?.data || error);
 		res.status(500).json({ message: 'Server error' });
 	}
 });
@@ -72,7 +81,7 @@ router.get('/', async (req, res) => {
 		const data = {};
 		res.json(data);
 	} catch (error) {
-		console.error('Error fetching Yahoo Finance data:', error);
+		console.error('Error :', error);
 		res.status(500).json({ message: 'Server error' });
 	}
 });
