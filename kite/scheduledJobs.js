@@ -123,7 +123,7 @@ async function updateStopLossOrders() {
                     trigger_price: highestPrice,
                     product: "MIS",
                     validity: "DAY",
-                    guid: 'x' + stock.id,
+                    // guid: 'x' + stock.id,
                 });
 
                 await sendMessageToChannel('🔄 Updated SL-M SELL order', stock.stockSymbol, stock.quantity, 'New trigger price:', highestPrice);
