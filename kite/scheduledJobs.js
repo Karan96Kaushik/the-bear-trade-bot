@@ -6,7 +6,7 @@ const { kiteSession } = require('./setup');
 const { getDateStringIND, getDataFromYahoo } = require('./utils');
 const { createSellOrders } = require('./processor');
 const { connectToDatabase } = require('../modules/db');
-const OrderLog = require('../models/OrderLog');
+// const OrderLog = require('../models/OrderLog');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
@@ -35,14 +35,14 @@ async function setupSellOrdersFromSheet() {
                 const orderResponse = await createSellOrders(stock)
                 
                 // Log the order placement
-                await OrderLog.create({
-                    orderId: orderResponse.order_id,
-                    action: 'PLACED',
-                    orderDetails: {
-                        ...stock,
-                        order_id: orderResponse.order_id
-                    }
-                });
+                // await OrderLog.create({
+                //     orderId: orderResponse.order_id,
+                //     action: 'PLACED',
+                //     orderDetails: {
+                //         ...stock,
+                //         order_id: orderResponse.order_id
+                //     }
+                // });
             } catch (error) {
                 console.error(error)
                 await sendMessageToChannel('🚨 Error running schedule sell jobs', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
