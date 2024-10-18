@@ -107,7 +107,7 @@ async function updateStopLossOrders() {
                 order.order_type === 'SL-M' &&
                 order.status === 'TRIGGER PENDING'
             );
-            await sendMessageToChannel('🫥', stock.stockSymbol, existingOrder?.trigger_price || 'N/A', highestPrice);
+            // await sendMessageToChannel('🫥', stock.stockSymbol, existingOrder?.trigger_price || 'N/A', highestPrice);
 
             if (existingOrder && highestPrice < existingOrder.trigger_price) {
                 // Cancel the existing order

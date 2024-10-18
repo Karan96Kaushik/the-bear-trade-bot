@@ -161,7 +161,7 @@ const createSellOrders = async (stock) => {
                 // price: Number(stock.targetPrice),
                 product: "MIS",
                 validity: "DAY",
-                guid: 'x' + stock.id,
+                // guid: 'x' + stock.id,
             });
             await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
