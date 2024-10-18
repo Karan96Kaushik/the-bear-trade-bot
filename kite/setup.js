@@ -42,8 +42,8 @@ class KiteSetup {
                 this.kc.setAccessToken(this.state.accessToken)
                 // let holdings = await this.kc.getHoldings()
                 // console.log(holdings)
-                // let profile = await this.kc.getProfile()
-                // console.log('🪪 Authenticated for ', profile.user_name)
+                let profile = await this.kc.getProfile()
+                console.log('🪪 Authenticated for ', profile.user_name)
                 // if (!silent) {
                 //     console.log(sendMessageToChannel)
                     // await sendMessageToChannel('🪪 Authenticated for ', profile.user_name)

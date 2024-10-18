@@ -126,7 +126,7 @@ async function updateStopLossOrders() {
                     // guid: 'x' + stock.id,
                 });
 
-                await sendMessageToChannel('🔄 Updated SL-M SELL order', stock.stockSymbol, stock.quantity, 'New trigger price:', highestPrice);
+                await sendMessageToChannel('🔄 Updated SL-M BUY order', stock.stockSymbol, stock.quantity, 'New trigger price:', highestPrice);
             }
         }
 

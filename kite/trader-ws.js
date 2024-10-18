@@ -2,6 +2,8 @@ const { KiteTicker } = require("kiteconnect");
 const { processSuccessfulOrder } = require("./processor");
 
 const setupWs = (apiKey, accessToken) => {
+
+	if (process.env.DISABLE_SLACK) return
 	
 	const ticker = new KiteTicker({
 		api_key: apiKey,

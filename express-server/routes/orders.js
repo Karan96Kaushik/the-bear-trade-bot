@@ -26,7 +26,7 @@ router.get('/kite-orders', async (req, res) => {
     }))
       res.json({orders, sheetData});
     } catch (error) {
-      console.error('Error fetching Yahoo Finance data:', error?.response?.data);
+      console.error('Error fetching orders data:', error);
       res.status(500).json({ message: 'Server error' });
     }
   });

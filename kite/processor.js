@@ -17,7 +17,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         product: "MIS",        // Intraday
         validity: "DAY",
         trigger_price: Number(stock.stopLossPrice.trim()),  // Stop-loss trigger price
-        guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
+        // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
@@ -31,7 +31,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         product: "MIS",        // Intraday
         validity: "DAY",
         price: Number(stock.targetPrice.trim()),  // Stop-loss trigger price
-        guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
+        // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
         // price: stock.targetPrice  // Stop-loss trigger price
     });
     await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
@@ -132,7 +132,7 @@ const createSellOrders = async (stock) => {
         if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
             throw new Error(`Order value ${order_value} not within limits!`)
 
-        if (Number(stock.sellPrice) < ltp) {
+        if (Number(stock.sellPrice) > ltp) {
             await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
             return
         }
