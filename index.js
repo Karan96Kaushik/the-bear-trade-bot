@@ -5,6 +5,7 @@ const { kiteSession } = require('./kite/setup');
 const { initialize_server } = require('./express-server');
 const { scheduleMISJobs } = require('./kite/scheduledJobs');
 const { setupWs } = require('./kite/trader-ws');
+const { connectToDatabase } = require('./modules/db');
 
 const expressApp = express();
 
@@ -30,6 +31,8 @@ const run = async () => {
 
 	initialize_slack(slack_app)
 	initialize_server(expressApp)
+	await connectToDatabase();
+
 
 	await sendMessageToChannel('🚀 Starting app!')
 

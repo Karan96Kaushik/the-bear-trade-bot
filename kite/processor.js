@@ -1,6 +1,7 @@
 const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrderLoc, processMISSheetData } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
+const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 0
@@ -42,6 +43,13 @@ const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
 
+            // Log the order update
+            await OrderLog.create({
+                orderId: order.order_id,
+                action: 'UPDATED',
+                orderDetails: order
+            });
+
             await sendMessageToChannel('📬 Order update', 
                 order.transaction_type, 
                 order.tradingsymbol, 
@@ -73,7 +81,6 @@ const processSuccessfulOrder = async (order) => {
                 await sendMessageToChannel('🛑 Error updating sheet!', error.message)
             }
 
-
             if (order.transaction_type == 'SELL') {
                 let stock = {}
                 try {
@@ -96,16 +103,20 @@ const processSuccessfulOrder = async (order) => {
                 let orders = await kiteSession.kc.getOrders()
                 orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'BUY')
 
-                /* TODO
-                    use order guid to find the order to cancel
-                 */
-
                 if (orders.length > 1)
                     await sendMessageToChannel('😱 Multiple pending buy orders found!!')
                 else if (orders.length < 1)
                     await sendMessageToChannel('😱 Pending order not found!!')
                 else {
                     await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
+                    
+                    // Log the order cancellation
+                    await OrderLog.create({
+                        orderId: orders[0].order_id,
+                        action: 'CANCELLED',
+                        orderDetails: orders[0]
+                    });
+
                     await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
                 }
             }
@@ -137,9 +148,9 @@ const createSellOrders = async (stock) => {
             return
         }
 
-        // console.log(stock.targetPrice, stock.stockSymbol)
+        let orderResponse;
         if (stock.sellPrice?.trim() == 'MKT') {
-            await kiteSession.kc.placeOrder("regular", {
+            orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol.trim(),
                 transaction_type: "SELL",
@@ -151,20 +162,30 @@ const createSellOrders = async (stock) => {
             await sendMessageToChannel('✅ Successfully placed Market SELL order', stock.stockSymbol, stock.quantity)
         }
         else {
-            await kiteSession.kc.placeOrder("regular", {
+            orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol.trim(),
                 transaction_type: "SELL",
                 quantity: Number(stock.quantity),
                 order_type: "SL-M",
-                trigger_price: Number(stock.sellPrice),  // Stop-loss trigger price
-                // price: Number(stock.targetPrice),
+                trigger_price: Number(stock.sellPrice),
                 product: "MIS",
                 validity: "DAY",
-                // guid: 'x' + stock.id,
             });
             await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
+
+        // Log the order placement
+        await OrderLog.create({
+            orderId: orderResponse.order_id,
+            action: 'PLACED',
+            orderDetails: {
+                ...stock,
+                order_id: orderResponse.order_id,
+                ltp: ltp
+            }
+        });
+
     } catch (error) {
         await sendMessageToChannel('🚨 Error placing SELL order', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
         console.error("🚨 Error placing SELL order: ", stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message);

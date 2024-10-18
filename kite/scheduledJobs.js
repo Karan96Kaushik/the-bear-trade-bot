@@ -5,6 +5,8 @@ const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo } = require('./utils');
 const { createSellOrders } = require('./processor');
+const { connectToDatabase } = require('../modules/db');
+const OrderLog = require('../models/OrderLog');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
@@ -28,15 +30,26 @@ async function setupSellOrdersFromSheet() {
     
         await kiteSession.authenticate()
     
-        stockData.map(async (stock) => {
+        for (const stock of stockData) {
             try {
-                await createSellOrders(stock)
+                const orderResponse = await createSellOrders(stock)
+                
+                // Log the order placement
+                await OrderLog.create({
+                    orderId: orderResponse.order_id,
+                    action: 'PLACED',
+                    orderDetails: {
+                        ...stock,
+                        order_id: orderResponse.order_id
+                    }
+                });
             } catch (error) {
                 console.error(error)
+                await sendMessageToChannel('🚨 Error running schedule sell jobs', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
             }
-        })
+        }
     } catch (error) {
-        await sendMessageToChannel('🚨 Error runnings schedule sell jobs', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
+        await sendMessageToChannel('🚨 Error running schedule sell jobs', error?.message)
     }
 
 }
@@ -163,5 +176,5 @@ module.exports = {
     scheduleMISJobs,
     setupSellOrdersFromSheet,
     closeNegativePositions,
-    updateStopLossOrders, // Export the new function
+    updateStopLossOrders,
 }
