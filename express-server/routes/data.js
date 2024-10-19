@@ -4,6 +4,7 @@ const router = express.Router();
 const { getDataFromYahoo, searchUpstoxStocks } = require('../../kite/utils'); // Assuming this module exists
 const { kiteSession } = require('../../kite/setup');
 const { readSheetData, processMISSheetData } = require('../../gsheets');
+const FunctionHistory = require('../../models/FunctionHistory');
 
 const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (process.env.NODE_ENV == 'production' ? 5.5 : 4.5);
 
@@ -86,7 +87,38 @@ router.get('/', async (req, res) => {
 	}
 });
 
+router.post('/save-function', async (req, res) => {
+	try {
+		const { name, code } = req.body;
+		
+		if (!name || !code) {
+			return res.status(400).json({ message: 'Name and code are required' });
+		}
 
+		const functionHistory = new FunctionHistory({ name, code });
+		await functionHistory.save();
+
+		res.status(201).json({ message: 'Function saved successfully' });
+	} catch (error) {
+		console.error('Error saving function:', error);
+		res.status(500).json({ message: 'Server error' });
+	}
+});
+
+router.get('/functions', async (req, res) => {
+	try {
+		// const { name } = req.query;
+		
+		// if (!name) {
+		// 	return res.status(400).json({ message: 'Function name is required' });
+		// }
+
+		const savedFunctions = await FunctionHistory.find().sort('-createdAt').limit(10);
+		res.json(savedFunctions);
+	} catch (error) {
+		console.error('Error fetching function history:', error);
+		res.status(500).json({ message: 'Server error' });
+	}
+});
 
 module.exports = router;
-
