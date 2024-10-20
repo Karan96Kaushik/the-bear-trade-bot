@@ -111,7 +111,7 @@ async function appendRowToMISD(stock) {
             stock.reviseSL
         ]
         // Read existing data to determine the last row and ID
-        let existingData = await readSheetData('MIS-D!A2:W');
+        let existingData = await readSheetData('MIS-TEST!A2:W');
         const lastRow = existingData.length + 2; // +2 because we start from A2
         const lastRowData = existingData[existingData.length - 1]
         existingData = processMISSheetData(existingData)
@@ -127,7 +127,7 @@ async function appendRowToMISD(stock) {
         // Append the new row
         const response = await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
-            range: `MIS-D!A${lastRow}`,
+            range: `MIS-TEST!A${lastRow}`,
             valueInputOption: 'USER_ENTERED',
             insertDataOption: 'INSERT_ROWS',
             resource: {
@@ -138,7 +138,7 @@ async function appendRowToMISD(stock) {
         console.log(`New row appended successfully. ID: ${newId}`);
         return response.data;
     } catch (error) {
-        console.error('Error appending row to MIS-D sheet:', error);
+        console.error('Error appending row to MIS-TEST sheet:', error);
         throw error;
     }
 }

@@ -33,11 +33,11 @@ const run = async () => {
 
         console.log(orders)
 
-        stockData = await readSheetData('MIS-D!A2:W100')
+        stockData = await readSheetData('MIS-TEST!A2:W100')
         stockData = processMISSheetData(stockData)
         console.log(stockData)
 
-        stockData = await readSheetData('MIS-D!A1:W100')
+        stockData = await readSheetData('MIS-TEST!A1:W100')
         console.log(stockData)
         const rowHeaders = stockData.map(a => a[1])
         const colHeaders = stockData[0]
