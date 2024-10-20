@@ -78,4 +78,47 @@ describe('scheduled orders', () => {
 		//   expect(kiteSession.kc.getLTP).toHaveBeenCalledTimes(2);
 	});
 	
+	test('should create valid SL and target order from sheet for UP', async () => {
+		jest.spyOn(kiteSession, 'authenticate');
+		jest.spyOn(kiteSession.kc, 'placeOrder');
+
+		await processSuccessfulOrder({
+			exchange: 'NSE',
+			tradingsymbol: 'ABFRL',
+			transaction_type: 'BUY',
+			quantity: 1,
+			order_type: 'LIMIT',
+			price: 335,
+			product: 'MIS',
+			validity: 'DAY',
+      status: 'COMPLETE'
+		});
+		
+		expect(kiteSession.kc.placeOrder).toHaveBeenCalledTimes(2);
+		expect(kiteSession.kc.placeOrder).toHaveBeenCalledWith("regular", {
+			exchange: 'NSE',
+			tradingsymbol: 'ABFRL',
+			transaction_type: 'SELL',
+			quantity: 1,
+			order_type: 'SL-M',
+      trigger_price: 320,
+			product: 'MIS',
+			validity: 'DAY'
+		});
+
+    expect(kiteSession.kc.placeOrder).toHaveBeenCalledWith("regular", {
+			exchange: 'NSE',
+			tradingsymbol: 'ABFRL',
+			transaction_type: 'SELL',
+			quantity: 1,
+			order_type: 'LIMIT',
+      price: 350,
+			product: 'MIS',
+			validity: 'DAY'
+		});
+
+
+		//   expect(kiteSession.kc.getLTP).toHaveBeenCalledTimes(2);
+	});
+	
 });

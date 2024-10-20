@@ -39,6 +39,39 @@ const createBuyLimSLOrders = async (stock, order) => {
 
 }
 
+const createSellLimSLOrders = async (stock, order) => {
+    await kiteSession.authenticate()
+
+    await kiteSession.kc.placeOrder("regular", {
+        exchange: "NSE",
+        tradingsymbol: stock.stockSymbol.trim(),
+        transaction_type: "SELL",
+        quantity: stock.quantity,
+        order_type: "SL-M",    // Stop Loss Market
+        product: "MIS",        // Intraday
+        validity: "DAY",
+        trigger_price: Number(stock.stopLossPrice.trim()),  // Stop-loss trigger price
+        // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
+    });
+    await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
+
+
+    await kiteSession.kc.placeOrder("regular", {
+        exchange: "NSE",
+        tradingsymbol: stock.stockSymbol,
+        transaction_type: "SELL",
+        quantity: Math.abs(stock.quantity),
+        order_type: "LIMIT",    // Stop Loss Market
+        product: "MIS",        // Intraday
+        validity: "DAY",
+        price: Number(stock.targetPrice.trim()),  // Stop-loss trigger price
+        // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
+        // price: stock.targetPrice  // Stop-loss trigger price
+    });
+    await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
+
+}
+
 const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
@@ -84,29 +117,61 @@ const processSuccessfulOrder = async (order) => {
                 await sendMessageToChannel('🛑 Error updating sheet!', error.message)
             }
 
-            if (order.transaction_type == 'SELL') {
-                let stock = {}
+            let stockData = await readSheetData('MIS-TEST!A2:W100')
+            stockData = processMISSheetData(stockData)
+
+            let stock = stockData.find(s => s.stockSymbol.trim() == order.tradingsymbol)
+
+            if (order.transaction_type == 'SELL' && stock?.type == 'DOWN') {
                 try {
-                    let stockData = await readSheetData('MIS-TEST!A2:W100')
-                    stockData = processMISSheetData(stockData)
-
-                    stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
-
-                    console.log('stock', stock)
-
                     if (stock.lastAction.includes('SELL')) {
                         await createBuyLimSLOrders(stock, order)
                     }
                 } catch (error) {
-                    await sendMessageToChannel('💥 Error buy orders', stock.stockSymbol, stock.quantity, error?.message)
-                    console.error("💥 Error buy orders: ", stock.stockSymbol, stock.quantity, error?.message);
+                    await sendMessageToChannel('💥 Error [DOWN] buy orders', stock.stockSymbol, stock.quantity, error?.message)
+                    console.error("💥 Error [DOWN] buy orders: ", stock.stockSymbol, stock.quantity, error?.message);
                 }
             }
-            // Check if it was a buy order and not placed by Admin Squareoff
-            else if (order.transaction_type == 'BUY' && order.placed_by !== 'ADMINSQF') {
+
+            if (order.transaction_type == 'BUY' && stock?.type == 'UP') {
+                try {
+                    if (stock.lastAction.includes('BUY')) {
+                        await createSellLimSLOrders(stock, order)
+                    }
+                } catch (error) {
+                    await sendMessageToChannel('💥 Error [UP] sell orders', stock.stockSymbol, stock.quantity, error?.message)
+                    console.error("💥 Error [UP] sell orders: ", stock.stockSymbol, stock.quantity, error?.message);
+                }
+            }
+            else if (order.transaction_type == 'BUY' && stock?.type == 'DOWN' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
                 let orders = await kiteSession.kc.getOrders()
                 orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'BUY')
+
+                if (orders.length > 1)
+                    await sendMessageToChannel('😱 Multiple pending buy orders found!!')
+                else if (orders.length < 1)
+                    await sendMessageToChannel('😱 Pending order not found!!')
+                else {
+                    await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
+                    
+                    try {
+                        await OrderLog.create({
+                            bear_status: 'CANCELLED',
+                            ...order,
+                        });
+                    } catch (error) {
+                        await sendMessageToChannel('❌ Error logging order', error?.message)
+                        console.error('Error logging order', error)
+                    }
+
+                    await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
+                }
+            }            
+            else if (order.transaction_type == 'SELL' && stock?.type == 'UP' && order.placed_by !== 'ADMINSQF') {
+                // Closing opposite end order
+                let orders = await kiteSession.kc.getOrders()
+                orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'SELL')
 
                 if (orders.length > 1)
                     await sendMessageToChannel('😱 Multiple pending buy orders found!!')
