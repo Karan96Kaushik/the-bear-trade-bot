@@ -132,6 +132,8 @@ const createSellOrders = async (stock) => {
     try {
         if (stock.ignore)
             return console.log('IGNORING', stock.stockSymbol)
+        if (stock.lastAction.length > 0)
+            return console.log('SELL already placed', stock.stockSymbol)
 
         await kiteSession.authenticate()
 
