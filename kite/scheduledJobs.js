@@ -19,7 +19,44 @@ const buySch = process.env.NODE_ENV === 'production' ?
                     '17 16 * * 1-5'
 
 
+const MAX_ORDER_VALUE = 110000
+const MIN_ORDER_VALUE = 0
 
+async function validateOrdersFromSheet() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Validation Job')
+    
+        let stockData = await readSheetData('MIS-TEST!A2:W100')
+        stockData = processMISSheetData(stockData)
+    
+        await kiteSession.authenticate()
+    
+        for (const stock of stockData) {
+            try {
+                const sym = `NSE:${stock.stockSymbol}`
+                let ltp = await kiteSession.kc.getLTP([sym]);
+                ltp = ltp[sym].last_price
+                let order_value = Math.abs(stock.quantity) * Number(ltp)
+                
+                if (Number(stock.sellPrice) > ltp) {
+                    await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
+                    return
+                }
+                if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE) {
+                    await sendMessageToChannel(`🔔 Order value ${order_value} not within limits!`, stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
+                    return
+                }
+
+            } catch (error) {
+                console.error(error)
+                await sendMessageToChannel('🔕 Error validating', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
+            }
+        }
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running schedule sell jobs', error?.message)
+    }
+
+}
 
 async function setupSellOrdersFromSheet() {
     try {
@@ -163,6 +200,12 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+
+    const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
+        validateOrdersFromSheet();
+        sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    });
+    sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
     const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
