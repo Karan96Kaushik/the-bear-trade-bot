@@ -84,12 +84,12 @@ async function setupOrdersFromSheet() {
 
 async function closePositions() {
     try {
-        await sendMessageToChannel('⌛️ Executing Close Positions Job');
+        await sendMessageToChannel('⌛️ Executing Close [POSITIVE] Positions Job');
 
         await kiteSession.authenticate();
 
         const positions = await kiteSession.kc.getPositions();
-        const allPositions = positions.net.filter(position => position.quantity != 0);
+        const allPositions = positions.net.filter(position => position.quantity > 0);
 
         for (const position of allPositions) {
             try {
@@ -102,10 +102,10 @@ async function closePositions() {
                     product: "MIS",
                     validity: "DAY"
                 });
-                await sendMessageToChannel('✅ Successfully placed Market BUY order to close negative position', position.tradingsymbol, Math.abs(position.quantity));
+                await sendMessageToChannel(`✅ Successfully placed Market ${position.quantity < 0 ? "BUY" : "SELL"} order to close position`, position.tradingsymbol, Math.abs(position.quantity));
             } catch (error) {
-                await sendMessageToChannel('🚨 Error placing BUY order to close negative position', position.tradingsymbol, Math.abs(position.quantity), error?.message);
-                console.error("🚨 Error placing BUY order to close negative position: ", position.tradingsymbol, Math.abs(position.quantity), error?.message);
+                await sendMessageToChannel('🚨 Error placing  order to close position', position.tradingsymbol, position.quantity, error?.message);
+                console.error("🚨 Error placing  order to close position: ", position.tradingsymbol, position.quantity, error?.message);
             }
         }
     } catch (error) {
