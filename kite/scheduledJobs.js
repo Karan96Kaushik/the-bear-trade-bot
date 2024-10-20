@@ -21,7 +21,7 @@ const buySch = process.env.NODE_ENV === 'production' ?
 
 
 
-async function setupSellOrdersFromSheet() {
+async function setupOrdersFromSheet() {
     try {
         await sendMessageToChannel('⌛️ Executing MIS Sell Jobs')
     
@@ -54,21 +54,21 @@ async function setupSellOrdersFromSheet() {
 
 }
 
-async function closeNegativePositions() {
+async function closePositions() {
     try {
         await sendMessageToChannel('⌛️ Executing Close Negative Positions Job');
 
         await kiteSession.authenticate();
 
         const positions = await kiteSession.kc.getPositions();
-        const negativePositions = positions.net.filter(position => position.quantity < 0);
+        const allPositions = positions.net.filter(position => position.quantity != 0);
 
-        for (const position of negativePositions) {
+        for (const position of allPositions) {
             try {
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: position.exchange,
                     tradingsymbol: position.tradingsymbol,
-                    transaction_type: "BUY",
+                    transaction_type: position.quantity < 0 ? "BUY" : "SELL",
                     quantity: Math.abs(position.quantity),
                     order_type: "MARKET",
                     product: "MIS",
@@ -153,13 +153,13 @@ async function updateStopLossOrders() {
 const scheduleMISJobs = () => {
 
     const sellJob = schedule.scheduleJob(sellSch, () => {
-        setupSellOrdersFromSheet()
+        setupOrdersFromSheet()
         sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
     sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
     const closeNegativePositionsJob = schedule.scheduleJob(buySch, () => {
-        closeNegativePositions();
+        closePositions();
         sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
@@ -174,7 +174,7 @@ const scheduleMISJobs = () => {
 
 module.exports = {
     scheduleMISJobs,
-    setupSellOrdersFromSheet,
-    closeNegativePositions,
+    setupOrdersFromSheet,
+    closePositions,
     updateStopLossOrders,
 }

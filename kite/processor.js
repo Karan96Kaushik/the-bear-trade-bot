@@ -1,7 +1,7 @@
 const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrderLoc, processMISSheetData } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
-// const OrderLog = require('../models/OrderLog');
+const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 0
@@ -43,12 +43,15 @@ const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
 
-            // Log the order update
-            // await OrderLog.create({
-            //     orderId: order.order_id,
-            //     action: 'UPDATED',
-            //     orderDetails: order
-            // });
+            try {
+                await OrderLog.create({
+                    bear_status: 'COMPLETED',
+                    ...order
+                });
+            } catch (error) {
+                await sendMessageToChannel('❌ Error logging order', error?.message)
+                console.error('Error logging order', error)
+            }
 
             await sendMessageToChannel('📬 Order update', 
                 order.transaction_type, 
@@ -110,12 +113,15 @@ const processSuccessfulOrder = async (order) => {
                 else {
                     await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
                     
-                    // Log the order cancellation
-                    // await OrderLog.create({
-                    //     orderId: orders[0].order_id,
-                    //     action: 'CANCELLED',
-                    //     orderDetails: orders[0]
-                    // });
+                    try {
+                        await OrderLog.create({
+                            bear_status: 'CANCELLED',
+                            ...order,
+                        });
+                    } catch (error) {
+                        await sendMessageToChannel('❌ Error logging order', error?.message)
+                        console.error('Error logging order', error)
+                    }
 
                     await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
                 }
@@ -175,20 +181,27 @@ const createSellOrders = async (stock) => {
             await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
 
-        // Log the order placement
-        // await OrderLog.create({
-        //     orderId: orderResponse.order_id,
-        //     action: 'PLACED',
-        //     orderDetails: {
-        //         ...stock,
-        //         order_id: orderResponse.order_id,
-        //         ltp: ltp
-        //     }
-        // });
+        try {
+            await OrderLog.create({
+                bear_action: 'PLACED',
+                ...orderResponse
+            });
+        } catch (error) {
+            await sendMessageToChannel('❌ Error logging order', error?.message)
+            console.error('Error logging order', error)
+        }
+
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error placing SELL order', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
         console.error("🚨 Error placing SELL order: ", stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message);
+        await OrderLog.create({
+            bear_action: 'FAILED - PLACE',
+            tradingsymbol: stock.stockSymbol,
+            quantity: stock.quantity,
+            trigger_price: stock.sellPrice,
+            error: error?.message,
+        });
         throw error
     }
 }

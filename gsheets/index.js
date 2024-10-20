@@ -33,17 +33,22 @@ async function readSheetData(range=READ_RANGE) {
 }
 
 function processMISSheetData (stockData) {
-    return stockData.map(s => ({
+    let data = stockData.map(s => ({
         id: s[0], 
         stockSymbol: s[1], 
         sellPrice: s[2], 
         stopLossPrice: s[3],
         targetPrice: s[4], 
-        quantity: s[5], 
+        quantity: Number(s[5]), 
         lastAction: s[6],
         ignore: s[7],
         reviseSL: s[8],
     })).filter(s => s.stockSymbol)
+    return data.map(d => ({
+        ...d,
+        type: d.quantity < 0 ? 'SELL' : 'BUY',
+        quantity: Math.abs(d.quantity),
+    }))
 }
 
 async function bulkUpdateCells(updates) {
