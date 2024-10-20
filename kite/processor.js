@@ -13,7 +13,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol.trim(),
         transaction_type: "BUY",
-        quantity: Number(stock.quantity.trim()),
+        quantity: stock.quantity,
         order_type: "SL-M",    // Stop Loss Market
         product: "MIS",        // Intraday
         validity: "DAY",
@@ -27,7 +27,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol,
         transaction_type: "BUY",
-        quantity: Number(stock.quantity.trim()),
+        quantity: Math.abs(stock.quantity),
         order_type: "LIMIT",    // Stop Loss Market
         product: "MIS",        // Intraday
         validity: "DAY",
@@ -91,6 +91,8 @@ const processSuccessfulOrder = async (order) => {
                     stockData = processMISSheetData(stockData)
 
                     stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
+
+                    console.log('stock', stock)
 
                     if (stock.lastAction.includes('SELL')) {
                         await createBuyLimSLOrders(stock, order)
