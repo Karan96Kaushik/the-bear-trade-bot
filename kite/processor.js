@@ -159,7 +159,7 @@ const createOrders = async (stock) => {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol.trim(),
-                transaction_type: "SELL",
+                transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
                 order_type: "MARKET",
                 product: "MIS",
@@ -171,7 +171,7 @@ const createOrders = async (stock) => {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol.trim(),
-                transaction_type: "SELL",
+                transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
                 order_type: "SL-M",
                 trigger_price: Number(stock.sellPrice),

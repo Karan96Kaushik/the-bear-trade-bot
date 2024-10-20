@@ -6,7 +6,7 @@ const { sendMessageToChannel } = require('../slack-actions');
 jest.mock('../slack-actions');
 
 
-describe('closePositions', () => {
+describe('validations', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
