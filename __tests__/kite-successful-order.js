@@ -46,6 +46,7 @@ describe('scheduled orders', () => {
 			transaction_type: 'SELL',
 			quantity: 1,
 			order_type: 'MARKET',
+      average_price: 465,
 			product: 'MIS',
 			validity: 'DAY',
       status: 'COMPLETE'
@@ -88,7 +89,7 @@ describe('scheduled orders', () => {
 			transaction_type: 'BUY',
 			quantity: 1,
 			order_type: 'LIMIT',
-			price: 335,
+			average_price: 335,
 			product: 'MIS',
 			validity: 'DAY',
       status: 'COMPLETE'

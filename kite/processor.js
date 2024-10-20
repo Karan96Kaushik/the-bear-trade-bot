@@ -111,7 +111,7 @@ const processSuccessfulOrder = async (order) => {
                     },
                 ];
         
-                await bulkUpdateCells(updates)                
+                await bulkUpdateCells(updates)
             } catch (error) {
                 console.error(error)
                 await sendMessageToChannel('🛑 Error updating sheet!', error.message)
