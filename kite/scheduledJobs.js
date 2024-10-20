@@ -211,4 +211,5 @@ module.exports = {
     setupOrdersFromSheet,
     closePositions,
     updateStopLossOrders,
+    validateOrdersFromSheet
 }
