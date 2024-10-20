@@ -47,7 +47,7 @@ kiteSession.kc.placeOrder = async (...p) => {
 const run = async () => {
     await connectToDatabase()
     // await setupSellOrdersFromSheet()
-    const data = await readSheetData('MIS-D!A1:W100')
+    const data = await readSheetData('MIS-TEST!A1:W100')
     console.log(data)
 }
 

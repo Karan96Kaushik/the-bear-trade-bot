@@ -6,7 +6,8 @@
     "start": "nodemon index.js",
     "deployprod": "ssh the-bear -t \"cd the-bear-trade-bot && git stash && git pull && pm2 restart trade-bot && pm2 log\"",
     "test": "jest --no-watchman",
-    "test:kite-successful-order": "jest --no-watchman tests/kite-successful-order.js"
+    "test:kite-successful-order": "jest --no-watchman __tests__/kite-successful-order.js",
+    "test:close-negative": "jest --no-watchman __tests__/close-negative.js"
   },
   "author": "",
   "license": "ISC",

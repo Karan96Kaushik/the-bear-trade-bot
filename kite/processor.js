@@ -66,14 +66,14 @@ const processSuccessfulOrder = async (order) => {
             console.log('📬 Order update', order)
 
             try {
-                let stockData = await readSheetData('MIS-D!A1:W100')
+                let stockData = await readSheetData('MIS-TEST!A1:W100')
                 const rowHeaders = stockData.map(a => a[1])
                 const colHeaders = stockData[0]
                 const [row, col] = getStockLoc(order.tradingsymbol, 'Last Action', rowHeaders, colHeaders)
     
                 const updates = [
                     {
-                        range: 'MIS-D!' + numberToExcelColumn(col) + String(row), 
+                        range: 'MIS-TEST!' + numberToExcelColumn(col) + String(row), 
                         values: [[order.transaction_type + '-' + order.average_price]], 
                     },
                 ];
@@ -87,7 +87,7 @@ const processSuccessfulOrder = async (order) => {
             if (order.transaction_type == 'SELL') {
                 let stock = {}
                 try {
-                    let stockData = await readSheetData('MIS-D!A2:W100')
+                    let stockData = await readSheetData('MIS-TEST!A2:W100')
                     stockData = processMISSheetData(stockData)
 
                     stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
@@ -134,7 +134,7 @@ const processSuccessfulOrder = async (order) => {
     }
 }
 
-const createSellOrders = async (stock) => {
+const createOrders = async (stock) => {
     try {
         if (stock.ignore)
             return console.log('IGNORING', stock.stockSymbol)
@@ -208,5 +208,5 @@ const createSellOrders = async (stock) => {
 
 module.exports = {
     processSuccessfulOrder,
-    createSellOrders
+    createOrders
 }

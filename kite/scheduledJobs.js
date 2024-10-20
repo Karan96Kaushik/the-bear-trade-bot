@@ -4,7 +4,7 @@ const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo } = require('./utils');
-const { createSellOrders } = require('./processor');
+const { createOrders } = require('./processor');
 const { connectToDatabase } = require('../modules/db');
 // const OrderLog = require('../models/OrderLog');
 
@@ -23,16 +23,16 @@ const buySch = process.env.NODE_ENV === 'production' ?
 
 async function setupOrdersFromSheet() {
     try {
-        await sendMessageToChannel('⌛️ Executing MIS Sell Jobs')
+        await sendMessageToChannel('⌛️ Executing MIS Jobs')
     
-        let stockData = await readSheetData('MIS-D!A2:W100')
+        let stockData = await readSheetData('MIS-TEST!A2:W100')
         stockData = processMISSheetData(stockData)
     
         await kiteSession.authenticate()
     
         for (const stock of stockData) {
             try {
-                const orderResponse = await createSellOrders(stock)
+                const orderResponse = await createOrders(stock)
                 
                 // Log the order placement
                 // await OrderLog.create({
@@ -56,7 +56,7 @@ async function setupOrdersFromSheet() {
 
 async function closePositions() {
     try {
-        await sendMessageToChannel('⌛️ Executing Close Negative Positions Job');
+        await sendMessageToChannel('⌛️ Executing Close Positions Job');
 
         await kiteSession.authenticate();
 
@@ -92,7 +92,7 @@ async function updateStopLossOrders() {
 
         await kiteSession.authenticate();
 
-        let stockData = await readSheetData('MIS-D!A2:W100');
+        let stockData = await readSheetData('MIS-TEST!A2:W100');
         stockData = processMISSheetData(stockData);
 
         for (const stock of stockData) {
@@ -154,15 +154,15 @@ const scheduleMISJobs = () => {
 
     const sellJob = schedule.scheduleJob(sellSch, () => {
         setupOrdersFromSheet()
-        sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
+        sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
-    sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
+    sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
-    const closeNegativePositionsJob = schedule.scheduleJob(buySch, () => {
+    const closePositionsJob = schedule.scheduleJob(buySch, () => {
         closePositions();
-        sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+        sendMessageToChannel('⏰ MIS BUY Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
     });
-    sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
+    sendMessageToChannel('⏰ MIS BUY Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
     const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
