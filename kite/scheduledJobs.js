@@ -38,18 +38,18 @@ async function validateOrdersFromSheet() {
                 ltp = ltp[sym].last_price
                 let order_value = Math.abs(stock.quantity) * Number(ltp)
                 
-                if (Number(stock.sellPrice) > ltp) {
-                    await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
+                if (Number(stock.triggerPrice) > ltp) {
+                    await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
                     return
                 }
                 if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE) {
-                    await sendMessageToChannel(`🔔 Order value ${order_value} not within limits!`, stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
+                    await sendMessageToChannel(`🔔 Order value ${order_value} not within limits!`, stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
                     return
                 }
 
             } catch (error) {
                 console.error(error)
-                await sendMessageToChannel('🔕 Error validating', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
+                await sendMessageToChannel('🔕 Error validating', stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message)
             }
         }
     } catch (error) {
@@ -73,7 +73,7 @@ async function setupOrdersFromSheet() {
 
             } catch (error) {
                 console.error(error)
-                await sendMessageToChannel('🚨 Error running schedule sell jobs', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
+                await sendMessageToChannel('🚨 Error running schedule sell jobs', stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message)
             }
         }
     } catch (error) {

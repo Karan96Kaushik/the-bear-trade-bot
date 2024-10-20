@@ -149,13 +149,17 @@ const createOrders = async (stock) => {
         if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
             throw new Error(`Order value ${order_value} not within limits!`)
 
-        if (Number(stock.sellPrice) > ltp) {
-            await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.sellPrice, 'LTP: ', ltp)
+        if (stock.type == 'DOWN' && Number(stock.triggerPrice) > ltp) {
+            await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
+            return
+        }
+        if (stock.type == 'UP' && Number(stock.triggerPrice) < ltp) {
+            await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Trigger Price.', stock.stockSymbol, stock.quantity, "Trigger Price:", stock.triggerPrice, 'LTP: ', ltp)
             return
         }
 
         let orderResponse;
-        if (stock.sellPrice?.trim() == 'MKT') {
+        if (stock.triggerPrice?.trim() == 'MKT') {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol.trim(),
@@ -173,8 +177,11 @@ const createOrders = async (stock) => {
                 tradingsymbol: stock.stockSymbol.trim(),
                 transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
-                order_type: "SL-M",
-                trigger_price: Number(stock.sellPrice),
+                order_type: stock.type == "DOWN" ? "SL-M" : "LIMIT",
+                ...(stock.type == "DOWN" 
+                    ? { trigger_price: Number(stock.triggerPrice) }
+                    : { price: Number(stock.triggerPrice) }
+                ),
                 product: "MIS",
                 validity: "DAY",
             });
@@ -193,13 +200,13 @@ const createOrders = async (stock) => {
 
 
     } catch (error) {
-        await sendMessageToChannel('🚨 Error placing SELL order', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
-        console.error("🚨 Error placing SELL order: ", stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message);
+        await sendMessageToChannel('🚨 Error placing SELL order', stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message)
+        console.error("🚨 Error placing SELL order: ", stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message);
         await OrderLog.create({
             bear_action: 'FAILED - PLACE',
             tradingsymbol: stock.stockSymbol,
             quantity: stock.quantity,
-            trigger_price: stock.sellPrice,
+            trigger_price: stock.triggerPrice,
             error: error?.message,
         });
         throw error

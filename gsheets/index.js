@@ -36,7 +36,7 @@ function processMISSheetData (stockData) {
     let data = stockData.map(s => ({
         id: s[0], 
         stockSymbol: s[1], 
-        sellPrice: s[2], 
+        triggerPrice: s[2], 
         stopLossPrice: s[3],
         targetPrice: s[4], 
         quantity: Number(s[5]), 
@@ -102,7 +102,7 @@ async function appendRowToMISD(stock) {
     try {
         const newRowData = [
             stock.stockSymbol,
-            stock.sellPrice,
+            stock.triggerPrice,
             stock.stopLossPrice,
             stock.targetPrice,
             stock.quantity,
