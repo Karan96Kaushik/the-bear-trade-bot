@@ -33,16 +33,7 @@ async function setupOrdersFromSheet() {
         for (const stock of stockData) {
             try {
                 const orderResponse = await createOrders(stock)
-                
-                // Log the order placement
-                // await OrderLog.create({
-                //     orderId: orderResponse.order_id,
-                //     action: 'PLACED',
-                //     orderDetails: {
-                //         ...stock,
-                //         order_id: orderResponse.order_id
-                //     }
-                // });
+
             } catch (error) {
                 console.error(error)
                 await sendMessageToChannel('🚨 Error running schedule sell jobs', stock.stockSymbol, stock.quantity, stock.sellPrice, error?.message)
