@@ -8,17 +8,6 @@ const { createSellOrders } = require('./processor');
 const { connectToDatabase } = require('../modules/db');
 // const OrderLog = require('../models/OrderLog');
 
-const sellSch = process.env.NODE_ENV === 'production' ? 
-                    // '16 5 * * 1-5' : 
-                    '46 3 * * 1-5' : 
-                    '17 16 * * 1-5'
-
-const buySch = process.env.NODE_ENV === 'production' ? 
-                    // '50 10 * * 1-5' : 
-                    '49 9 * * 1-5' : 
-                    '17 16 * * 1-5'
-
-
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 0
 
@@ -189,13 +178,13 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sellJob = schedule.scheduleJob(sellSch, () => {
+    const sellJob = schedule.scheduleJob('46 3 * * 1-5', () => {
         setupSellOrdersFromSheet()
         sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
     sendMessageToChannel('⏰ MIS SELL Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
-    const closeNegativePositionsJob = schedule.scheduleJob(buySch, () => {
+    const closeNegativePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closeNegativePositions();
         sendMessageToChannel('⏰ MIS BUY Close Negative Positions Job Scheduled - ', getDateStringIND(closeNegativePositionsJob.nextInvocation()));
     });
@@ -210,7 +199,7 @@ const scheduleMISJobs = () => {
     // Schedule the new job to run every 15 minutes
     const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
         updateStopLossOrders();
-        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
+        sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
 }
