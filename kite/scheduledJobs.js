@@ -223,6 +223,5 @@ module.exports = {
     closePositions,
     updateStopLossOrders,
     validateOrdersFromSheet,
-    calculateHighestPrice,
     calculateExtremePrice,
 }
