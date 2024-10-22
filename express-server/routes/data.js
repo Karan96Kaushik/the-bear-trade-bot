@@ -5,6 +5,7 @@ const { getDataFromYahoo, searchUpstoxStocks, processYahooData } = require('../.
 const { kiteSession } = require('../../kite/setup');
 const { readSheetData, processMISSheetData } = require('../../gsheets');
 const FunctionHistory = require('../../models/FunctionHistory');
+const { addMovingAverage } = require('../../analytics');
 
 const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (process.env.NODE_ENV == 'production' ? 5.5 : 4.5);
 
@@ -39,6 +40,7 @@ router.get('/yahoo', async (req, res) => {
 		}
 
 		data = processYahooData(data)
+		data = addMovingAverage(data, 'close', 44, 'sma44')
 
 		res.json(data);
 	} catch (error) {

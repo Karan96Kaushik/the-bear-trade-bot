@@ -63,9 +63,31 @@ function checkDownwardTrend(df, i, tolerance) {
   );
 }
 
+/**
+ * Add moving average for a specified key to an array of objects
+ * @param {Array} data - Array of objects containing OHLCV data
+ * @param {string} key - The key for which to calculate the moving average
+ * @param {number} window - The window size for the moving average
+ * @param {string} newKey - The key to store the moving average results
+ * @returns {Array} The original array with the new moving average key added
+ */
+function addMovingAverage(data, key, window, newKey) {
+    return data.map((item, index, array) => {
+        const start = Math.max(0, index - window + 1);
+        const values = array.slice(start, index + 1).filter(i => !isNaN(i[key])).map(i => i[key]);
+        const average = values.reduce((sum, val) => sum + val, 0) / values.length;
+        
+        return {
+            ...item,
+            [newKey]: Number(average.toFixed(2))
+        };
+    });
+}
+
 module.exports = { 
     analyzeDataForTrends,
     calculateMovingAverage,
     checkUpwardTrend,
-    checkDownwardTrend
+    checkDownwardTrend,
+    addMovingAverage
 };
