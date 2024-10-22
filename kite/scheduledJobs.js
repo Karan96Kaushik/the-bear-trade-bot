@@ -10,7 +10,7 @@ const { connectToDatabase } = require('../modules/db');
 
 const sellSch = process.env.NODE_ENV === 'production' ? 
                     // '16 5 * * 1-5' : 
-                    '56 7 * * 1-5' : 
+                    '57 7 * * 1-5' : 
                     '17 16 * * 1-5'
 
 const buySch = process.env.NODE_ENV === 'production' ? 
