@@ -135,6 +135,7 @@ async function updateStopLossOrders() {
         let stockData = await readSheetData('MIS-TEST!A2:W100');
         stockData = processMISSheetData(stockData);
         const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
 
         // console.log(orders)
         // console.log(stockData)
@@ -144,6 +145,9 @@ async function updateStopLossOrders() {
 
             const sym = stock.stockSymbol;
             const isDown = stock.type === 'DOWN';
+
+            const position = positions.net.find(p => p.tradingsymbol === sym);
+            if (!position) continue;
 
             const existingOrder = orders.find(order => 
                 order.tradingsymbol === stock.stockSymbol && 
