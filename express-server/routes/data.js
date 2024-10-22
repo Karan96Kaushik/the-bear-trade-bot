@@ -97,14 +97,21 @@ router.get('/', async (req, res) => {
 
 router.post('/save-function', async (req, res) => {
 	try {
-		const { name, code } = req.body;
+		const { name, code, type } = req.body;
 		
-		if (!name || !code) {
-			return res.status(400).json({ message: 'Name and code are required' });
+		if (!name || !code || !type) {
+			return res.status(400).json({ message: 'Name, code and type are required' });
 		}
 
-		const functionHistory = new FunctionHistory({ name, code });
-		await functionHistory.save();
+		const existingFunction = await FunctionHistory.findOne({ name, type });
+		if (existingFunction) {
+			existingFunction.code = code;
+			existingFunction.type = type;
+			await existingFunction.save();
+		} else {
+			const functionHistory = new FunctionHistory({ name, code, type });
+			await functionHistory.save();
+		}
 
 		res.status(201).json({ message: 'Function saved successfully' });
 	} catch (error) {
