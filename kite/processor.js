@@ -244,11 +244,16 @@ const createOrders = async (stock) => {
                 tradingsymbol: stock.stockSymbol.trim(),
                 transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
-                order_type: stock.type == "DOWN" ? "SL-M" : "LIMIT",
-                ...(stock.type == "DOWN" 
-                    ? { trigger_price: Number(stock.triggerPrice) }
-                    : { price: Number(stock.triggerPrice) }
-                ),
+
+                order_type: "SL-M",
+                trigger_price: Number(stock.triggerPrice),
+
+                // order_type: stock.type == "DOWN" ? "SL-M" : "LIMIT",
+                // ...(stock.type == "DOWN" 
+                //     ? { trigger_price: Number(stock.triggerPrice) }
+                //     : { price: Number(stock.triggerPrice) }
+                // ),
+
                 product: "MIS",
                 validity: "DAY",
             });
