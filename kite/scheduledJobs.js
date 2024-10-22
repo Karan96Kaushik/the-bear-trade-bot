@@ -5,19 +5,7 @@ const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo } = require('./utils');
 const { createOrders } = require('./processor');
-const { connectToDatabase } = require('../modules/db');
 // const OrderLog = require('../models/OrderLog');
-
-const sellSch = process.env.NODE_ENV === 'production' ? 
-                    // '16 5 * * 1-5' : 
-                    '46 3 * * 1-5' : 
-                    '17 16 * * 1-5'
-
-const buySch = process.env.NODE_ENV === 'production' ? 
-                    // '50 10 * * 1-5' : 
-                    '49 9 * * 1-5' : 
-                    '17 16 * * 1-5'
-
 
 const MAX_ORDER_VALUE = 110000
 const MIN_ORDER_VALUE = 0
@@ -195,13 +183,13 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sellJob = schedule.scheduleJob(sellSch, () => {
+    const sellJob = schedule.scheduleJob('46 3 * * 1-5', () => {
         setupOrdersFromSheet()
         sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
     sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     
-    const closePositionsJob = schedule.scheduleJob(buySch, () => {
+    const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
         sendMessageToChannel('⏰ MIS BUY Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
     });

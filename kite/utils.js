@@ -152,9 +152,31 @@ async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
     }
 }
 
+/**
+ * Process Yahoo Finance data into an ordered array of OHLCV objects
+ * @param {Object} yahooData - The raw data from Yahoo Finance
+ * @returns {Array} An array of OHLCV objects
+ */
+function processYahooData(yahooData) {
+    const result = yahooData.chart.result[0];
+    const timestamps = result.timestamp;
+    const quote = result.indicators.quote[0];
+    
+    return timestamps.map((timestamp, index) => ({
+        time: timestamp * 1000,
+        // time: new Date(timestamp * 1000).toISOString(),
+        open: quote.open[index],
+        high: quote.high[index],
+        low: quote.low[index],
+        close: quote.close[index],
+        volume: quote.volume[index]
+    }));
+}
+
 module.exports = {
     getInstrumentToken,
     getDateStringIND,
     getDataFromYahoo,
-    searchUpstoxStocks
+    searchUpstoxStocks,
+    processYahooData
 };

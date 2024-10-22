@@ -1,7 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
-const { getDataFromYahoo, searchUpstoxStocks } = require('../../kite/utils'); // Assuming this module exists
+const { getDataFromYahoo, searchUpstoxStocks, processYahooData } = require('../../kite/utils'); // Assuming this module exists
 const { kiteSession } = require('../../kite/setup');
 const { readSheetData, processMISSheetData } = require('../../gsheets');
 const FunctionHistory = require('../../models/FunctionHistory');
@@ -27,17 +27,23 @@ router.get('/yahoo', async (req, res) => {
 			days = 2;
 		
 		const cacheKey = `${symbol}-${days}-${interval}-${startDate}-${endDate}`;
-		
+
+		let data
+
 		if (yahooDataCache.has(cacheKey)) {
-			return res.json(yahooDataCache.get(cacheKey));
+			data = yahooDataCache.get(cacheKey);
 		}
-		
-		const data = await getDataFromYahoo(symbol, days, interval, startDate, endDate);
-		yahooDataCache.set(cacheKey, data);
+		else {
+			data = await getDataFromYahoo(symbol, days, interval, startDate, endDate);
+			yahooDataCache.set(cacheKey, data);
+		}
+
+		data = processYahooData(data)
+
 		res.json(data);
 	} catch (error) {
 		console.error('Error fetching Yahoo Finance data:', error?.data || error);
-		res.status(500).json({ message: 'Server error' });
+		res.status(500).json({ message: ('Error fetching Yahoo Finance data:', error?.data || error) });
 	}
 });
 
