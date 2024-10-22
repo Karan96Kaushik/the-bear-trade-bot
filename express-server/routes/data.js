@@ -136,4 +136,25 @@ router.get('/functions', async (req, res) => {
 	}
 });
 
+router.post('/delete-function', async (req, res) => {
+	try {
+		const { _id } = req.body;
+		
+		if (!_id) {
+			return res.status(400).json({ message: 'Function _id is required' });
+		}
+
+		const result = await FunctionHistory.findByIdAndDelete(_id);
+
+		if (!result) {
+			return res.status(404).json({ message: 'Function not found' });
+		}
+
+		res.status(200).json({ message: 'Function deleted successfully' });
+	} catch (error) {
+		console.error('Error deleting function:', error);
+		res.status(500).json({ message: 'Server error' });
+	}
+});
+
 module.exports = router;
