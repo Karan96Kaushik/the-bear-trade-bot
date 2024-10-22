@@ -114,28 +114,16 @@ async function closePositions() {
     }
 }
 
-async function calculateHighestPrice(sym) {
+async function calculateExtremePrice(sym, type) {
     const data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
     const historicalData = data.chart.result[0].indicators.quote[0];
     const timestamps = data.chart.result[0].timestamp;
     // Extract the last 30 minutes of data
     const thirtyMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60;
-    const last30MinData = historicalData.high.slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
-    // console.log(last30MinData)
-    // Calculate the highest price in the last 30 minutes
-    return Math.max(...last30MinData);
-}
-
-async function calculateLowestPrice(sym) {
-    const data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
-    const historicalData = data.chart.result[0].indicators.quote[0];
-    const timestamps = data.chart.result[0].timestamp;
-    // Extract the last 30 minutes of data
-    const thirtyMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60;
-    const last30MinData = historicalData.low.slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
-    // console.log(last30MinData)
-    // Calculate the highest price in the last 30 minutes
-    return Math.min(...last30MinData);
+    const priceType = type === 'highest' ? 'high' : 'low';
+    const last30MinData = historicalData[priceType].slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
+    // Calculate the extreme price in the last 30 minutes
+    return type === 'highest' ? Math.max(...last30MinData) : Math.min(...last30MinData);
 }
 
 async function updateStopLossOrders() {
@@ -154,76 +142,43 @@ async function updateStopLossOrders() {
         for (const stock of stockData) {
             if (!stock.reviseSL) continue;
 
-            const sym = stock.stockSymbol;  // No need to append .NS here
+            const sym = stock.stockSymbol;
+            const isDown = stock.type === 'DOWN';
 
-            if (stock.type === 'DOWN') {
+            const existingOrder = orders.find(order => 
+                order.tradingsymbol === stock.stockSymbol && 
+                order.transaction_type === (isDown ? 'BUY' : 'SELL') && 
+                order.order_type === 'SL-M' &&
+                order.status === 'TRIGGER PENDING'
+            );
 
-                const existingOrder = orders.find(order => 
-                    order.tradingsymbol === stock.stockSymbol && 
-                    order.transaction_type === 'BUY' && 
-                    order.order_type === 'SL-M' &&
-                    order.status === 'TRIGGER PENDING'
-                );
+            if (!existingOrder) continue;
 
-                if (!existingOrder) continue
+            const newPrice = isDown 
+                ? await calculateExtremePrice(sym, 'highest')
+                : await calculateExtremePrice(sym, 'lowest');
 
-                const highestPrice = await calculateHighestPrice(sym);
-                // console.log(highestPrice, existingOrder.trigger_price)
+            const shouldUpdate = isDown 
+                ? newPrice < existingOrder.trigger_price
+                : newPrice > existingOrder.trigger_price;
 
-                if (highestPrice < existingOrder.trigger_price) {
-                    // Cancel the existing order
-                    await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
-    
-                    // Place a new order with updated stop loss
-                    await kiteSession.kc.placeOrder("regular", {
-                        exchange: "NSE",
-                        tradingsymbol: stock.stockSymbol.trim(),
-                        transaction_type: "BUY",
-                        quantity: Number(stock.quantity),
-                        order_type: "SL-M",
-                        trigger_price: highestPrice,
-                        product: "MIS",
-                        validity: "DAY",
-                        // guid: 'x' + stock.id,
-                    });
-    
-                    await sendMessageToChannel('🔄 Updated SL-M BUY order', stock.stockSymbol, stock.quantity, 'New trigger price:', highestPrice);
-                }
+            if (shouldUpdate) {
+                // Cancel the existing order
+                await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
 
-            }
-            else {
+                // Place a new order with updated stop loss
+                await kiteSession.kc.placeOrder("regular", {
+                    exchange: "NSE",
+                    tradingsymbol: stock.stockSymbol.trim(),
+                    transaction_type: isDown ? "BUY" : "SELL",
+                    quantity: Number(stock.quantity),
+                    order_type: "SL-M",
+                    trigger_price: newPrice,
+                    product: "MIS",
+                    validity: "DAY",
+                });
 
-                const existingOrder = orders.find(order => 
-                    order.tradingsymbol === stock.stockSymbol && 
-                    order.transaction_type === 'SELL' && 
-                    order.order_type === 'SL-M' &&
-                    order.status === 'TRIGGER PENDING'
-                );
-
-                if (!existingOrder) continue
-
-                const lowestPrice = await calculateLowestPrice(sym);
-                // console.log(lowestPrice, existingOrder.trigger_price)
-
-                if (lowestPrice > existingOrder.trigger_price) {
-                    // Cancel the existing order
-                    await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
-    
-                    // Place a new order with updated stop loss
-                    await kiteSession.kc.placeOrder("regular", {
-                        exchange: "NSE",
-                        tradingsymbol: stock.stockSymbol.trim(),
-                        transaction_type: "SELL",
-                        quantity: Number(stock.quantity),
-                        order_type: "SL-M",
-                        trigger_price: lowestPrice,
-                        product: "MIS",
-                        validity: "DAY",
-                        // guid: 'x' + stock.id,
-                    });
-    
-                    await sendMessageToChannel('🔄 Updated SL-M SELL order', stock.stockSymbol, stock.quantity, 'New trigger price:', highestPrice);
-                }
+                await sendMessageToChannel(`🔄 Updated SL-M ${isDown ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
             }
         }
 
@@ -269,4 +224,5 @@ module.exports = {
     updateStopLossOrders,
     validateOrdersFromSheet,
     calculateHighestPrice,
+    calculateExtremePrice,
 }
