@@ -7,7 +7,7 @@ const { getDateStringIND, getDataFromYahoo } = require('./utils');
 const { createOrders } = require('./processor');
 // const OrderLog = require('../models/OrderLog');
 
-const MAX_ORDER_VALUE = 110000
+const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 
 async function validateOrdersFromSheet() {
@@ -26,14 +26,20 @@ async function validateOrdersFromSheet() {
                 ltp = ltp[sym].last_price
                 let order_value = Math.abs(stock.quantity) * Number(ltp)
                 
-                if (Number(stock.triggerPrice) > ltp) {
+                if (stock.type === 'DOWN' && Number(stock.triggerPrice) > ltp) {
                     await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
-                    return
+                    continue
+                }
+                if (stock.type === 'UP' && Number(stock.triggerPrice) < ltp) {
+                    await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Buy Price.', stock.stockSymbol, stock.quantity, "Buy Price:", stock.triggerPrice, 'LTP: ', ltp)
+                    continue
                 }
                 if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE) {
-                    await sendMessageToChannel(`🔔 Order value ${order_value} not within limits!`, stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
-                    return
+                    await sendMessageToChannel(`🔔 Order value ${order_value} not within limits!`, stock.stockSymbol, stock.quantity, "Price:", stock.triggerPrice, 'LTP: ', ltp)
+                    continue
                 }
+
+                await sendMessageToChannel('✅ Validation passed', stock.stockSymbol, stock.quantity, stock.type, "Price:", stock.triggerPrice, 'LTP: ', ltp)
 
             } catch (error) {
                 console.error(error)
@@ -41,9 +47,8 @@ async function validateOrdersFromSheet() {
             }
         }
     } catch (error) {
-        await sendMessageToChannel('🚨 Error running schedule sell jobs', error?.message)
+        await sendMessageToChannel('🚨 Error running validation job', error?.message)
     }
-
 }
 
 async function setupOrdersFromSheet() {

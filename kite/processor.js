@@ -3,7 +3,7 @@ const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 const OrderLog = require('../models/OrderLog');
 
-const MAX_ORDER_VALUE = 110000
+const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 
 const createBuyLimSLOrders = async (stock, order) => {
@@ -208,7 +208,7 @@ const createOrders = async (stock) => {
 
         await kiteSession.authenticate()
 
-        const sym = `NSE:${stock.stockSymbol}`
+        const sym = `NSE:${stock.stockSymbol.toUpperCase()}`
         let ltp = await kiteSession.kc.getLTP([sym]);
         ltp = ltp[sym].last_price
         let order_value = Number(stock.quantity) * Number(ltp)
@@ -226,7 +226,7 @@ const createOrders = async (stock) => {
         }
 
         let orderResponse;
-        if (stock.triggerPrice?.trim() == 'MKT') {
+        if (stock.triggerPrice?.trim().toLowerCase() == 'mkt') {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol.trim(),
