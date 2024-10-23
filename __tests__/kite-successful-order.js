@@ -1,4 +1,4 @@
-const { readSheetData } = require('../gsheets');
+const { readSheetData, processMISSheetData } = require('../gsheets');
 const { processSuccessfulOrder } = require('../kite/processor');
 const { setupOrdersFromSheet } = require('../kite/scheduledJobs');
 const { kiteSession } = require('../kite/setup');
@@ -30,6 +30,8 @@ kiteSession.kc.placeOrder = async (...p) => {
 describe('scheduled orders', () => {
 	beforeAll(async () => {
 		await connectToDatabase();
+		let stockData = processMISSheetData(await readSheetData('MIS-TEST!A2:W100'))
+		console.log(stockData)
 	});
 	
 	beforeEach(() => {

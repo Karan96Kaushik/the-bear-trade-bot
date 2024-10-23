@@ -11,13 +11,13 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
-        tradingsymbol: stock.stockSymbol.trim(),
+        tradingsymbol: stock.stockSymbol,
         transaction_type: "BUY",
         quantity: stock.quantity,
         order_type: "SL-M",    // Stop Loss Market
         product: "MIS",        // Intraday
         validity: "DAY",
-        trigger_price: Number(stock.stopLossPrice.trim()),  // Stop-loss trigger price
+        trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
         // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
@@ -31,7 +31,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         order_type: "LIMIT",    // Stop Loss Market
         product: "MIS",        // Intraday
         validity: "DAY",
-        price: Number(stock.targetPrice.trim()),  // Stop-loss trigger price
+        price: Number(stock.targetPrice),  // Stop-loss trigger price
         // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
         // price: stock.targetPrice  // Stop-loss trigger price
     });
@@ -44,13 +44,13 @@ const createSellLimSLOrders = async (stock, order) => {
 
     await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
-        tradingsymbol: stock.stockSymbol.trim(),
+        tradingsymbol: stock.stockSymbol,
         transaction_type: "SELL",
         quantity: stock.quantity,
         order_type: "SL-M",    // Stop Loss Market
         product: "MIS",        // Intraday
         validity: "DAY",
-        trigger_price: Number(stock.stopLossPrice.trim()),  // Stop-loss trigger price
+        trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
         // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
@@ -64,7 +64,7 @@ const createSellLimSLOrders = async (stock, order) => {
         order_type: "LIMIT",    // Stop Loss Market
         product: "MIS",        // Intraday
         validity: "DAY",
-        price: Number(stock.targetPrice.trim()),  // Stop-loss trigger price
+        price: Number(stock.targetPrice),  // Stop-loss trigger price
         // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
         // price: stock.targetPrice  // Stop-loss trigger price
     });
@@ -120,7 +120,7 @@ const processSuccessfulOrder = async (order) => {
             let stockData = await readSheetData('MIS-TEST!A2:W100')
             stockData = processMISSheetData(stockData)
 
-            let stock = stockData.find(s => s.stockSymbol.trim() == order.tradingsymbol)
+            let stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
 
             if (order.transaction_type == 'SELL' && stock?.type == 'DOWN') {
                 try {
@@ -208,7 +208,7 @@ const createOrders = async (stock) => {
 
         await kiteSession.authenticate()
 
-        const sym = `NSE:${stock.stockSymbol.toUpperCase()}`
+        const sym = `NSE:${stock.stockSymbol}`
         let ltp = await kiteSession.kc.getLTP([sym]);
         ltp = ltp[sym].last_price
         let order_value = Number(stock.quantity) * Number(ltp)
@@ -226,10 +226,10 @@ const createOrders = async (stock) => {
         }
 
         let orderResponse;
-        if (stock.triggerPrice?.trim().toLowerCase() == 'mkt') {
+        if (stock.triggerPrice == 'mkt') {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
-                tradingsymbol: stock.stockSymbol.trim(),
+                tradingsymbol: stock.stockSymbol,
                 transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
                 order_type: "MARKET",
@@ -241,7 +241,7 @@ const createOrders = async (stock) => {
         else {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
-                tradingsymbol: stock.stockSymbol.trim(),
+                tradingsymbol: stock.stockSymbol,
                 transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
 

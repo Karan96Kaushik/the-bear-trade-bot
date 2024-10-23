@@ -166,7 +166,7 @@ async function updateStopLossOrders() {
                 // Place a new order with updated stop loss
                 await kiteSession.kc.placeOrder("regular", {
                     exchange: "NSE",
-                    tradingsymbol: stock.stockSymbol.trim(),
+                    tradingsymbol: stock.stockSymbol,
                     transaction_type: isDown ? "BUY" : "SELL",
                     quantity: Number(stock.quantity),
                     order_type: "SL-M",
