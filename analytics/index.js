@@ -1,3 +1,5 @@
+const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data } = require("../kite/utils");
+
 function analyzeDataForTrends(df, sym, tolerance = 0.01) {
   try {
     // Calculate moving averages
@@ -86,6 +88,7 @@ function addMovingAverage(data, key, window, newKey) {
 
 function checkMARising(df, window = 5) {
     const maValues = df.slice(-window).map(row => row['sma44']);
+    // console.log(maValues.map((value, index) => index === 0 || maValues[index - 1] < value));
     return maValues.every((value, index) => index === 0 || maValues[index - 1] < value);
 }
 
@@ -95,7 +98,6 @@ function checkCandleConditions(row, maValue, tolerance = 0.01) {
     const condition1 = close > open && Math.abs(close - open) / open < 0.05;
     const condition2 = close > (high + low) / 2;
     const condition3 = (Math.abs(maValue - low) < (maValue * tolerance)) || (maValue > low && maValue < high);
-
     return (condition1 || condition2) && condition3;
 }
 
@@ -110,29 +112,42 @@ function checkReverseCandleConditions(row, maValue, tolerance = 0.01) {
     const condition1 = close < open && Math.abs(close - open) / open < 0.05;
     const condition2 = close < (high + low) / 2;
     const condition3 = (Math.abs(maValue - high) < (maValue * tolerance)) || (maValue < high && maValue > low);
-
+    console.log(condition1, condition2, condition3)
     return (condition1 || condition2) && condition3;
 }
 
-async function scanIntradayStocks(stockList) {
+async function scanZaireStocks(stockList) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
+      try {
+
         const endDate = new Date();
-        endDate.setUTCHours(4, 1, 0, 0);
+        // endDate.setUTCHours(4, 0, 10, 0);
+        endDate.setUTCSeconds(10);
 
-        const df = await getDfFromYahoo(sym, 5, '15m', endDate);
+        const startDate = new Date(endDate);
+        startDate.setDate(startDate.getDate() - 5);
 
+        let df = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
+        df = processYahooData(df);
+        
         if (!df || df.length === 0) continue;
+        
+        df = addMovingAverage(df, 'close', 44, 'sma44');
+        df = df.filter(r => r.close);
 
-        df.forEach(row => row['sma44'] = calculateMovingAverage(df.map(r => r.close), 44));
-
-        if (!checkMARising(df)) continue;
+        const isRising = checkMARising(df) ? "UP" : checkMAFalling(df) ? "DOWN" : null;
+        if (!isRising) continue;
 
         const firstCandle = df[df.length - 1];
         const maValue = firstCandle['sma44'];
 
-        if (checkCandleConditions(firstCandle, maValue)) {
+        const conditionsMet = isRising 
+            ? checkCandleConditions(firstCandle, maValue)
+            : checkReverseCandleConditions(firstCandle, maValue);
+
+        if (conditionsMet) {
             selectedStocks.push({
                 sym,
                 open: firstCandle.open,
@@ -140,43 +155,13 @@ async function scanIntradayStocks(stockList) {
                 high: firstCandle.high,
                 low: firstCandle.low,
                 'sma44': maValue,
-                volume: firstCandle.volume
+                volume: firstCandle.volume,
+                direction: isRising
             });
         }
-    }
-
-    return selectedStocks;
-}
-
-async function scanReverseIntradayStocks(stockList) {
-    const selectedStocks = [];
-
-    for (const sym of stockList) {
-        const endDate = new Date();
-        endDate.setUTCHours(4, 0, 0, 0);
-
-        const df = await getDfFromYahoo(sym, 5, '15m', endDate);
-
-        if (!df || df.length === 0) continue;
-
-        df.forEach(row => row['sma44'] = calculateMovingAverage(df.map(r => r.close), 44));
-
-        if (!checkMAFalling(df)) continue;
-
-        const firstCandle = df[df.length - 1];
-        const maValue = firstCandle['sma44'];
-
-        if (checkReverseCandleConditions(firstCandle, maValue)) {
-            selectedStocks.push({
-                sym,
-                open: firstCandle.open,
-                close: firstCandle.close,
-                high: firstCandle.high,
-                low: firstCandle.low,
-                'sma44': maValue,
-                volume: firstCandle.volume
-            });
-        }
+      } catch (e) {
+        console.error(e?.response?.data, sym);
+      }
     }
 
     return selectedStocks;
@@ -192,6 +177,11 @@ module.exports = {
     checkCandleConditions,
     checkMAFalling,
     checkReverseCandleConditions,
-    scanIntradayStocks,
-    scanReverseIntradayStocks
+    scanZaireStocks
 };
+
+
+// getDhanNIFTY50Data().then(async (stocks) => {
+//   const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
+//   console.log(selectedStocks)
+// })

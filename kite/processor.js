@@ -2,9 +2,11 @@ const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrd
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 const OrderLog = require('../models/OrderLog');
+const { getDataFromYahoo, processYahooData } = require("./utils");
 
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
+const RISK_AMOUNT = 200;
 
 const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
@@ -201,6 +203,156 @@ const processSuccessfulOrder = async (order) => {
     }
 }
 
+async function createZaireOrders(stock) {
+    try {
+        await kiteSession.authenticate();
+
+        let buyTriggerPrice, sellTriggerPrice, limitPrice, quantity;
+
+        if (stock.direction === 'UP') {
+            buyTriggerPrice = stock.high * 1.0005;
+            sellTriggerPrice = stock.low;
+            limitPrice = (stock.high - stock.low) * 1.5 + buyTriggerPrice;
+            quantity = Math.floor(RISK_AMOUNT / (buyTriggerPrice - sellTriggerPrice));
+
+            // Place SL-M BUY order
+            await placeOrder("BUY", "SL-M", buyTriggerPrice, quantity, stock);
+
+            // Place SL-M SELL order
+            await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
+
+            // Place LIMIT SELL order
+            await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
+        } else if (stock.direction === 'DOWN') {
+            sellTriggerPrice = stock.high * 0.9995;
+            buyTriggerPrice = stock.low;
+            limitPrice = sellTriggerPrice - (stock.high - stock.low) * 1.5;
+            quantity = Math.floor(RISK_AMOUNT / (sellTriggerPrice - buyTriggerPrice));
+
+            // Place SL-M SELL order
+            await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
+
+            // Place SL-M BUY order
+            await placeOrder("BUY", "SL-M", buyTriggerPrice, quantity, stock);
+
+            // Place LIMIT BUY order
+            await placeOrder("BUY", "LIMIT", limitPrice, quantity, stock);
+        } else {
+            throw new Error(`Invalid direction: ${stock.direction}`);
+        }
+
+        // Log the orders
+        await OrderLog.create({
+            bear_action: 'PLACED',
+            tradingsymbol: stock.sym,
+            quantity: quantity,
+            zaire_direction: stock.direction,
+            zaire_buy_trigger: buyTriggerPrice,
+            zaire_sell_trigger: sellTriggerPrice,
+            zaire_limit: limitPrice,
+        });
+
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock.sym, error?.message);
+        console.error("🚨 Error running Zaire MIS Jobs: ", stock.sym, error?.message);
+        await OrderLog.create({
+            bear_action: 'FAILED - ZAIRE',
+            tradingsymbol: stock.sym,
+            error: error?.message,
+        });
+        throw error;
+    }
+}
+
+// Helper function to place orders
+async function placeOrder(transactionType, orderType, price, quantity, stock) {
+    const order = {
+        exchange: "NSE",
+        tradingsymbol: stock.sym,
+        transaction_type: transactionType,
+        quantity: quantity,
+        order_type: orderType,
+        product: "MIS",
+        validity: "DAY",
+    };
+
+    if (orderType === "SL-M") {
+        order.trigger_price = price;
+    } else if (orderType === "LIMIT") {
+        order.price = price;
+    }
+
+    await kiteSession.kc.placeOrder("regular", order);
+    await sendMessageToChannel(`✅ Zaire: Placed ${orderType} ${transactionType} order`, stock.sym, quantity, price);
+}
+
+async function createSpecialOrders(stock) {
+    const sym = `NSE:${stock}`;
+    const startTime = new Date().setHours(0, 0, 0, 0) / 1000;
+    const endTime = new Date() / 1000;
+    const data = await getDataFromYahoo(sym, 1, '1m', startTime, endTime);
+    let candles = processYahooData(data)
+
+    // Add moving average
+    candles = addMovingAverage(candles, 'close', 44, 'sma44');
+
+    // Get the 4:01 candle
+    const targetTime = new Date().setHours(16, 1, 0, 0) / 1000;
+    const firstCandleIndex = timestamps.findIndex(t => t >= targetTime);
+    const firstCandle = candles[firstCandleIndex];
+
+    if (!firstCandle) {
+        throw new Error('First candle not found');
+    }
+
+    // Check conditions
+    if (firstCandle.close <= firstCandle.open) {
+        throw new Error('First candle is not green');
+    }
+
+    const priceDifference = (firstCandle.close - firstCandle.open) / firstCandle.open;
+    if (priceDifference < 0.01 || priceDifference > 0.05) {
+        throw new Error('Price difference not between 1-5%');
+    }
+
+    if (firstCandle.low > firstCandle.sma44 || firstCandle.high < firstCandle.sma44 * 0.99) {
+        throw new Error('Candle not on or slightly above 44 MA');
+    }
+
+    // Calculate order details
+    const targetBuyPrice = firstCandle.high * 1.002;
+    const stopLossPrice = firstCandle.low;
+    const quantity = Math.floor(1000 / (firstCandle.high - firstCandle.low));
+    const targetSellPrice = (firstCandle.high - firstCandle.low) * 2 + targetBuyPrice;
+
+    // Place the order
+    const orderResponse = await kiteSession.kc.placeOrder("regular", {
+        exchange: "NSE",
+        tradingsymbol: stock.stockSymbol,
+        transaction_type: "BUY",
+        quantity: quantity,
+        order_type: "SL-M",
+        product: "MIS",
+        validity: "DAY",
+        trigger_price: targetBuyPrice,
+    });
+
+    await sendMessageToChannel('✅ Successfully placed Special SL-M BUY order', stock.stockSymbol, quantity, targetBuyPrice);
+
+    // Schedule order cancellation
+    const cancelTime = new Date().setHours(16, 16, 0, 0);
+    setTimeout(async () => {
+        try {
+            await kiteSession.kc.cancelOrder("regular", orderResponse.order_id);
+            await sendMessageToChannel('🚫 Cancelled unfilled Special BUY order', stock.stockSymbol);
+        } catch (error) {
+            console.error('Error cancelling order:', error);
+        }
+    }, cancelTime - Date.now());
+
+    return orderResponse;
+}
+
 const createOrders = async (stock) => {
     try {
         if (stock.ignore)
@@ -289,5 +441,7 @@ const createOrders = async (stock) => {
 
 module.exports = {
     processSuccessfulOrder,
-    createOrders
+    createOrders,
+    createSpecialOrders,
+    createZaireOrders
 }

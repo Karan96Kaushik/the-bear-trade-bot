@@ -31,6 +31,8 @@ const run = async () => {
 
 	initialize_slack(slack_app)
 	initialize_server(expressApp)
+
+	console.log("Connecting to database...")
 	await connectToDatabase();
 
 

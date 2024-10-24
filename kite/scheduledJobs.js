@@ -3,12 +3,61 @@ const { sendMessageToChannel } = require('../slack-actions');
 const { readSheetData, processMISSheetData } = require('../gsheets');
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
-const { getDateStringIND, getDataFromYahoo } = require('./utils');
-const { createOrders } = require('./processor');
+const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data } = require('./utils');
+const { createOrders, createSpecialOrders, createZaireOrders } = require('./processor');
+const { scanZaireStocks } = require('../analytics');
+
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
+
+async function setupZaireOrders() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Zaire MIS Jobs');
+
+        let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
+        niftyList = niftyList.map(stock => stock[0])
+
+        await kiteSession.authenticate();
+
+        const selectedStocks = await scanZaireStocks(niftyList);
+
+        for (const stock of selectedStocks) {
+            try {
+                const orderResponse = await createZaireOrders(stock);
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock, error?.message);
+            }
+        }
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', error?.message);
+    }
+}
+
+async function setupSpecialOrdersFromSheet() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Special MIS Jobs');
+    
+        let niftyList = await getDhanNIFTY50Data()
+
+        niftyList = niftyList.map(stock => stock.Sym)
+    
+        await kiteSession.authenticate();
+    
+        for (const stock of niftyList) {
+            try {
+                const orderResponse = await createSpecialOrders(stock);
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel('🚨 Error running special schedule jobs', stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message);
+            }
+        }
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running special schedule jobs', error?.message);
+    }
+}
 
 async function validateOrdersFromSheet() {
     try {
@@ -219,6 +268,18 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
+
+    // const specialJob = schedule.scheduleJob('1 16 * * 1-5', () => {
+    //     setupSpecialOrdersFromSheet();
+    //     sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
+    // });
+    // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
+
+    const zaireJob = schedule.scheduleJob('1,16 16 * * 1-5', () => {
+        sendMessageToChannel('⏰ Zaire MIS Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+        setupZaireOrders();
+    });
+    sendMessageToChannel('⏰ Zaire MIS Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 }
 
 module.exports = {
@@ -228,4 +289,6 @@ module.exports = {
     updateStopLossOrders,
     validateOrdersFromSheet,
     calculateExtremePrice,
-}
+    setupSpecialOrdersFromSheet,
+    createSpecialOrders,
+};
