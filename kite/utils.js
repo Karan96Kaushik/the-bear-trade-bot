@@ -173,10 +173,75 @@ function processYahooData(yahooData) {
     }));
 }
 
+/**
+ * Fetch stock data from Dhan API
+ * @param {Object} params - Parameters for the API request
+ * @param {number} [params.count=1000] - Number of records to fetch
+ * @param {number} [params.pgno=1] - Page number for pagination
+ * @returns {Promise<Object>} The stock data from Dhan API
+ */
+async function getDhanNIFTY50Data(params = {}) {
+    try {
+        const url = 'https://ow-scanx-analytics.dhan.co/customscan/fetchdt';
+        
+        const defaultData = {
+            sort: "Mcap",
+            sorder: "desc",
+            count: 1000,
+            params: [
+                { field: "idxlist.Indexid", op: "", val: "13" },
+                { field: "Exch", op: "", val: "NSE" },
+                { field: "OgInst", op: "", val: "ES" }
+            ],
+            fields: [
+                "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue", "Year1RevenueGrowth",
+                "NetProfitMargin", "YoYLastQtrlyProfitGrowth", "EBIDTAMargin", "volume",
+                "PricePerchng1year", "PricePerchng3year", "PricePerchng5year", "Ind_Pe",
+                "Pb", "DivYeild", "Eps", "DaySMA50CurrentCandle", "DaySMA200CurrentCandle",
+                "DayRSI14CurrentCandle", "ROCE", "Roe", "Sym", "PricePerchng1mon", "PricePerchng3mon"
+            ],
+            pgno: 1
+        };
+
+        const requestData = {
+            data: {
+                ...defaultData,
+                ...params
+            }
+        };
+
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Referer': 'https://dhan.co/',
+            'Content-Type': 'application/json; charset=UTF-8',
+            'Origin': 'https://dhan.co',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-site',
+            'Priority': 'u=4',
+            'TE': 'trailers'
+        };
+
+        const response = await axios.post(url, requestData, { headers });
+        return response.data?.data;
+    } catch (error) {
+        console.error(`Error fetching data from Dhan API:`, error?.response?.data);
+        throw error;
+    }
+}
+
+getDhanNIFTY50Data().then(console.log)
+// getDhanNIFTY50Data().then(a => console.log(Object.keys(a)))
+
 module.exports = {
     getInstrumentToken,
     getDateStringIND,
     getDataFromYahoo,
     searchUpstoxStocks,
-    processYahooData
+    processYahooData,
+    getDhanNIFTY50Data
 };
