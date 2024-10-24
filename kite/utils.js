@@ -234,9 +234,6 @@ async function getDhanNIFTY50Data(params = {}) {
     }
 }
 
-getDhanNIFTY50Data().then(console.log)
-// getDhanNIFTY50Data().then(a => console.log(Object.keys(a)))
-
 module.exports = {
     getInstrumentToken,
     getDateStringIND,
