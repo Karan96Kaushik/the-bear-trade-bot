@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const { sendMessageToChannel } = require('../slack-actions');
-const { readSheetData, processMISSheetData } = require('../gsheets');
+const { readSheetData, processMISSheetData, appendRowsToMISD } = require('../gsheets');
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data } = require('./utils');
@@ -23,14 +23,19 @@ async function setupZaireOrders() {
 
         const selectedStocks = await scanZaireStocks(niftyList);
 
+        const sheetEntries = []
+
         for (const stock of selectedStocks) {
             try {
-                const orderResponse = await createZaireOrders(stock);
+                let sheetEntry = await createZaireOrders(stock);
+                sheetEntries.push(sheetEntry)
             } catch (error) {
                 console.error(error);
                 await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock, error?.message);
             }
         }
+        await appendRowsToMISD(sheetEntries)
+
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', error?.message);
     }
@@ -184,6 +189,9 @@ async function updateStopLossOrders() {
 
         for (const stock of stockData) {
             if (!stock.reviseSL) continue;
+
+            // Only revise SL for stocks that have already been traded
+            if (!stock.lastAction) continue;
 
             const sym = stock.stockSymbol;
             const isDown = stock.type === 'DOWN';
