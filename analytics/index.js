@@ -189,7 +189,7 @@ module.exports = {
 };
 
 
-getDhanNIFTY50Data().then(async (stocks) => {
-  const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
-  console.log(selectedStocks)
-})
+// getDhanNIFTY50Data().then(async (stocks) => {
+//   const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
+//   console.log(selectedStocks)
+// })
