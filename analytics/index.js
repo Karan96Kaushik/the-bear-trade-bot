@@ -134,12 +134,24 @@ async function scanZaireStocks(stockList) {
 
         let df = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
         df = processYahooData(df);
-        df.pop()
 
-        // console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 1])
+
+        console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 1])
+        console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 2])
+        console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 3])
         // console.log(df[df.length - 1])
         // console.log(new Date(df[df.length - 1].time))
         
+
+        /*
+          Remove incomplete candles
+        */
+        df.pop()
+        // Confirm that the final candle will be for today only and then remve the additional incomplete one
+        if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
+            df.pop()
+        }
+
         if (!df || df.length === 0) continue;
         
         df = addMovingAverage(df, 'close', 44, 'sma44');
@@ -189,7 +201,7 @@ module.exports = {
 };
 
 
-// getDhanNIFTY50Data().then(async (stocks) => {
-//   const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
-//   console.log(selectedStocks)
-// })
+getDhanNIFTY50Data().then(async (stocks) => {
+  const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
+  console.log(selectedStocks)
+})
