@@ -123,14 +123,21 @@ async function scanZaireStocks(stockList) {
       try {
 
         const endDate = new Date();
-        // endDate.setUTCHours(4, 0, 10, 0);
+        // endDate.setUTCDate(endDate.getUTCDate() - 1);
+        // endDate.setUTCHours(4);
         endDate.setUTCSeconds(10);
+
+        // console.log(endDate)
 
         const startDate = new Date(endDate);
         startDate.setDate(startDate.getDate() - 5);
 
         let df = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
         df = processYahooData(df);
+
+        // console.log(df.map(r => ({...r, time: new Date(r.time)})))
+        // console.log(df[df.length - 1])
+        // console.log(new Date(df[df.length - 1].time))
         
         if (!df || df.length === 0) continue;
         
@@ -181,7 +188,7 @@ module.exports = {
 };
 
 
-// getDhanNIFTY50Data().then(async (stocks) => {
-//   const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
-//   console.log(selectedStocks)
-// })
+getDhanNIFTY50Data().then(async (stocks) => {
+  const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
+  console.log(selectedStocks)
+})
