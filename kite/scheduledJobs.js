@@ -204,9 +204,9 @@ async function updateStopLossOrders() {
                 ? await calculateExtremePrice(sym, 'highest')
                 : await calculateExtremePrice(sym, 'lowest');
             
-            if (isDown) {
-                newPrice = newPrice * 1.02
-            }
+            // if (isDown) {
+            //     newPrice = newPrice * 1.02
+            // }
             // else {
             //     newPrice = newPrice * 0.98
             // }
