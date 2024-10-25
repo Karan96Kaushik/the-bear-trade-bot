@@ -131,12 +131,12 @@ async function setupOrdersFromSheet() {
 
 async function closePositions() {
     try {
-        await sendMessageToChannel('⌛️ Executing Close [POSITIVE] Positions Job');
+        await sendMessageToChannel('⌛️ Executing Close Positions Job');
 
         await kiteSession.authenticate();
 
         const positions = await kiteSession.kc.getPositions();
-        const allPositions = positions.net.filter(position => position.quantity > 0);
+        const allPositions = positions.net //.filter(position => position.quantity > 0);
 
         for (const position of allPositions) {
             try {
