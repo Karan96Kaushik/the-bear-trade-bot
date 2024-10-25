@@ -134,8 +134,9 @@ async function scanZaireStocks(stockList) {
 
         let df = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
         df = processYahooData(df);
+        df.pop()
 
-        // console.log(df.map(r => ({...r, time: new Date(r.time)})))
+        // console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 1])
         // console.log(df[df.length - 1])
         // console.log(new Date(df[df.length - 1].time))
         
@@ -188,7 +189,7 @@ module.exports = {
 };
 
 
-// getDhanNIFTY50Data().then(async (stocks) => {
-//   const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
-//   console.log(selectedStocks)
-// })
+getDhanNIFTY50Data().then(async (stocks) => {
+  const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
+  console.log(selectedStocks)
+})
