@@ -213,7 +213,7 @@ async function createZaireOrders(stock) {
             buyTriggerPrice = stock.high * 1.0005;
             sellTriggerPrice = stock.low;
             limitPrice = (stock.high - stock.low) * 1.5 + buyTriggerPrice;
-            quantity = Math.floor(RISK_AMOUNT / (buyTriggerPrice - sellTriggerPrice));
+            quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
 
             // Place SL-M BUY order
             await placeOrder("BUY", "SL-M", buyTriggerPrice, quantity, stock);
@@ -227,7 +227,7 @@ async function createZaireOrders(stock) {
             sellTriggerPrice = stock.high * 0.9995;
             buyTriggerPrice = stock.low;
             limitPrice = sellTriggerPrice - (stock.high - stock.low) * 1.5;
-            quantity = Math.floor(RISK_AMOUNT / (sellTriggerPrice - buyTriggerPrice));
+            quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
 
             // Place SL-M SELL order
             await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
