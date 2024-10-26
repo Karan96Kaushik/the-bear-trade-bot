@@ -98,89 +98,64 @@ function numberToExcelColumn(n) {
     return column;
 }
 
-async function appendRowToMISD(stock) {
+async function appendRowsToMISD(stocks) {
     try {
-        const newRowData = [
-            stock.stockSymbol,
-            stock.triggerPrice,
-            stock.stopLossPrice,
-            stock.targetPrice,
-            stock.quantity,
-            stock.lastAction,
-            stock.ignore,
-            stock.reviseSL
-        ]
         // Read existing data to determine the last row and ID
         let existingData = await readSheetData('MIS-TEST!A2:W');
-        const lastRow = existingData.length + 2; // +2 because we start from A2
-        const lastRowData = existingData[existingData.length - 1]
-        existingData = processMISSheetData(existingData)
-        const newId = 'TMD' + (parseInt(lastRowData[0].split('TMD')[1]) + 1);
+        let lastRow = existingData.length + 2; // +2 because we start from A2
+        let lastId = parseInt(existingData[existingData.length - 1][0].split('TMD')[1]);
+        existingData = processMISSheetData(existingData);
 
-        const existingStock = existingData.find(d => d.quantity == stock.quantity && d.stockSymbol == stock.stockSymbol)
-        if (existingStock)
-            throw new Error('Stock already exists with the same quantity!')
-        
-        // Prepare the new row data with the generated ID
-        const rowToAppend = [newId.toString(), ...newRowData];
-        
-        // Append the new row
+        const rowsToAppend = [];
+
+        for (const stock of stocks) {
+            const newRowData = [
+                stock.stockSymbol,
+                stock.triggerPrice,
+                stock.stopLossPrice,
+                stock.targetPrice,
+                stock.quantity,
+                stock.lastAction,
+                stock.ignore,
+                stock.reviseSL
+            ];
+
+            const existingStock = existingData.find(d => d.quantity == stock.quantity && d.stockSymbol == stock.stockSymbol);
+            if (existingStock) {
+                console.warn(`Stock ${stock.stockSymbol} already exists with the same quantity. Skipping.`);
+                continue;
+            }
+
+            lastId++;
+            const newId = 'TMD' + lastId;
+            
+            // Prepare the new row data with the generated ID
+            rowsToAppend.push([newId.toString(), ...newRowData]);
+        }
+
+        if (rowsToAppend.length === 0) {
+            console.log('No new rows to append.');
+            return;
+        }
+
+        // Append the new rows
         const response = await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
             range: `MIS-TEST!A${lastRow}`,
             valueInputOption: 'USER_ENTERED',
             insertDataOption: 'INSERT_ROWS',
             resource: {
-                values: [rowToAppend]
+                values: rowsToAppend
             }
         });
         
-        console.log(`New row appended successfully. ID: ${newId}`);
+        console.log(`${rowsToAppend.length} new rows appended successfully.`);
         return response.data;
     } catch (error) {
-        console.error('Error appending row to MIS-TEST sheet:', error);
+        console.error('Error appending rows to MIS-TEST sheet:', error);
         throw error;
     }
 }
-
-if (false)
-readSheetData()
-    .then(async data => {
-        console.log('Sheet Data:', data);
-
-        const rowHeaders = data.map(a => a[0])
-        const colHeaders = data[0]
-
-        const b = getStockLoc('DCXINDIA', '19 Sep 24', rowHeaders, colHeaders)
-        let col1 = numberToExcelColumn(b.colPrice)
-        let col2 = numberToExcelColumn(b.colVol)
-        let c1 = String(col1) + String(b.row)
-        let c2 = String(col2) + String(b.row)
-        console.log(b, col1 + b.row, col2 + b.row, 'Test!' + c1, 'Test!' + c2)
-
-        const updates = [
-            {
-                range: 'Test!' + c1, 
-                values: [['Price']], 
-            },
-            {
-                range: 'Test!' + c2, 
-                values: [['Volume']], 
-            },
-        ];
-
-        bulkUpdateCells(updates)
-            .then(result => {
-                console.log('Update Result:', result);
-            })
-            .catch(err => {
-                console.error('Failed to update cells:', err);
-            });
-    })
-    .catch(err => {
-        console.error('Failed to read data:', err);
-    });
-
 
 module.exports = {
     bulkUpdateCells,
@@ -189,5 +164,5 @@ module.exports = {
     numberToExcelColumn,
     processMISSheetData,
     getOrderLoc,
-    appendRowToMISD
+    appendRowsToMISD
 }
