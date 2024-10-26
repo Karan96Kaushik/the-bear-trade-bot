@@ -168,15 +168,3 @@ module.exports = {
     getOrderLoc,
     appendRowsToMISD
 }
-
-
-appendRowsToMISD([{
-    stockSymbol: 'INFY',
-    triggerPrice: 1000,
-    stopLossPrice: 900,
-    targetPrice: 1100,
-    quantity: 100,
-    lastAction: 'BUY',
-    ignore: undefined,
-    reviseSL: '1',
-}])
