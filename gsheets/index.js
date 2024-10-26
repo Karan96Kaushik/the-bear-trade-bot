@@ -103,7 +103,7 @@ async function appendRowsToMISD(stocks) {
         // Read existing data to determine the last row and ID
         let existingData = await readSheetData('MIS-ALPHA!A2:W100');
         let lastRow = existingData.length + 2; // +2 because we start from A2
-        let lastId = parseInt(existingData[existingData.length - 1][0].split('TMD')[1]);
+        let lastId = parseInt(existingData[existingData.length - 1]?.[0]?.split('TMD')?.[1]);
         if (isNaN(lastId))
             lastId = 0
         existingData = processMISSheetData(existingData);
@@ -123,7 +123,7 @@ async function appendRowsToMISD(stocks) {
             ];
 
             const existingStock = existingData.find(d => d.quantity == stock.quantity && d.stockSymbol == stock.stockSymbol);
-            if (existingStock) {
+            if (existingStock && !existingStock.ignore) {
                 console.warn(`Stock ${stock.stockSymbol} already exists with the same quantity. Skipping.`);
                 continue;
             }
@@ -168,3 +168,15 @@ module.exports = {
     getOrderLoc,
     appendRowsToMISD
 }
+
+
+appendRowsToMISD([{
+    stockSymbol: 'INFY',
+    triggerPrice: 1000,
+    stopLossPrice: 900,
+    targetPrice: 1100,
+    quantity: 100,
+    lastAction: 'BUY',
+    ignore: undefined,
+    reviseSL: '1',
+}])

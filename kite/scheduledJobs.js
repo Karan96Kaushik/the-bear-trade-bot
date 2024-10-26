@@ -20,6 +20,8 @@ async function setupZaireOrders() {
         niftyList = niftyList.map(stock => stock[0])
 
         await kiteSession.authenticate();
+        const positions = await kiteSession.kc.getPositions();
+        const orders = await kiteSession.kc.getOrders();
 
         const selectedStocks = await scanZaireStocks(niftyList);
 
@@ -27,6 +29,13 @@ async function setupZaireOrders() {
 
         for (const stock of selectedStocks) {
             try {
+                // Skip if stock is already in position or open orders
+                if (
+                    positions.net.find(p => p.tradingsymbol === stock.stockSymbol) || 
+                    orders.find(o => o.tradingsymbol === stock.stockSymbol)
+                )
+                    continue
+
                 let sheetEntry = await createZaireOrders(stock);
                 sheetEntries.push(sheetEntry)
             } catch (error) {
