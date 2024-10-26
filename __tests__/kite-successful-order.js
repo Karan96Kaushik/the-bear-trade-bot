@@ -30,7 +30,7 @@ kiteSession.kc.placeOrder = async (...p) => {
 describe('scheduled orders', () => {
 	beforeAll(async () => {
 		await connectToDatabase();
-		let stockData = processMISSheetData(await readSheetData('MIS-TEST!A2:W100'))
+		let stockData = processMISSheetData(await readSheetData('MIS-ALPHA!A2:W100'))
 		console.log(stockData)
 	});
 	

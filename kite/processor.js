@@ -101,14 +101,14 @@ const processSuccessfulOrder = async (order) => {
             console.log('📬 Order update', order)
 
             try {
-                let stockData = await readSheetData('MIS-TEST!A1:W100')
+                let stockData = await readSheetData('MIS-ALPHA!A1:W100')
                 const rowHeaders = stockData.map(a => a[1])
                 const colHeaders = stockData[0]
                 const [row, col] = getStockLoc(order.tradingsymbol, 'Last Action', rowHeaders, colHeaders)
     
                 const updates = [
                     {
-                        range: 'MIS-TEST!' + numberToExcelColumn(col) + String(row), 
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
                         values: [[order.transaction_type + '-' + order.average_price]], 
                     },
                 ];
@@ -119,7 +119,7 @@ const processSuccessfulOrder = async (order) => {
                 await sendMessageToChannel('🛑 Error updating sheet!', error.message)
             }
 
-            let stockData = await readSheetData('MIS-TEST!A2:W100')
+            let stockData = await readSheetData('MIS-ALPHA!A2:W100')
             stockData = processMISSheetData(stockData)
 
             let stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)

@@ -101,9 +101,11 @@ function numberToExcelColumn(n) {
 async function appendRowsToMISD(stocks) {
     try {
         // Read existing data to determine the last row and ID
-        let existingData = await readSheetData('MIS-TEST!A2:W');
+        let existingData = await readSheetData('MIS-ALPHA!A2:W100');
         let lastRow = existingData.length + 2; // +2 because we start from A2
         let lastId = parseInt(existingData[existingData.length - 1][0].split('TMD')[1]);
+        if (isNaN(lastId))
+            lastId = 0
         existingData = processMISSheetData(existingData);
 
         const rowsToAppend = [];
@@ -141,7 +143,7 @@ async function appendRowsToMISD(stocks) {
         // Append the new rows
         const response = await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
-            range: `MIS-TEST!A${lastRow}`,
+            range: `MIS-ALPHA!A${lastRow}`,
             valueInputOption: 'USER_ENTERED',
             insertDataOption: 'INSERT_ROWS',
             resource: {
@@ -152,7 +154,7 @@ async function appendRowsToMISD(stocks) {
         console.log(`${rowsToAppend.length} new rows appended successfully.`);
         return response.data;
     } catch (error) {
-        console.error('Error appending rows to MIS-TEST sheet:', error);
+        console.error('Error appending rows to MIS-ALPHA sheet:', error);
         throw error;
     }
 }

@@ -68,7 +68,7 @@ async function validateOrdersFromSheet() {
     try {
         await sendMessageToChannel('⌛️ Executing Validation Job')
     
-        let stockData = await readSheetData('MIS-TEST!A2:W100')
+        let stockData = await readSheetData('MIS-ALPHA!A2:W100')
         stockData = processMISSheetData(stockData)
     
         await kiteSession.authenticate()
@@ -109,7 +109,7 @@ async function setupOrdersFromSheet() {
     try {
         await sendMessageToChannel('⌛️ Executing MIS Jobs')
     
-        let stockData = await readSheetData('MIS-TEST!A2:W100')
+        let stockData = await readSheetData('MIS-ALPHA!A2:W100')
         stockData = processMISSheetData(stockData)
     
         await kiteSession.authenticate()
@@ -179,7 +179,7 @@ async function updateStopLossOrders() {
 
         await kiteSession.authenticate();
 
-        let stockData = await readSheetData('MIS-TEST!A2:W100');
+        let stockData = await readSheetData('MIS-ALPHA!A2:W100');
         stockData = processMISSheetData(stockData);
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
