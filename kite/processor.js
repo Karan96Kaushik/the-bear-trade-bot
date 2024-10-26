@@ -207,40 +207,79 @@ async function createZaireOrders(stock) {
     try {
         await kiteSession.authenticate();
 
-        let buyTriggerPrice, sellTriggerPrice, limitPrice, quantity;
+        let triggerPrice, stopLossPrice, targetPrice, quantity;
+
+        const sheetEntry = {
+            stockSymbol: stock.sym,
+            reviseSL: true,
+            ignore: '',    // False
+        }
+
+        const sym = `NSE:${stock.stockSymbol}`
+        let ltp = await kiteSession.kc.getLTP([sym]);
+        ltp = ltp[sym].last_price
 
         if (stock.direction === 'UP') {
-            buyTriggerPrice = stock.high * 1.0005;
-            sellTriggerPrice = stock.low;
-            limitPrice = (stock.high - stock.low) * 1.5 + buyTriggerPrice;
-            quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
+            triggerPrice = stock.high * 1.0005;
+            stopLossPrice = stock.low;
+            targetPrice = ((stock.high - stock.low) * 2) + triggerPrice;
 
-            // Place SL-M BUY order
-            await placeOrder("BUY", "SL-M", buyTriggerPrice, quantity, stock);
+            // Round all values to 1 decimal place
+            triggerPrice = Math.round(triggerPrice * 10) / 10;
+            stopLossPrice = Math.round(stopLossPrice * 10) / 10;
+            targetPrice = Math.round(targetPrice * 10) / 10;
+
+            quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
+            if (quantity < 1)
+                quantity = 1
+
+            // Place SL-M BUY order at price higher than trigger price
+            if (ltp > triggerPrice)
+                await placeOrder('BUY', 'MARKET', null, quantity, stock)
+            else
+                await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock);
+
 
             // Place SL-M SELL order
-            await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
+            // await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
 
             // Place LIMIT SELL order
-            await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
+            // await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
         } else if (stock.direction === 'DOWN') {
-            sellTriggerPrice = stock.high * 0.9995;
-            buyTriggerPrice = stock.low;
-            limitPrice = sellTriggerPrice - (stock.high - stock.low) * 1.5;
-            quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
+            triggerPrice = stock.low * 0.9995;
+            stopLossPrice = stock.high;
+            targetPrice = ((stock.high - stock.low) * 2) + triggerPrice;
 
-            // Place SL-M SELL order
-            await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
+            // Round all values to 1 decimal place
+            triggerPrice = Math.round(triggerPrice * 10) / 10;
+            stopLossPrice = Math.round(stopLossPrice * 10) / 10;
+            targetPrice = Math.round(targetPrice * 10) / 10;
+
+            quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
+            if (quantity < 1)
+                quantity = 1
+
+            // Place SELL order at price lower than trigger price
+            if (ltp < triggerPrice)
+                await placeOrder('SELL', 'MARKET', null, quantity, stock)
+            else
+                await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock);
+
 
             // Place SL-M BUY order
-            await placeOrder("BUY", "SL-M", buyTriggerPrice, quantity, stock);
+            // await placeOrder("BUY", "SL-M", buyTriggerPrice, quantity, stock);
 
-            // Place LIMIT BUY order
-            await placeOrder("BUY", "LIMIT", limitPrice, quantity, stock);
+            // // Place LIMIT BUY order
+            // await placeOrder("BUY", "LIMIT", limitPrice, quantity, stock);
         } else {
             throw new Error(`Invalid direction: ${stock.direction}`);
         }
 
+        sheetEntry.quantity = quantity
+        sheetEntry.targetPrice = targetPrice
+        sheetEntry.stopLossPrice = stopLossPrice
+        sheetEntry.triggerPrice = triggerPrice
+        
         // Log the orders
         await OrderLog.create({
             bear_action: 'PLACED',
@@ -251,6 +290,8 @@ async function createZaireOrders(stock) {
             zaire_sell_trigger: sellTriggerPrice,
             zaire_limit: limitPrice,
         });
+
+        return sheetEntry
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock.sym, error?.message);
