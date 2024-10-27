@@ -215,7 +215,7 @@ async function createZaireOrders(stock) {
             ignore: '',    // False
         }
 
-        const sym = `NSE:${stock.stockSymbol}`
+        const sym = `NSE:${stock.sym}`
         let ltp = await kiteSession.kc.getLTP([sym]);
         ltp = ltp[sym].last_price
 

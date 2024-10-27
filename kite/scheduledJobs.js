@@ -37,13 +37,13 @@ async function setupZaireOrders() {
                     continue
 
                 let sheetEntry = await createZaireOrders(stock);
-                sheetEntries.push(sheetEntry)
+                // sheetEntries.push(sheetEntry)
+                await appendRowsToMISD([sheetEntry])
             } catch (error) {
                 console.error(error);
                 await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock, error?.message);
             }
         }
-        await appendRowsToMISD(sheetEntries)
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', error?.message);
@@ -292,7 +292,7 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
-    const zaireJob = schedule.scheduleJob('44 13 * * *', () => {
+    const zaireJob = schedule.scheduleJob('55 13 * * *', () => {
     // const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire MIS Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
