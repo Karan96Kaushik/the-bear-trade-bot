@@ -269,9 +269,9 @@ const scheduleMISJobs = () => {
     
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
-        sendMessageToChannel('⏰ MIS BUY Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
+        sendMessageToChannel('⏰ MIS Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
     });
-    sendMessageToChannel('⏰ MIS BUY Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
+    sendMessageToChannel('⏰ MIS Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
     const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
         validateOrdersFromSheet();
