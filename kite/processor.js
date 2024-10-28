@@ -398,7 +398,7 @@ const createOrders = async (stock) => {
     try {
         if (stock.ignore)
             return console.log('IGNORING', stock.stockSymbol)
-        if (stock.lastAction.length > 1)
+        if (stock.lastAction?.length > 1)
             return console.log('ACTION ALREADY PLACED', stock.stockSymbol, stock.lastAction)
 
         await kiteSession.authenticate()
