@@ -286,9 +286,9 @@ async function createZaireOrders(stock) {
             tradingsymbol: stock.sym,
             quantity: quantity,
             zaire_direction: stock.direction,
-            zaire_buy_trigger: buyTriggerPrice,
-            zaire_sell_trigger: sellTriggerPrice,
-            zaire_limit: limitPrice,
+            zaire_buy_trigger: triggerPrice,
+            zaire_sell_trigger: triggerPrice,
+            zaire_limit: targetPrice,
         });
 
         return sheetEntry
