@@ -263,7 +263,7 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sellJob = schedule.scheduleJob('46,42 3,4 * * 1-5', () => {
+    const sellJob = schedule.scheduleJob('46 3 * * 1-5', () => {
         setupOrdersFromSheet()
         sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
