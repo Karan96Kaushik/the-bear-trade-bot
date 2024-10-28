@@ -292,8 +292,8 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
-    const zaireJob = schedule.scheduleJob('11 4 * * *', () => {
-    // const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
+    // const zaireJob = schedule.scheduleJob('11 4 * * *', () => {
+    const zaireJob = schedule.scheduleJob('1,20 4 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire MIS Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
