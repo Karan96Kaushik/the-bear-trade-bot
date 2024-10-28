@@ -275,7 +275,7 @@ async function createZaireOrders(stock) {
             throw new Error(`Invalid direction: ${stock.direction}`);
         }
 
-        sheetEntry.quantity = quantity
+        sheetEntry.quantity = stock.direction == 'UP' ? quantity : -quantity
         sheetEntry.targetPrice = targetPrice
         sheetEntry.stopLossPrice = stopLossPrice
         sheetEntry.triggerPrice = triggerPrice

@@ -120,6 +120,8 @@ async function setupOrdersFromSheet() {
     
         let stockData = await readSheetData('MIS-ALPHA!A2:W100')
         stockData = processMISSheetData(stockData)
+
+        console.log(stockData)
     
         await kiteSession.authenticate()
     
@@ -261,7 +263,7 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sellJob = schedule.scheduleJob('46 3 * * 1-5', () => {
+    const sellJob = schedule.scheduleJob('46,36 3,4 * * 1-5', () => {
         setupOrdersFromSheet()
         sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sellJob.nextInvocation()))
     });
@@ -293,7 +295,7 @@ const scheduleMISJobs = () => {
     // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
     // const zaireJob = schedule.scheduleJob('11 4 * * *', () => {
-    const zaireJob = schedule.scheduleJob('1,20 4 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire MIS Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
