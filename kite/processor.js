@@ -8,10 +8,24 @@ const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 const RISK_AMOUNT = 200;
 
+// Add this helper function near the top of the file
+const logOrder = async (status, initiator, orderResponse) => {
+    try {
+        await OrderLog.create({
+            bear_status: status,
+            initiated_by: initiator,
+            ...orderResponse
+        });
+    } catch (error) {
+        await sendMessageToChannel(`❌ Error logging ${initiator}`, error?.message)
+        console.error(`Error logging ${initiator}`, error)
+    }
+}
+
 const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
-    await kiteSession.kc.placeOrder("regular", {
+    let orderResponse = await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol,
         transaction_type: "BUY",
@@ -24,8 +38,9 @@ const createBuyLimSLOrders = async (stock, order) => {
     });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
+    await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
-    await kiteSession.kc.placeOrder("regular", {
+    orderResponse = await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol,
         transaction_type: "BUY",
@@ -39,12 +54,13 @@ const createBuyLimSLOrders = async (stock, order) => {
     });
     await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
+    await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 }
 
 const createSellLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
-    await kiteSession.kc.placeOrder("regular", {
+    let orderResponse = await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol,
         transaction_type: "SELL",
@@ -57,8 +73,9 @@ const createSellLimSLOrders = async (stock, order) => {
     });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
+    await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
-    await kiteSession.kc.placeOrder("regular", {
+    orderResponse = await kiteSession.kc.placeOrder("regular", {
         exchange: "NSE",
         tradingsymbol: stock.stockSymbol,
         transaction_type: "SELL",
@@ -72,21 +89,14 @@ const createSellLimSLOrders = async (stock, order) => {
     });
     await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
+    await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 }
 
 const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
 
-            try {
-                await OrderLog.create({
-                    bear_status: 'COMPLETED',
-                    ...order
-                });
-            } catch (error) {
-                await sendMessageToChannel('❌ Error logging order', error?.message)
-                console.error('Error logging order', error)
-            }
+            await logOrder('COMPLETED', 'PROCESS SUCCESS', order)
 
             await sendMessageToChannel('📬 Order update', 
                 order.transaction_type, 
@@ -157,15 +167,7 @@ const processSuccessfulOrder = async (order) => {
                 else {
                     await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
                     
-                    try {
-                        await OrderLog.create({
-                            bear_status: 'CANCELLED',
-                            ...order,
-                        });
-                    } catch (error) {
-                        await sendMessageToChannel('❌ Error logging order', error?.message)
-                        console.error('Error logging order', error)
-                    }
+                    await logOrder('CANCELLED', 'PROCESS SUCCESS', order)
 
                     await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
                 }
@@ -182,15 +184,7 @@ const processSuccessfulOrder = async (order) => {
                 else {
                     await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
                     
-                    try {
-                        await OrderLog.create({
-                            bear_status: 'CANCELLED',
-                            ...order,
-                        });
-                    } catch (error) {
-                        await sendMessageToChannel('❌ Error logging order', error?.message)
-                        console.error('Error logging order', error)
-                    }
+                    await logOrder('CANCELLED', 'PROCESS SUCCESS', order)
 
                     await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
                 }
@@ -207,7 +201,7 @@ async function createZaireOrders(stock) {
     try {
         await kiteSession.authenticate();
 
-        let triggerPrice, stopLossPrice, targetPrice, quantity;
+        let triggerPrice, stopLossPrice, targetPrice, quantity, orderResponse;
 
         const sheetEntry = {
             stockSymbol: stock.sym,
@@ -235,9 +229,9 @@ async function createZaireOrders(stock) {
 
             // Place SL-M BUY order at price higher than trigger price
             if (ltp > triggerPrice)
-                await placeOrder('BUY', 'MARKET', null, quantity, stock)
+                orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock)
             else
-                await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock);
+                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock);
 
 
             // Place SL-M SELL order
@@ -261,9 +255,9 @@ async function createZaireOrders(stock) {
 
             // Place SELL order at price lower than trigger price
             if (ltp < triggerPrice)
-                await placeOrder('SELL', 'MARKET', null, quantity, stock)
+                orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock)
             else
-                await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock);
+                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock);
 
 
             // Place SL-M BUY order
@@ -280,28 +274,15 @@ async function createZaireOrders(stock) {
         sheetEntry.stopLossPrice = stopLossPrice
         sheetEntry.triggerPrice = triggerPrice
         
-        // Log the orders
-        await OrderLog.create({
-            bear_action: 'PLACED',
-            tradingsymbol: stock.sym,
-            quantity: quantity,
-            zaire_direction: stock.direction,
-            zaire_buy_trigger: triggerPrice,
-            zaire_sell_trigger: triggerPrice,
-            zaire_limit: targetPrice,
-        });
+        await logOrder('PLACED', 'ZAIRE', orderResponse)
 
         return sheetEntry
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock.sym, error?.message);
         console.error("🚨 Error running Zaire MIS Jobs: ", stock.sym, error?.message);
-        await OrderLog.create({
-            bear_action: 'FAILED - ZAIRE',
-            tradingsymbol: stock.sym,
-            error: error?.message,
-        });
-        throw error;
+        await logOrder('FAILED - PLACE', 'ZAIRE', {tradingsymbol: stock.sym, error: error?.message, ...stock})
+        // throw error;
     }
 }
 
@@ -323,8 +304,10 @@ async function placeOrder(transactionType, orderType, price, quantity, stock) {
         order.price = price;
     }
 
-    await kiteSession.kc.placeOrder("regular", order);
+    const orderResponse = await kiteSession.kc.placeOrder("regular", order);
     await sendMessageToChannel(`✅ Zaire: Placed ${orderType} ${transactionType} order`, stock.sym, quantity, price);
+
+    return orderResponse
 }
 
 async function createSpecialOrders(stock) {
@@ -379,6 +362,8 @@ async function createSpecialOrders(stock) {
     });
 
     await sendMessageToChannel('✅ Successfully placed Special SL-M BUY order', stock.stockSymbol, quantity, targetBuyPrice);
+
+    await logOrder('PLACED', 'SPECIAL', orderResponse)
 
     // Schedule order cancellation
     const cancelTime = new Date().setHours(16, 16, 0, 0);
@@ -455,28 +440,12 @@ const createOrders = async (stock) => {
             await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
 
-        try {
-            await OrderLog.create({
-                bear_action: 'PLACED',
-                ...orderResponse
-            });
-        } catch (error) {
-            await sendMessageToChannel('❌ Error logging order', error?.message)
-            console.error('Error logging order', error)
-        }
-
+        await logOrder('PLACED', 'SHEET', orderResponse)
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error placing SELL order', stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message)
         console.error("🚨 Error placing SELL order: ", stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message);
-        await OrderLog.create({
-            bear_action: 'FAILED - PLACE',
-            tradingsymbol: stock.stockSymbol,
-            quantity: stock.quantity,
-            trigger_price: stock.triggerPrice,
-            error: error?.message,
-        });
-        throw error
+        await logOrder('FAILED - PLACE', 'SHEET', {tradingsymbol: stock.stockSymbol, quantity: stock.quantity, trigger_price: stock.triggerPrice, error: error?.message})
     }
 }
 

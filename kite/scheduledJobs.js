@@ -121,10 +121,15 @@ async function setupOrdersFromSheet() {
         let stockData = await readSheetData('MIS-ALPHA!A2:W100')
         stockData = processMISSheetData(stockData)
 
+        const orders = await kiteSession.kc.getOrders();
+
         await kiteSession.authenticate()
     
         for (const stock of stockData) {
             try {
+                if ( orders.find(o => o.tradingsymbol === stock.stockSymbol) )
+                    continue
+
                 const orderResponse = await createOrders(stock)
 
             } catch (error) {
