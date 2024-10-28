@@ -150,7 +150,7 @@ async function closePositions() {
         await kiteSession.authenticate();
 
         const positions = await kiteSession.kc.getPositions();
-        const allPositions = positions.net //.filter(position => position.quantity > 0);
+        const allPositions = positions.net.filter(position => (position.quantity || 0) != 0);
 
         for (const position of allPositions) {
             try {
