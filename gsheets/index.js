@@ -70,10 +70,14 @@ async function bulkUpdateCells(updates) {
 }
 
 function getStockLoc(stock, column, rowHeaders, colHeaders) {
-    const row = rowHeaders.indexOf(stock) + 1;
+    let row = rowHeaders.indexOf(stock) + 1;
     const col = colHeaders.indexOf(column);
-    if (row < 1)
+    if (row < 1) {
+        row = rowHeaders.indexOf(stock.toLowerCase()) + 1;
+    }
+    if (row < 1) {
         throw new Error('Stock not found in sheet!')
+    }
     // const colPrice = col;
     // const colVol = col + 1; // Next column for volume
     return [row, col];
