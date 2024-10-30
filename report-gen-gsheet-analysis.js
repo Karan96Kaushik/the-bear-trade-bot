@@ -16,34 +16,43 @@ async function getDailyStats() {
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        let startTime = new Date().setDate(20);
-        let endTime = new Date().setUTCHours(4, 0, 10, 0);
-
+        let startTime = new Date('2024-10-20').setUTCHours(4, 0, 10, 0);
+        let endTime = new Date('2024-10-30').setUTCHours(4, 0, 10, 0);
+        console.log(endTime)
         const interval = '15m'
 
-        const rows = [['Data ' + interval + ' ' + endTime.toLocaleString()]];
+        const rows = [['Data ' + interval + ' ' + (new Date(endTime).toISOString().split('T')[0])]];
 
         for (const stock of niftyList) {
             try {
+
                 // startTime = new Date().setUTCHours(4, 0, 10, 0) / 1000;
                 // endTime = new Date() / 1000;
 
                 // const sym = `NSE:${stock}`;
                 // Get 1-minute candles for today
+
                 const data = await getDataFromYahoo(stock, 1, interval, startTime, endTime);
                 let candles = processYahooData(data);
 
+                let startTimeDay = new Date('2024-10-30').setUTCHours(0, 0, 10, 0);
+                let endTimeDay = new Date('2024-10-30').setUTCHours(23, 0, 10, 0);
+
+                const dataDay = await getDataFromYahoo(stock, 1, '1d', startTimeDay, endTimeDay);
+                let candlesDay = processYahooData(dataDay);
+
                 // console.log(candles[candles.length - 2])
-                console.log(new Date(candles[candles.length - 2].time).toLocaleString())
+                console.log(new Date(candles[candles.length - 2].time))
                 // return
                 // Calculate SMA44
 
                 candles = addMovingAverage(candles, 'close', 44, 'sma44');
 
                 const { high, low, open, close, sma44 } = candles[candles.length - 2]
+                const { high: highDay, low: lowDay, open: openDay, close: closeDay } = candlesDay[0]
 
                 // Calculate continuous MA trend
-                const maTrend = calculateMATrend(candles, sma44);
+                const [maTrend, count] = calculateMATrend(candles, sma44).split(' ');
 
                 rows.push([
                     stock,          // Stock
@@ -51,8 +60,12 @@ async function getDailyStats() {
                     low,            // L
                     open,           // O
                     close,          // C
+                    highDay,        // H
+                    lowDay,         // L
+
                     sma44,        // SMA44
-                    maTrend         // Continuous Up/Down MA
+                    maTrend,      // Continuous Up/Down MA
+                    count         // Count
                 ]);
 
             } catch (error) {
