@@ -141,21 +141,13 @@ async function scanZaireStocks(stockList) {
       try {
 
         const endDate = new Date();
-        // endDate.setUTCDate(endDate.getUTCDate() - 1);
-        // endDate.setUTCHours(4);
         endDate.setUTCSeconds(10);
 
-        // console.log(endDate)
-
         const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - 5);
+        startDate.setDate(startDate.getDate() - 6);
 
         let df = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
         df = processYahooData(df);
-
-        // console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 1])
-        // console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 2])
-        // console.log(df.map(r => ({...r, time: new Date(r.time)}))[df.length - 3])
 
         /*
           Remove incomplete candles
