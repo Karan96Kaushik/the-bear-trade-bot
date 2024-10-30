@@ -21,7 +21,7 @@ async function getDailyStats() {
         console.log(endTime)
         const interval = '15m'
 
-        const rows = [['Data ' + interval + ' ' + (new Date(endTime).toISOString().split('T')[0])]];
+        const rows = [['' + interval + ' - ' + new Date(endTime).toDateString()]];
 
         for (const stock of niftyList) {
             try {
@@ -41,8 +41,10 @@ async function getDailyStats() {
                 const dataDay = await getDataFromYahoo(stock, 1, '1d', startTimeDay, endTimeDay);
                 let candlesDay = processYahooData(dataDay);
 
+                // console.log(candlesDay, new Date(candlesDay[0].time))
+
                 // console.log(candles[candles.length - 2])
-                console.log(new Date(candles[candles.length - 2].time))
+                // console.log(new Date(candles[candles.length - 2].time))
                 // return
                 // Calculate SMA44
 
