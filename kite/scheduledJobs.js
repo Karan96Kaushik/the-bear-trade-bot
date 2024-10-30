@@ -38,7 +38,7 @@ async function setupZaireOrders() {
 
                 let sheetEntry = await createZaireOrders(stock);
                 // sheetEntries.push(sheetEntry)
-                await appendRowsToMISD([sheetEntry])
+                // await appendRowsToMISD([sheetEntry])
             } catch (error) {
                 console.error(error);
                 await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock, error?.message);

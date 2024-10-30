@@ -1,4 +1,4 @@
-const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrderLoc, processMISSheetData } = require("../gsheets")
+const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrderLoc, processMISSheetData, appendRowsToMISD } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 const OrderLog = require('../models/OrderLog');
@@ -227,6 +227,13 @@ async function createZaireOrders(stock) {
             if (quantity < 1)
                 quantity = 1
 
+            sheetEntry.quantity = stock.direction == 'UP' ? quantity : -quantity
+            sheetEntry.targetPrice = targetPrice
+            sheetEntry.stopLossPrice = stopLossPrice
+            sheetEntry.triggerPrice = triggerPrice
+
+            await appendRowsToMISD([sheetEntry])
+        
             // Place SL-M BUY order at price higher than trigger price
             if (ltp > triggerPrice)
                 orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock)
@@ -253,6 +260,13 @@ async function createZaireOrders(stock) {
             if (quantity < 1)
                 quantity = 1
 
+            sheetEntry.quantity = stock.direction == 'UP' ? quantity : -quantity
+            sheetEntry.targetPrice = targetPrice
+            sheetEntry.stopLossPrice = stopLossPrice
+            sheetEntry.triggerPrice = triggerPrice
+
+            await appendRowsToMISD([sheetEntry])
+
             // Place SELL order at price lower than trigger price
             if (ltp < triggerPrice)
                 orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock)
@@ -268,11 +282,6 @@ async function createZaireOrders(stock) {
         } else {
             throw new Error(`Invalid direction: ${stock.direction}`);
         }
-
-        sheetEntry.quantity = stock.direction == 'UP' ? quantity : -quantity
-        sheetEntry.targetPrice = targetPrice
-        sheetEntry.stopLossPrice = stopLossPrice
-        sheetEntry.triggerPrice = triggerPrice
         
         await logOrder('PLACED', 'ZAIRE', orderResponse)
 
