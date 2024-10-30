@@ -61,16 +61,25 @@ function checkUpwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
   );
 }
 
-function checkDownwardTrend(df, i, tolerance) {
+function checkDownwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
+  // Check that we have enough data points
+  if (i < 20) return false;
+  
+  // Check 20 consecutive decreases in SMA44
+  for (let j = 0; j < 19; j++) {
+    if (df[i-j-1]['sma44'] <= df[i-j]['sma44']) {
+      return false;
+    }
+  }
+
   return (
-    df[i-1]['sma44'] > df[i]['sma44'] &&
-    df[i-2]['sma44'] > df[i-1]['sma44'] &&
-    df[i-3]['sma44'] > df[i-2]['sma44'] &&
-    df[i-4]['sma44'] > df[i-3]['sma44'] &&
     (Math.abs(df[i]['sma44'] - df[i]['high']) < (df[i]['sma44'] * tolerance) ||
      (df[i]['sma44'] > df[i]['low'] && df[i]['sma44'] < df[i]['high'])) &&
+
+    // Bearish Candle or Doji
     (df[i]['close'] < df[i]['open'] ||
-     (df[i]['high'] - df[i]['close']) > (df[i]['close'] - df[i]['low']))
+     (df[i]['high'] - df[i]['close']) > (df[i]['close'] - df[i]['low']) ||
+     Math.abs(df[i]['close'] - ((df[i]['high'] + df[i]['low']) / 2)) < ((df[i]['high'] + df[i]['low']) / 2) * doji_tolerance) // Doji condition
   );
 }
 
