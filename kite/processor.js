@@ -214,8 +214,11 @@ async function createZaireOrders(stock) {
         ltp = ltp[sym].last_price
 
         if (stock.direction === 'UP') {
+            // Trigger price is 0.05% above high
             triggerPrice = stock.high * 1.0005;
+            // Stop loss is low
             stopLossPrice = stock.low;
+            // Target price is double the difference between high and low plus trigger price
             targetPrice = ((stock.high - stock.low) * 2) + triggerPrice;
 
             // Round all values to 1 decimal place
@@ -223,6 +226,7 @@ async function createZaireOrders(stock) {
             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
             targetPrice = Math.round(targetPrice * 10) / 10;
 
+            // Quantity is risk amount divided by difference between high and low
             quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
             if (quantity < 1)
                 quantity = 1
@@ -233,10 +237,16 @@ async function createZaireOrders(stock) {
             sheetEntry.triggerPrice = triggerPrice
 
             await appendRowsToMISD([sheetEntry])
+
+            let targetGain = targetPrice - triggerPrice
         
             // Place SL-M BUY order at price higher than trigger price
-            if (ltp > triggerPrice)
-                orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock)
+            if (ltp > triggerPrice) {
+                if ((targetPrice - ltp) / targetGain > 0.8)
+                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock)
+                else
+                    return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
+            }
             else
                 orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock);
 
@@ -247,15 +257,19 @@ async function createZaireOrders(stock) {
             // Place LIMIT SELL order
             // await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
         } else if (stock.direction === 'DOWN') {
+            // Trigger price is 0.05% below low 
             triggerPrice = stock.low * 0.9995;
+            // Stop loss is high
             stopLossPrice = stock.high;
-            targetPrice = ((stock.high - stock.low) * 2) + triggerPrice;
+            // Target price is double the difference between trigger price and low
+            targetPrice = ((triggerPrice - (stock.high - stock.low)) * 2);
 
             // Round all values to 1 decimal place
             triggerPrice = Math.round(triggerPrice * 10) / 10;
             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
             targetPrice = Math.round(targetPrice * 10) / 10;
 
+            // Quantity is risk amount divided by difference between high and low
             quantity = Math.floor(RISK_AMOUNT / (stock.high - stock.low));
             if (quantity < 1)
                 quantity = 1
@@ -267,11 +281,18 @@ async function createZaireOrders(stock) {
 
             await appendRowsToMISD([sheetEntry])
 
+            let targetGain = triggerPrice - targetPrice
+            
             // Place SELL order at price lower than trigger price
-            if (ltp < triggerPrice)
-                orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock)
-            else
+            if (ltp < triggerPrice) {
+                if ((ltp - targetPrice) / targetGain > 0.8)
+                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock)
+                else
+                    return sendMessageToChannel('🔔 Zaire: SELL order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
+            }
+            else {
                 orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock);
+            }
 
 
             // Place SL-M BUY order
