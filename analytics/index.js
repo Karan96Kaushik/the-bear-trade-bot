@@ -40,11 +40,17 @@ function calculateMovingAverage(data, window) {
 }
 
 function checkUpwardTrend(df, i, tolerance) {
+  // Check that we have enough data points
+  if (i < 20) return false;
+  
+  // Check 20 consecutive increases in SMA44
+  for (let j = 0; j < 19; j++) {
+    if (df[i-j-1]['sma44'] >= df[i-j]['sma44']) {
+      return false;
+    }
+  }
+
   return (
-    df[i-1]['sma44'] < df[i]['sma44'] &&
-    df[i-2]['sma44'] < df[i-1]['sma44'] &&
-    df[i-3]['sma44'] < df[i-2]['sma44'] &&
-    df[i-4]['sma44'] < df[i-3]['sma44'] &&
     (Math.abs(df[i]['sma44'] - df[i]['low']) < (df[i]['sma44'] * tolerance) ||
      (df[i]['sma44'] > df[i]['low'] && df[i]['sma44'] < df[i]['high'])) &&
     (df[i]['close'] > df[i]['open'] ||
