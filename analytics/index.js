@@ -39,7 +39,7 @@ function calculateMovingAverage(data, window) {
   );
 }
 
-function checkUpwardTrend(df, i, tolerance) {
+function checkUpwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
   // Check that we have enough data points
   if (i < 20) return false;
   
@@ -53,8 +53,11 @@ function checkUpwardTrend(df, i, tolerance) {
   return (
     (Math.abs(df[i]['sma44'] - df[i]['low']) < (df[i]['sma44'] * tolerance) ||
      (df[i]['sma44'] > df[i]['low'] && df[i]['sma44'] < df[i]['high'])) &&
+
+    // Bullish Candle or Doji
     (df[i]['close'] > df[i]['open'] ||
-     (df[i]['high'] - df[i]['close']) < (df[i]['close'] - df[i]['low']))
+     (df[i]['high'] - df[i]['close']) < (df[i]['close'] - df[i]['low']) ||
+     Math.abs(df[i]['close'] - ((df[i]['high'] + df[i]['low']) / 2)) < ((df[i]['high'] + df[i]['low']) / 2) * doji_tolerance) // Doji condition
   );
 }
 
