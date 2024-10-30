@@ -134,17 +134,17 @@ function checkReverseCandleConditions(row, maValue, tolerance = 0.01) {
     return (condition1 || condition2) && condition3;
 }
 
-async function scanZaireStocks(stockList, endDate) {
+async function scanZaireStocks(stockList, endDateNew) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
       try {
 
-        const endDate = new Date();
+        let endDate = new Date();
         endDate.setUTCSeconds(10);
 
-        if (endDate) {
-            endDate = new Date(endDate);
+        if (endDateNew) {
+            endDate = new Date(endDateNew);
         }
 
         const startDate = new Date(endDate);
@@ -190,7 +190,7 @@ async function scanZaireStocks(stockList, endDate) {
             });
         }
       } catch (e) {
-        console.error(e?.response?.data, sym);
+        console.error(e?.response?.data || e.message || e, sym);
       }
     }
 
