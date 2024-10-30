@@ -134,7 +134,7 @@ function checkReverseCandleConditions(row, maValue, tolerance = 0.01) {
     return (condition1 || condition2) && condition3;
 }
 
-async function scanZaireStocks(stockList) {
+async function scanZaireStocks(stockList, endDate) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
@@ -142,6 +142,10 @@ async function scanZaireStocks(stockList) {
 
         const endDate = new Date();
         endDate.setUTCSeconds(10);
+
+        if (endDate) {
+            endDate = new Date(endDate);
+        }
 
         const startDate = new Date(endDate);
         startDate.setDate(startDate.getDate() - 6);
