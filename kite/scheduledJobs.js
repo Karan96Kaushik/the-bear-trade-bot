@@ -288,11 +288,11 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
-        setupOrdersFromSheet()
-        sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
-    });
-    sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    // const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
+    //     setupOrdersFromSheet()
+    //     sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    // });
+    // sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
