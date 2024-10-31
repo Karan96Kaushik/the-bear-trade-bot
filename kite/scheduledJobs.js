@@ -50,6 +50,28 @@ async function setupZaireOrders() {
     }
 }
 
+async function cancelZaireOrders() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Zaire Cancel Orders Job');
+
+        const orders = await kiteSession.kc.getOrders();
+        const zaireOrders = orders.filter(o => o.status === 'OPEN');
+
+        for (const order of zaireOrders) {
+            try {
+                await kiteSession.kc.cancelOrder('regular', order.order_id);
+                await sendMessageToChannel('❎ Cancelled Zaire order:', order.tradingsymbol, order.quantity);
+            } catch (error) {
+                console.error(error)
+                await sendMessageToChannel('🚨 Error cancelling Zaire order:', order.tradingsymbol, order.quantity, error?.message);
+            }
+        }
+
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Zaire Cancel Orders Job', error?.message);
+    }
+}
+
 async function setupSpecialOrdersFromSheet() {
     try {
         await sendMessageToChannel('⌛️ Executing Special MIS Jobs');
@@ -303,6 +325,12 @@ const scheduleMISJobs = () => {
         setupZaireOrders();
     });
     sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+
+    const zaireCancelJob = schedule.scheduleJob('15 4 * * 1-5', () => {
+        sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+        cancelZaireOrders();
+    });
+    sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 }
 
 module.exports = {
