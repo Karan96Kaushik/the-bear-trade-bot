@@ -300,11 +300,11 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ MIS Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
-    const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
-        validateOrdersFromSheet();
-        sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
-    });
-    sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    // const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
+    //     validateOrdersFromSheet();
+    //     sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    // });
+    // sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
     const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
