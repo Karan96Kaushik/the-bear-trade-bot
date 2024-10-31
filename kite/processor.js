@@ -136,7 +136,8 @@ const processSuccessfulOrder = async (order) => {
 
             if (order.transaction_type == 'SELL' && stock?.type == 'DOWN') {
                 try {
-                    if (stock.lastAction.includes('SELL')) {
+                    // This is the first completed order
+                    if (!stock.lastAction) {
                         await createBuyLimSLOrders(stock, order)
                     }
                 } catch (error) {
@@ -147,7 +148,8 @@ const processSuccessfulOrder = async (order) => {
 
             if (order.transaction_type == 'BUY' && stock?.type == 'UP') {
                 try {
-                    if (stock.lastAction.includes('BUY')) {
+                    // This is the first completed order
+                    if (!stock.lastAction) {
                         await createSellLimSLOrders(stock, order)
                     }
                 } catch (error) {
