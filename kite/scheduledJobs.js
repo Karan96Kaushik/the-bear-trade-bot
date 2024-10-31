@@ -319,18 +319,17 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
-    // const zaireJob = schedule.scheduleJob('11 4 * * *', () => {
-    const zaireJob = schedule.scheduleJob('1 4 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
     sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 
-    const zaireCancelJob = schedule.scheduleJob('15 4 * * 1-5', () => {
-        sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
-        cancelZaireOrders();
-    });
-    sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+    // const zaireCancelJob = schedule.scheduleJob('15 4 * * 1-5', () => {
+    //     sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+    //     cancelZaireOrders();
+    // });
+    // sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 }
 
 module.exports = {
