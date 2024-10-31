@@ -25,7 +25,7 @@ async function setupZaireOrders() {
 
         const selectedStocks = await scanZaireStocks(niftyList);
 
-        return sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
+        sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
 
         const sheetEntries = []
 
@@ -321,7 +321,7 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
-    const zaireJob = schedule.scheduleJob('1,16 4,5 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
