@@ -110,10 +110,15 @@ const processSuccessfulOrder = async (order) => {
 
             console.log('📬 Order update', order)
 
+            let stockData = await readSheetData('MIS-ALPHA!A2:W100')
+            stockData = processMISSheetData(stockData)
+
+            let stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
+
             try {
-                let stockData = await readSheetData('MIS-ALPHA!A1:W100')
-                const rowHeaders = stockData.map(a => a[1])
-                const colHeaders = stockData[0]
+                let sheetData = await readSheetData('MIS-ALPHA!A1:W100')
+                const rowHeaders = sheetData.map(a => a[1])
+                const colHeaders = sheetData[0]
                 const [row, col] = getStockLoc(order.tradingsymbol, 'Last Action', rowHeaders, colHeaders)
     
                 const updates = [
@@ -128,11 +133,6 @@ const processSuccessfulOrder = async (order) => {
                 console.error(error)
                 await sendMessageToChannel('🛑 Error updating sheet!', error.message)
             }
-
-            let stockData = await readSheetData('MIS-ALPHA!A2:W100')
-            stockData = processMISSheetData(stockData)
-
-            let stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
 
             if (order.transaction_type == 'SELL' && stock?.type == 'DOWN') {
                 try {

@@ -61,6 +61,31 @@ function checkUpwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
   );
 }
 
+/*
+
+UPWARD TREND
+
+A: Stock Symbol
+B: High
+C: Low
+D: Open
+E: Close
+F: SMA44
+
+=AND(
+    OR( 
+      ABS(F3-C3) < (F3*0.01), 
+      AND( F3>C3 , F3<B3 ) 
+    ),
+    OR( 
+      E3>D3, 
+      (B3-E3) < (E3-C3), 
+      ABS(E3-((B3+C3)/2))<((B3+C3)/2)*0.001 
+    )
+)
+
+*/
+
 function checkDownwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
   // Check that we have enough data points
   if (i < 20) return false;
@@ -82,6 +107,31 @@ function checkDownwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
      Math.abs(df[i]['close'] - ((df[i]['high'] + df[i]['low']) / 2)) < ((df[i]['high'] + df[i]['low']) / 2) * doji_tolerance) // Doji condition
   );
 }
+
+/*
+
+DOWNWARD TREND
+
+A: Stock Symbol
+B: High
+C: Low
+D: Open
+E: Close
+F: SMA44
+
+=AND(
+    OR( 
+      ABS(F3-B3)<(F3*0.01), 
+      AND( F3>C3 , F3<B3 ) 
+    ),
+    OR( 
+      E3<D3, 
+      (B3-E3)>(E3-C3), 
+      ABS(E3-((B3+C3)/2))<((B3+C3)/2)*0.001 
+    )
+)
+
+*/
 
 /**
  * Add moving average for a specified key to an array of objects
