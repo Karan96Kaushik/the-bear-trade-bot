@@ -33,8 +33,8 @@ async function setupZaireOrders() {
             try {
                 // Skip if stock is already in position or open orders
                 if (
-                    positions.net.find(p => p.tradingsymbol === stock.stockSymbol) || 
-                    orders.find(o => o.tradingsymbol === stock.stockSymbol)
+                    positions.net.find(p => p.tradingsymbol === stock.sym) || 
+                    orders.find(o => o.tradingsymbol === stock.sym)
                 )
                     continue
 
