@@ -41,7 +41,7 @@ function calculateMovingAverage(data, window) {
 
 
 
-function checkUpwardTrend(df, i, tolerance) {
+function checkUpwardTrend(df, i, tolerance = 0.002) {
   // Check that we have enough data points
   if (i < 20) return false;
   
@@ -54,10 +54,7 @@ function checkUpwardTrend(df, i, tolerance) {
 
   const currentCandle = df[i];
   return (
-    // SMA44 condition remains the same
-    (Math.abs(currentCandle['sma44'] - currentCandle['low']) < (currentCandle['sma44'] * tolerance) ||
-     (currentCandle['sma44'] > currentCandle['low'] && currentCandle['sma44'] < currentCandle['high'])) &&
-    // New candle pattern check
+    checkCandlePlacement(currentCandle, currentCandle['sma44'], "UP", tolerance) &&
     (isBullishCandle(currentCandle) || isDojiCandle(currentCandle))
   );
 }
@@ -87,7 +84,7 @@ F: SMA44
 
 */
 
-function checkDownwardTrend(df, i, tolerance) {
+function checkDownwardTrend(df, i, tolerance = 0.002) {
   // Check that we have enough data points
   if (i < 20) return false;
   
@@ -100,10 +97,7 @@ function checkDownwardTrend(df, i, tolerance) {
 
   const currentCandle = df[i];
   return (
-    // SMA44 condition remains the same
-    (Math.abs(currentCandle['sma44'] - currentCandle['high']) < (currentCandle['sma44'] * tolerance) ||
-     (currentCandle['sma44'] > currentCandle['low'] && currentCandle['sma44'] < currentCandle['high'])) &&
-    // New candle pattern check
+    checkCandlePlacement(currentCandle, currentCandle['sma44'], "DOWN", tolerance) &&
     (isBearishCandle(currentCandle) || isDojiCandle(currentCandle))
   );
 }
@@ -266,6 +260,25 @@ function isDojiCandle(candle) {
   return priceRange / avgPrice <= 0.05; // Within 5% of average price
 }
 
+function checkCandlePlacement(candle, maValue, direction, tolerance = 0.002) { // 0.002 = 0.2%
+  const { high, low } = candle;
+  
+  // Common condition: MA lies between high and low of the candle
+  const maBetweenHighLow = maValue > low && maValue < high;
+  
+  if (direction === "UP") {
+    // For upward trend: (Low - MA) < 0.2% of low
+    const lowDistance = (low - maValue) / low;
+    return maBetweenHighLow || lowDistance < tolerance;
+  } else if (direction === "DOWN") {
+    // For downward trend: (MA - High) > 0.2% of high
+    const highDistance = (maValue - high) / high;
+    return maBetweenHighLow || highDistance > tolerance;
+  }
+  
+  return false;
+}
+
 module.exports = { 
     analyzeDataForTrends,
     calculateMovingAverage,
@@ -279,7 +292,8 @@ module.exports = {
     scanZaireStocks,
     isBullishCandle,
     isBearishCandle,
-    isDojiCandle
+    isDojiCandle,
+    checkCandlePlacement
 };
 
 
