@@ -45,9 +45,9 @@ function calculateMovingAverage(data, window) {
 
 function checkUpwardTrend(df, i, tolerance = 0.002) {
 
-  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "UP", tolerance))
-  console.log('isBullishCandle', isBullishCandle(df[i]))
-  console.log('isDojiCandle', isDojiCandle(df[i]))
+  // console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "UP", tolerance))
+  // console.log('isBullishCandle', isBullishCandle(df[i]))
+  // console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
@@ -83,9 +83,9 @@ F: SMA44
 
 function checkDownwardTrend(df, i, tolerance = 0.002) {
 
-  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "DOWN", tolerance))
-  console.log('isBearishCandle', isBearishCandle(df[i]))
-  console.log('isDojiCandle', isDojiCandle(df[i]))
+  // console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "DOWN", tolerance))
+  // console.log('isBearishCandle', isBearishCandle(df[i]))
+  // console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
@@ -147,12 +147,13 @@ function countMATrendRising(maValues) {
     if (_maValues[i] < _maValues[i+1])
       return i + 1
   }
-  return 0
+  return maValues.length
 }
 
 function checkMARising(df, window = 20) {
   const maValues = df.slice(-window).map(row => row['sma44']);
   const trendCount = countMATrendRising(maValues);
+  // console.log(maValues.length, trendCount)
   return trendCount >= window;
 }
 
@@ -163,12 +164,13 @@ function countMATrendFalling(maValues) {
       if (_maValues[i] > _maValues[i+1])
         return i + 1
     }
-    return 0
+    return maValues.length
 }
 
 function checkMAFalling(df, window = 20) {
     const maValues = df.slice(-window).map(row => row['sma44']);
     const trendCount = countMATrendFalling(maValues);
+    // console.log(maValues.length, trendCount)
     return trendCount >= window;
 }
 
