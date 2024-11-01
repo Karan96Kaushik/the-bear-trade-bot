@@ -14,7 +14,7 @@ const run = async () => {
         // const orders = await kiteSession.kc.getOrders();
 
         const selectedStocks = await scanZaireStocks(niftyList, new Date('2024-10-30T04:01:10Z'));
-        console.log(selectedStocks)
+        console.table(selectedStocks)
 
         
         // console.log(pos)
