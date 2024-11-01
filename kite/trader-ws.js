@@ -3,7 +3,7 @@ const { processSuccessfulOrder } = require("./processor");
 
 const setupWs = (apiKey, accessToken) => {
 
-	if (process.env.DISABLE_SLACK) return
+	if (process.env.NODE_ENV !== 'production') return
 	
 	const ticker = new KiteTicker({
 		api_key: apiKey,
