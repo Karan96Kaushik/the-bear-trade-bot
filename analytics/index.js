@@ -1,5 +1,7 @@
 const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data } = require("../kite/utils");
 
+const MA_TREND_WINDOW = 20;
+
 function analyzeDataForTrends(df, sym, tolerance = 0.01) {
   try {
     // Calculate moving averages
@@ -42,15 +44,10 @@ function calculateMovingAverage(data, window) {
 
 
 function checkUpwardTrend(df, i, tolerance = 0.002) {
-  // Check that we have enough data points
-  if (i < 20) return false;
-  
-  // Check 20 consecutive increases in SMA44
-  for (let j = 0; j < 19; j++) {
-    if (df[i-j-1]['sma44'] >= df[i-j]['sma44']) {
-      return false;
-    }
-  }
+
+  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "UP", tolerance))
+  console.log('isBullishCandle', isBullishCandle(df[i]))
+  console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
@@ -85,15 +82,10 @@ F: SMA44
 */
 
 function checkDownwardTrend(df, i, tolerance = 0.002) {
-  // Check that we have enough data points
-  if (i < 20) return false;
-  
-  // Check 20 consecutive decreases in SMA44
-  for (let j = 0; j < 19; j++) {
-    if (df[i-j-1]['sma44'] <= df[i-j]['sma44']) {
-      return false;
-    }
-  }
+
+  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "DOWN", tolerance))
+  console.log('isBearishCandle', isBearishCandle(df[i]))
+  console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
@@ -148,10 +140,36 @@ function addMovingAverage(data, key, window, newKey) {
     });
 }
 
-function checkMARising(df, window = 5) {
+function countMATrendRising(maValues) {
+  const _maValues = maValues.reverse()
+  for (let i = 0; i < _maValues.length - 1; i++) {
+    // console.log(_maValues[i], _maValues[i+1])
+    if (_maValues[i] < _maValues[i+1])
+      return i + 1
+  }
+  return 0
+}
+
+function checkMARising(df, window = 20) {
+  const maValues = df.slice(-window).map(row => row['sma44']);
+  const trendCount = countMATrendRising(maValues);
+  return trendCount >= window;
+}
+
+function countMATrendFalling(maValues) {
+    const _maValues = maValues.reverse()
+    for (let i = 0; i < _maValues.length - 1; i++) {
+      // console.log(_maValues[i], _maValues[i+1])
+      if (_maValues[i] > _maValues[i+1])
+        return i + 1
+    }
+    return 0
+}
+
+function checkMAFalling(df, window = 20) {
     const maValues = df.slice(-window).map(row => row['sma44']);
-    // console.log(maValues.map((value, index) => index === 0 || maValues[index - 1] < value));
-    return maValues.every((value, index) => index === 0 || maValues[index - 1] < value);
+    const trendCount = countMATrendFalling(maValues);
+    return trendCount >= window;
 }
 
 function checkCandleConditions(row, maValue, tolerance = 0.01) {
@@ -161,11 +179,6 @@ function checkCandleConditions(row, maValue, tolerance = 0.01) {
     const condition2 = close > (high + low) / 2;
     const condition3 = (Math.abs(maValue - low) < (maValue * tolerance)) || (maValue > low && maValue < high);
     return (condition1 || condition2) && condition3;
-}
-
-function checkMAFalling(df, window = 5) {
-    const maValues = df.slice(-window).map(row => row['sma44']);
-    return maValues.every((value, index) => index === 0 || maValues[index - 1] > value);
 }
 
 function checkReverseCandleConditions(row, maValue, tolerance = 0.01) {
@@ -211,15 +224,15 @@ async function scanZaireStocks(stockList, endDateNew) {
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
 
-        const isRising = checkMARising(df) ? "UP" : checkMAFalling(df) ? "DOWN" : null;
+        const isRising = checkMARising(df, MA_TREND_WINDOW) ? "UP" : checkMAFalling(df, MA_TREND_WINDOW) ? "DOWN" : null;
         if (!isRising) continue;
 
         const firstCandle = df[df.length - 1];
         const maValue = firstCandle['sma44'];
 
         const conditionsMet = isRising 
-            ? checkCandleConditions(firstCandle, maValue)
-            : checkReverseCandleConditions(firstCandle, maValue);
+            ? checkUpwardTrend(df, df.length - 1)
+            : checkDownwardTrend(df, df.length - 1);
 
         if (conditionsMet) {
             selectedStocks.push({
@@ -293,7 +306,9 @@ module.exports = {
     isBullishCandle,
     isBearishCandle,
     isDojiCandle,
-    checkCandlePlacement
+    checkCandlePlacement,
+    countMATrendRising,
+    countMATrendFalling
 };
 
 
