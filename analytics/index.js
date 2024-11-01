@@ -39,7 +39,9 @@ function calculateMovingAverage(data, window) {
   );
 }
 
-function checkUpwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
+
+
+function checkUpwardTrend(df, i, tolerance) {
   // Check that we have enough data points
   if (i < 20) return false;
   
@@ -50,14 +52,13 @@ function checkUpwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
     }
   }
 
+  const currentCandle = df[i];
   return (
-    (Math.abs(df[i]['sma44'] - df[i]['low']) < (df[i]['sma44'] * tolerance) ||
-     (df[i]['sma44'] > df[i]['low'] && df[i]['sma44'] < df[i]['high'])) &&
-
-    // Bullish Candle or Doji
-    (df[i]['close'] > df[i]['open'] ||
-     (df[i]['high'] - df[i]['close']) < (df[i]['close'] - df[i]['low']) ||
-     Math.abs(df[i]['close'] - ((df[i]['high'] + df[i]['low']) / 2)) < ((df[i]['high'] + df[i]['low']) / 2) * doji_tolerance) // Doji condition
+    // SMA44 condition remains the same
+    (Math.abs(currentCandle['sma44'] - currentCandle['low']) < (currentCandle['sma44'] * tolerance) ||
+     (currentCandle['sma44'] > currentCandle['low'] && currentCandle['sma44'] < currentCandle['high'])) &&
+    // New candle pattern check
+    (isBullishCandle(currentCandle) || isDojiCandle(currentCandle))
   );
 }
 
@@ -86,7 +87,7 @@ F: SMA44
 
 */
 
-function checkDownwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
+function checkDownwardTrend(df, i, tolerance) {
   // Check that we have enough data points
   if (i < 20) return false;
   
@@ -97,14 +98,13 @@ function checkDownwardTrend(df, i, tolerance, doji_tolerance = 0.001) {
     }
   }
 
+  const currentCandle = df[i];
   return (
-    (Math.abs(df[i]['sma44'] - df[i]['high']) < (df[i]['sma44'] * tolerance) ||
-     (df[i]['sma44'] > df[i]['low'] && df[i]['sma44'] < df[i]['high'])) &&
-
-    // Bearish Candle or Doji
-    (df[i]['close'] < df[i]['open'] ||
-     (df[i]['high'] - df[i]['close']) > (df[i]['close'] - df[i]['low']) ||
-     Math.abs(df[i]['close'] - ((df[i]['high'] + df[i]['low']) / 2)) < ((df[i]['high'] + df[i]['low']) / 2) * doji_tolerance) // Doji condition
+    // SMA44 condition remains the same
+    (Math.abs(currentCandle['sma44'] - currentCandle['high']) < (currentCandle['sma44'] * tolerance) ||
+     (currentCandle['sma44'] > currentCandle['low'] && currentCandle['sma44'] < currentCandle['high'])) &&
+    // New candle pattern check
+    (isBearishCandle(currentCandle) || isDojiCandle(currentCandle))
   );
 }
 
@@ -247,6 +247,25 @@ async function scanZaireStocks(stockList, endDateNew) {
     return selectedStocks;
 }
 
+function isBullishCandle(candle) {
+  const { high, low, close } = candle;
+  const avgPrice = (high + low) / 2;
+  return close > avgPrice;
+}
+
+function isBearishCandle(candle) {
+  const { high, low, close } = candle;
+  const avgPrice = (high + low) / 2;
+  return close < avgPrice;
+}
+
+function isDojiCandle(candle) {
+  const { high, low, open, close } = candle;
+  const avgPrice = (high + low) / 2;
+  const priceRange = Math.abs(close - open);
+  return priceRange / avgPrice <= 0.05; // Within 5% of average price
+}
+
 module.exports = { 
     analyzeDataForTrends,
     calculateMovingAverage,
@@ -257,7 +276,10 @@ module.exports = {
     checkCandleConditions,
     checkMAFalling,
     checkReverseCandleConditions,
-    scanZaireStocks
+    scanZaireStocks,
+    isBullishCandle,
+    isBearishCandle,
+    isDojiCandle
 };
 
 
