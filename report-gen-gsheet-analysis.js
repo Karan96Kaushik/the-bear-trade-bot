@@ -1,14 +1,8 @@
-const { getDataFromYahoo, processYahooData } = require("./kite/utils");
+const { getDataFromYahoo, processYahooData, getDateStringIND } = require("./kite/utils");
 const { appendRowsToSheet, readSheetData } = require("./gsheets");
-const { addMovingAverage } = require("./analytics");
+const { addMovingAverage, scanZaireStocks, countMATrendRising, countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, checkDownwardTrend } = require("./analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 
-// List of stocks to track
-const STOCKS = [
-    "RELIANCE",
-    "TCS",
-    // ... add more stocks as needed
-];
 
 async function getDailyStats() {
     try {
@@ -16,15 +10,18 @@ async function getDailyStats() {
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
+        // niftyList = ['ADANIENT']
+
         let startTime = new Date('2024-10-20').setUTCHours(4, 0, 10, 0);
-        let endTime = new Date('2024-10-30').setUTCHours(4, 0, 10, 0);
+        let endTime = new Date('2024-10-30').setUTCHours(4, 15, 10, 0);
         console.log(endTime)
         const interval = '15m'
 
-        const rows = [['' + interval + ' - ' + new Date(endTime).toDateString()]];
+        const rows = [];
 
         for (const stock of niftyList) {
             try {
+
 
                 // startTime = new Date().setUTCHours(4, 0, 10, 0) / 1000;
                 // endTime = new Date() / 1000;
@@ -35,8 +32,8 @@ async function getDailyStats() {
                 const data = await getDataFromYahoo(stock, 1, interval, startTime, endTime);
                 let candles = processYahooData(data);
 
-                let startTimeDay = new Date('2024-10-30').setUTCHours(0, 0, 10, 0);
-                let endTimeDay = new Date('2024-10-30').setUTCHours(23, 0, 10, 0);
+                let startTimeDay = new Date('2024-10-31').setUTCHours(0, 0, 10, 0);
+                let endTimeDay = new Date('2024-10-31').setUTCHours(23, 0, 10, 0);
 
                 const dataDay = await getDataFromYahoo(stock, 1, '1d', startTimeDay, endTimeDay);
                 let candlesDay = processYahooData(dataDay);
@@ -50,24 +47,46 @@ async function getDailyStats() {
 
                 candles = addMovingAverage(candles, 'close', 44, 'sma44');
 
-                const { high, low, open, close, sma44 } = candles[candles.length - 2]
-                const { high: highDay, low: lowDay, open: openDay, close: closeDay } = candlesDay[0]
+                const { high, low, open, close, sma44, time } = candles[candles.length - 2]
+                const { high: highDay, low: lowDay } = candlesDay[0]
 
-                // Calculate continuous MA trend
-                const [maTrend, count] = calculateMATrend(candles, sma44).split(' ');
+                if (rows.length == 0) {
+                    rows.push(['' + interval + ' - ' + getDateStringIND(new Date(time))]);
+                }
 
+                const maValues = candles.map(row => row['sma44']).slice(0, -2);
+
+                // console.log(maValues)
+
+                const trendCountRising = countMATrendRising(maValues);
+                const trendCountFalling = countMATrendFalling(maValues);
+
+                const trend = (trendCountRising > trendCountFalling ? 'UP' : 'DOWN')
+                let candleCleared
+
+                if (trend === 'UP' )
+                    candleCleared = checkUpwardTrend(candles, candles.length - 2) ? 'TRUE' : 'FALSE'
+                else if (trend === 'DOWN' )
+                    candleCleared = checkDownwardTrend(candles, candles.length - 2) ? 'TRUE' : 'FALSE'
+
+                console.log(stock, trendCountRising, trendCountFalling, trend, candleCleared)
+                // console.log(scanZaireStocks())
+                console.log({...candles[candles.length - 2], time: new Date(candles[candles.length - 2].time)})
+// return
+                // if (false)
                 rows.push([
                     stock,          // Stock
                     high,           // H
                     low,            // L
                     open,           // O
                     close,          // C
-                    highDay,        // H
-                    lowDay,         // L
-
                     sma44,        // SMA44
-                    maTrend,      // Continuous Up/Down MA
-                    count         // Count
+
+                    lowDay,         // L
+                    highDay,        // H
+
+                    trend + ' - ' + candleCleared,      // Continuous Up/Down MA
+                    trendCountRising > trendCountFalling ? trendCountRising : trendCountFalling         // Count
                 ]);
 
             } catch (error) {
@@ -77,7 +96,7 @@ async function getDailyStats() {
         }
 
         // Update Google Sheet
-        await appendRowsToSheet('Analysis1!A2:G', rows);
+        await appendRowsToSheet('Analysis 20Oct24!A2:G', rows);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
