@@ -1,6 +1,7 @@
 const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data } = require("../kite/utils");
 
-const MA_TREND_WINDOW = 20;
+const MA_TREND_WINDOW = 10;
+const DEBUG = process.env.DEBUG || false;
 
 function analyzeDataForTrends(df, sym, tolerance = 0.01) {
   try {
@@ -45,9 +46,9 @@ function calculateMovingAverage(data, window) {
 
 function checkUpwardTrend(df, i, tolerance = 0.002) {
 
-  // console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "UP", tolerance))
-  // console.log('isBullishCandle', isBullishCandle(df[i]))
-  // console.log('isDojiCandle', isDojiCandle(df[i]))
+  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "UP", tolerance))
+  console.log('isBullishCandle', isBullishCandle(df[i]))
+  console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
@@ -83,9 +84,9 @@ F: SMA44
 
 function checkDownwardTrend(df, i, tolerance = 0.002) {
 
-  // console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "DOWN", tolerance))
-  // console.log('isBearishCandle', isBearishCandle(df[i]))
-  // console.log('isDojiCandle', isDojiCandle(df[i]))
+  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "DOWN", tolerance))
+  console.log('isBearishCandle', isBearishCandle(df[i]))
+  console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
@@ -144,16 +145,16 @@ function countMATrendRising(maValues) {
   const _maValues = maValues.reverse()
   for (let i = 0; i < _maValues.length - 1; i++) {
     // console.log(_maValues[i], _maValues[i+1])
-    if (_maValues[i] < _maValues[i+1])
+    if (_maValues[i] <= _maValues[i+1])
       return i + 1
   }
   return maValues.length
 }
 
-function checkMARising(df, window = 20) {
+function checkMARising(df, window = 10) {
   const maValues = df.slice(-window).map(row => row['sma44']);
   const trendCount = countMATrendRising(maValues);
-  // console.log(maValues.length, trendCount)
+  console.log(trendCount)
   return trendCount >= window;
 }
 
@@ -161,16 +162,16 @@ function countMATrendFalling(maValues) {
     const _maValues = maValues.reverse()
     for (let i = 0; i < _maValues.length - 1; i++) {
       // console.log(_maValues[i], _maValues[i+1])
-      if (_maValues[i] > _maValues[i+1])
+      if (_maValues[i] >= _maValues[i+1])
         return i + 1
     }
     return maValues.length
 }
 
-function checkMAFalling(df, window = 20) {
+function checkMAFalling(df, window = 10) {
     const maValues = df.slice(-window).map(row => row['sma44']);
     const trendCount = countMATrendFalling(maValues);
-    // console.log(maValues.length, trendCount)
+    console.log(trendCount)
     return trendCount >= window;
 }
 
@@ -221,18 +222,21 @@ async function scanZaireStocks(stockList, endDateNew) {
             df.pop()
         }
 
+        console.log('----')
+
         if (!df || df.length === 0) continue;
         
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
 
         const isRising = checkMARising(df, MA_TREND_WINDOW) ? "UP" : checkMAFalling(df, MA_TREND_WINDOW) ? "DOWN" : null;
+        console.log(sym, isRising)
         if (!isRising) continue;
 
         const firstCandle = df[df.length - 1];
         const maValue = firstCandle['sma44'];
 
-        const conditionsMet = isRising 
+        const conditionsMet = isRising == "UP"
             ? checkUpwardTrend(df, df.length - 1)
             : checkDownwardTrend(df, df.length - 1);
 
@@ -257,9 +261,10 @@ async function scanZaireStocks(stockList, endDateNew) {
 }
 
 function isBullishCandle(candle) {
-  const { high, low, close } = candle;
+  const { high, low, open, close } = candle;
   const avgPrice = (high + low) / 2;
-  return close > avgPrice;
+  // Either both open and close are above average, or just close is above average
+  return (open > avgPrice && close > avgPrice) || close > avgPrice;
 }
 
 function isBearishCandle(candle) {
@@ -270,25 +275,21 @@ function isBearishCandle(candle) {
 
 function isDojiCandle(candle) {
   const { high, low, open, close } = candle;
-  const avgPrice = (high + low) / 2;
-  const priceRange = Math.abs(close - open);
-  return priceRange / avgPrice <= 0.05; // Within 5% of average price
+  // Check if the difference between open and close is less than 0.25% of the candle range
+  const candleRange = high - low;
+  const bodyRange = Math.abs(open - close);
+  return bodyRange < (0.0025 * candleRange);
 }
 
-function checkCandlePlacement(candle, maValue, direction, tolerance = 0.002) { // 0.002 = 0.2%
+function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { // Changed default tolerance to 1%
   const { high, low } = candle;
-  
-  // Common condition: MA lies between high and low of the candle
-  const maBetweenHighLow = maValue > low && maValue < high;
+
+  console.log(direction, maValue, high, low, maValue >= (high * 1.01), maValue >= low)
   
   if (direction === "UP") {
-    // For upward trend: (Low - MA) < 0.2% of low
-    const lowDistance = (low - maValue) / low;
-    return maBetweenHighLow || lowDistance < tolerance;
+    return maValue <= high && maValue >= (low * 0.99);
   } else if (direction === "DOWN") {
-    // For downward trend: (MA - High) > 0.2% of high
-    const highDistance = (maValue - high) / high;
-    return maBetweenHighLow || highDistance > tolerance;
+    return maValue <= (high * 1.01) && maValue >= low;
   }
   
   return false;
