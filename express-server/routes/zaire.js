@@ -12,6 +12,10 @@ router.get('/selected-stocks', async (req, res) => {
     date.setMinutes(Math.round(date.getMinutes() / 15) * 15);
     date.setSeconds(10); // Add 10 seconds
     
+    if (date.getUTCHours() < 4) {
+        date.setUTCHours(4,0,10,0);
+    }
+
     let niftyList = await readSheetData('Nifty!A1:A200')
     niftyList = niftyList.map(stock => stock[0])
 
