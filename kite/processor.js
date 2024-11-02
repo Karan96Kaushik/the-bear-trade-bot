@@ -229,7 +229,7 @@ async function createZaireOrders(stock) {
             targetPrice = Math.round(targetPrice * 10) / 10;
 
             // Quantity is risk amount divided by difference between high and low
-            quantity = Math.floor(RISK_AMOUNT / (triggerPrice - stopLossPrice));
+            quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
             if (quantity < 1)
                 quantity = 1
 
@@ -272,7 +272,7 @@ async function createZaireOrders(stock) {
             targetPrice = Math.round(targetPrice * 10) / 10;
 
             // Quantity is risk amount divided by difference between high and low
-            quantity = Math.floor(RISK_AMOUNT / (stopLossPrice - triggerPrice));
+            quantity = Math.ceil(RISK_AMOUNT / (stopLossPrice - triggerPrice));
             if (quantity < 1)
                 quantity = 1
 
