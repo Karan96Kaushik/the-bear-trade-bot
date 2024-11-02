@@ -3,4 +3,5 @@ module.exports = {
     data: require('./data'),
     orders: require('./orders'),
     kite: require('./kite'),
+    zaire: require('./zaire'),
 }
