@@ -13,8 +13,8 @@ const run = async () => {
         // const positions = await kiteSession.kc.getPositions();
         // const orders = await kiteSession.kc.getOrders();
 
-        const selectedStocks = await scanZaireStocks(niftyList, new Date('2024-10-30T04:16:10Z'));
-        console.table(selectedStocks)
+        const selectedStocks = await scanZaireStocks(niftyList, new Date('2024-10-30T04:01:10Z'));
+        console.table(selectedStocks.map(a => ({...a, qty: Math.ceil(200/(a.high - a.low))})))
 
         
         // console.log(pos)
