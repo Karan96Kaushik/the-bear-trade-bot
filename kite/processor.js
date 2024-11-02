@@ -134,30 +134,30 @@ const processSuccessfulOrder = async (order) => {
                 await sendMessageToChannel('🛑 Error updating sheet!', error.message)
             }
 
-            if (order.transaction_type == 'SELL' && stock?.type == 'DOWN') {
+            if (order.transaction_type == 'SELL' && stock?.type == 'BEARISH') {
                 try {
                     // This is the first completed order
                     if (!stock.lastAction) {
                         await createBuyLimSLOrders(stock, order)
                     }
                 } catch (error) {
-                    await sendMessageToChannel('💥 Error [DOWN] buy orders', stock.stockSymbol, stock.quantity, error?.message)
-                    console.error("💥 Error [DOWN] buy orders: ", stock.stockSymbol, stock.quantity, error?.message);
+                    await sendMessageToChannel('💥 Error [BEARISH] buy orders', stock.stockSymbol, stock.quantity, error?.message)
+                    console.error("💥 Error [BEARISH] buy orders: ", stock.stockSymbol, stock.quantity, error?.message);
                 }
             }
 
-            if (order.transaction_type == 'BUY' && stock?.type == 'UP') {
+            if (order.transaction_type == 'BUY' && stock?.type == 'BULLISH') {
                 try {
                     // This is the first completed order
                     if (!stock.lastAction) {
                         await createSellLimSLOrders(stock, order)
                     }
                 } catch (error) {
-                    await sendMessageToChannel('💥 Error [UP] sell orders', stock.stockSymbol, stock.quantity, error?.message)
-                    console.error("💥 Error [UP] sell orders: ", stock.stockSymbol, stock.quantity, error?.message);
+                    await sendMessageToChannel('💥 Error [BULLISH] sell orders', stock.stockSymbol, stock.quantity, error?.message)
+                    console.error("💥 Error [BULLISH] sell orders: ", stock.stockSymbol, stock.quantity, error?.message);
                 }
             }
-            else if (order.transaction_type == 'BUY' && stock?.type == 'DOWN' && order.placed_by !== 'ADMINSQF') {
+            else if (order.transaction_type == 'BUY' && stock?.type == 'BEARISH' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
                 let orders = await kiteSession.kc.getOrders()
                 orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'BUY')
@@ -174,7 +174,7 @@ const processSuccessfulOrder = async (order) => {
                     await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
                 }
             }            
-            else if (order.transaction_type == 'SELL' && stock?.type == 'UP' && order.placed_by !== 'ADMINSQF') {
+            else if (order.transaction_type == 'SELL' && stock?.type == 'BULLISH' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
                 let orders = await kiteSession.kc.getOrders()
                 orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'SELL')
@@ -215,7 +215,7 @@ async function createZaireOrders(stock) {
         let ltp = await kiteSession.kc.getLTP([sym]);
         ltp = ltp[sym].last_price
 
-        if (stock.direction === 'UP') {
+        if (stock.direction === 'BULLISH') {
             // Trigger price is 0.05% above high
             triggerPrice = stock.high + 1;
             // Stop loss is low
@@ -233,7 +233,7 @@ async function createZaireOrders(stock) {
             if (quantity < 1)
                 quantity = 1
 
-            sheetEntry.quantity = stock.direction == 'UP' ? quantity : -quantity
+            sheetEntry.quantity = stock.direction == 'BULLISH' ? quantity : -quantity
             sheetEntry.targetPrice = targetPrice
             sheetEntry.stopLossPrice = stopLossPrice
             sheetEntry.triggerPrice = triggerPrice
@@ -258,7 +258,7 @@ async function createZaireOrders(stock) {
 
             // Place LIMIT SELL order
             // await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
-        } else if (stock.direction === 'DOWN') {
+        } else if (stock.direction === 'BEARISH') {
             // Trigger price is 0.05% below low 
             triggerPrice = stock.low - 1;
             // Stop loss is high
@@ -276,7 +276,7 @@ async function createZaireOrders(stock) {
             if (quantity < 1)
                 quantity = 1
 
-            sheetEntry.quantity = stock.direction == 'UP' ? quantity : -quantity
+            sheetEntry.quantity = stock.direction == 'BULLISH' ? quantity : -quantity
             sheetEntry.targetPrice = targetPrice
             sheetEntry.stopLossPrice = stopLossPrice
             sheetEntry.triggerPrice = triggerPrice
@@ -428,11 +428,11 @@ const createOrders = async (stock) => {
         if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
             throw new Error(`Order value ${order_value} not within limits!`)
 
-        if (stock.type == 'DOWN' && Number(stock.triggerPrice) > ltp) {
+        if (stock.type == 'BEARISH' && Number(stock.triggerPrice) > ltp) {
             await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
             return
         }
-        if (stock.type == 'UP' && Number(stock.triggerPrice) < ltp) {
+        if (stock.type == 'BULLISH' && Number(stock.triggerPrice) < ltp) {
             await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Trigger Price.', stock.stockSymbol, stock.quantity, "Trigger Price:", stock.triggerPrice, 'LTP: ', ltp)
             return
         }
@@ -442,7 +442,7 @@ const createOrders = async (stock) => {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol,
-                transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
+                transaction_type: stock.type == 'BEARISH' ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
                 order_type: "MARKET",
                 product: "MIS",
@@ -454,14 +454,14 @@ const createOrders = async (stock) => {
             orderResponse = await kiteSession.kc.placeOrder("regular", {
                 exchange: "NSE",
                 tradingsymbol: stock.stockSymbol,
-                transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
+                transaction_type: stock.type == 'BEARISH' ? "SELL" : "BUY",
                 quantity: Number(stock.quantity),
 
                 order_type: "SL-M",
                 trigger_price: Number(stock.triggerPrice),
 
-                // order_type: stock.type == "DOWN" ? "SL-M" : "LIMIT",
-                // ...(stock.type == "DOWN" 
+                // order_type: stock.type == 'BEARISH' ? "SL-M" : "LIMIT",
+                // ...(stock.type == 'BEARISH' 
                 //     ? { trigger_price: Number(stock.triggerPrice) }
                 //     : { price: Number(stock.triggerPrice) }
                 // ),

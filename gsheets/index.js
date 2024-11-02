@@ -46,7 +46,7 @@ function processMISSheetData (stockData) {
     })).filter(s => s.stockSymbol)
     return data.map(d => ({
         ...d,
-        type: d.quantity < 0 ? 'DOWN' : 'UP',
+        type: d.quantity < 0 ? 'BEARISH' : 'BULLISH',
         quantity: Math.abs(d.quantity),
     }))
 }

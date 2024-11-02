@@ -16,12 +16,12 @@ function analyzeDataForTrends(df, sym, tolerance = 0.01) {
       // Check for upward trend
       if (checkUpwardTrend(df, i, tolerance)) {
         events.push(df[i-2], df[i-1], df[i]);
-        return "UP"
+        return 'BULLISH'
       }
       // Check for downward trend
       else if (checkDownwardTrend(df, i, tolerance)) {
         events.push(df[i-2], df[i-1], df[i]);
-        return "DOWN"
+        return 'BEARISH'
       }
     }
 
@@ -46,20 +46,20 @@ function calculateMovingAverage(data, window) {
 
 function checkUpwardTrend(df, i, tolerance = 0.002) {
 
-  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "UP", tolerance))
+  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], 'BULLISH', tolerance))
   console.log('isBullishCandle', isBullishCandle(df[i]))
   console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
-    checkCandlePlacement(currentCandle, currentCandle['sma44'], "UP", tolerance) &&
+    checkCandlePlacement(currentCandle, currentCandle['sma44'], 'BULLISH', tolerance) &&
     (isBullishCandle(currentCandle) || isDojiCandle(currentCandle))
   );
 }
 
 /*
 
-UPWARD TREND
+BULLISH TREND
 
 A: Stock Symbol
 B: High
@@ -84,20 +84,20 @@ F: SMA44
 
 function checkDownwardTrend(df, i, tolerance = 0.002) {
 
-  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], "DOWN", tolerance))
+  console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], 'BEARISH', tolerance))
   console.log('isBearishCandle', isBearishCandle(df[i]))
   console.log('isDojiCandle', isDojiCandle(df[i]))
 
   const currentCandle = df[i];
   return (
-    checkCandlePlacement(currentCandle, currentCandle['sma44'], "DOWN", tolerance) &&
+    checkCandlePlacement(currentCandle, currentCandle['sma44'], 'BEARISH', tolerance) &&
     (isBearishCandle(currentCandle) || isDojiCandle(currentCandle))
   );
 }
 
 /*
 
-DOWNWARD TREND
+BEARISH TREND
 
 A: Stock Symbol
 B: High
@@ -229,14 +229,14 @@ async function scanZaireStocks(stockList, endDateNew) {
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
 
-        const isRising = checkMARising(df, MA_TREND_WINDOW) ? "UP" : checkMAFalling(df, MA_TREND_WINDOW) ? "DOWN" : null;
+        const isRising = checkMARising(df, MA_TREND_WINDOW) ? 'BULLISH' : checkMAFalling(df, MA_TREND_WINDOW) ? 'BEARISH' : null;
         console.log(sym, isRising)
         if (!isRising) continue;
 
         const firstCandle = df[df.length - 1];
         const maValue = firstCandle['sma44'];
 
-        const conditionsMet = isRising == "UP"
+        const conditionsMet = isRising == 'BULLISH'
             ? checkUpwardTrend(df, df.length - 1)
             : checkDownwardTrend(df, df.length - 1);
 
@@ -286,9 +286,9 @@ function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { //
 
   console.log(direction, maValue, high, low, maValue >= (high * 1.01), maValue >= low)
   
-  if (direction === "UP") {
+  if (direction === 'BULLISH') {
     return maValue <= high && maValue >= (low * 0.99);
-  } else if (direction === "DOWN") {
+  } else if (direction === 'BEARISH') {
     return maValue <= (high * 1.01) && maValue >= low;
   }
   

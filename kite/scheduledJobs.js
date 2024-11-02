@@ -116,11 +116,11 @@ async function validateOrdersFromSheet() {
                 ltp = ltp[sym].last_price
                 let order_value = Math.abs(stock.quantity) * Number(ltp)
                 
-                if (stock.type === 'DOWN' && Number(stock.triggerPrice) > ltp) {
+                if (stock.type === 'BEARISH' && Number(stock.triggerPrice) > ltp) {
                     await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
                 }
-                if (stock.type === 'UP' && Number(stock.triggerPrice) < ltp) {
+                if (stock.type === 'BULLISH' && Number(stock.triggerPrice) < ltp) {
                     await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Buy Price.', stock.stockSymbol, stock.quantity, "Buy Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
                 }
@@ -235,7 +235,7 @@ async function updateStopLossOrders() {
             if (!stock.lastAction) continue;
 
             const sym = stock.stockSymbol;
-            const isDown = stock.type === 'DOWN';
+            const isDown = stock.type === 'BEARISH';
 
             const position = positions.net.find(p => p.tradingsymbol === sym);
             if (!position) continue;

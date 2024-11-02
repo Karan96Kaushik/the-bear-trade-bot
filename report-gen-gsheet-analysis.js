@@ -61,12 +61,12 @@ async function getDailyStats() {
                 const trendCountRising = countMATrendRising(maValues);
                 const trendCountFalling = countMATrendFalling(maValues);
 
-                const trend = (trendCountRising > trendCountFalling ? 'UP' : 'DOWN')
+                const trend = (trendCountRising > trendCountFalling ? 'BULLISH' : 'BEARISH')
                 let candleCleared
 
-                if (trend === 'UP' )
+                if (trend === 'BULLISH' )
                     candleCleared = checkUpwardTrend(candles, candles.length - 2) ? 'TRUE' : 'FALSE'
-                else if (trend === 'DOWN' )
+                else if (trend === 'BEARISH' )
                     candleCleared = checkDownwardTrend(candles, candles.length - 2) ? 'TRUE' : 'FALSE'
 
                 console.log(stock, trendCountRising, trendCountFalling, trend, candleCleared)
@@ -119,12 +119,12 @@ function calculateMATrend(candles) {
         
         if (count === 0) {
             // First comparison establishes the trend
-            trend = currentValue > previousValue ? 'UP' : 'DOWN';
+            trend = currentValue > previousValue ? 'BULLISH' : 'BEARISH';
             count = 1;
         } else {
             // Check if the trend continues
             const isUp = currentValue > previousValue;
-            if ((trend === 'UP' && isUp) || (trend === 'DOWN' && !isUp)) {
+            if ((trend === 'BULLISH' && isUp) || (trend === 'BEARISH' && !isUp)) {
                 count++;
             } else {
                 break;
