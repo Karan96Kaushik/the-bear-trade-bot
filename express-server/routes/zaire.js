@@ -3,6 +3,7 @@ const router = express.Router();
 
 const { readSheetData } = require('../../gsheets');
 const { scanZaireStocks } = require('../../analytics');
+const { getDhanNIFTY50Data } = require('../../kite/utils');
 
 router.get('/selected-stocks', async (req, res) => {
     // Get date from query or use current date
@@ -21,13 +22,31 @@ router.get('/selected-stocks', async (req, res) => {
         date.setUTCHours(3,50,10,0);
     }
 
-    let niftyList = await readSheetData('Nifty!A1:A200')
-    niftyList = niftyList.map(stock => stock[0])
+    let niftyList = []
+    if (req.query.source == 'nifty') {
+        niftyList = await readSheetData('Nifty!A1:A200')
+        niftyList = niftyList.map(stock => stock[0])
+    }
+    else if (req.query.source == 'roce') {
+        niftyList = (await getDhanNIFTY50Data({sort: 'Year1ROCE'}))
+                        .filter(a => a.Volume > 100000)
+                        .map(a => a.Sym)
+        niftyList = niftyList.slice(0, 50)
+        console.log(niftyList)
+    }
+    else if (req.query.source == 'roe') {
+        niftyList = (await getDhanNIFTY50Data({sort: 'Year1ROE'}))
+                        .filter(a => a.Volume > 100000)
+                        .map(a => a.Sym)
+        niftyList = niftyList.slice(0, 50)
+        console.log(niftyList)
+    }
 
     let selectedStocks = await scanZaireStocks(niftyList, date, interval);
     selectedStocks = selectedStocks.map(a => ({...a, qty: Math.ceil(200/(a.high - a.low))}))
 
     res.json({stocks: selectedStocks})
 });
+
 
 module.exports = router;
