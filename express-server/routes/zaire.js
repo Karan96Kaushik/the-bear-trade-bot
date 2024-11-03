@@ -7,7 +7,7 @@ const { scanZaireStocks } = require('../../analytics');
 router.get('/selected-stocks', async (req, res) => {
     // Get date from query or use current date
     let date = req.query.date ? new Date(req.query.date) : new Date();
-    let interval = req.query.interval ? req.query.interval : '5m';
+    let interval = req.query.interval ? req.query.interval : '15m';
     const intervalMins = parseInt(interval.split('m')[0]);
     
     // Round to nearest 15 minutes
