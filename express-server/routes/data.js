@@ -41,7 +41,7 @@ router.get('/yahoo', async (req, res) => {
 
 		data = processYahooData(data)
 		data = addMovingAverage(data, 'close', 44, 'sma44')
-
+		data = data.filter(d => d.sma44 && d.close)
 		res.json(data);
 	} catch (error) {
 		console.error('Error fetching Yahoo Finance data:', error?.data || error);
@@ -128,7 +128,7 @@ router.get('/functions', async (req, res) => {
 		// 	return res.status(400).json({ message: 'Function name is required' });
 		// }
 
-		const savedFunctions = await FunctionHistory.find().sort('-createdAt').limit(10);
+		const savedFunctions = await FunctionHistory.find().sort('-createdAt').limit(20);
 		res.json(savedFunctions);
 	} catch (error) {
 		console.error('Error fetching function history:', error);
