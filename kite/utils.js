@@ -62,7 +62,8 @@ async function getInstrumentToken(tradingSymbol) {
  */
 async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', startDate, endDate) {
     try {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}.NS`;
+        const _sym = sym.includes('^') ? sym : sym + '.NS'
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${_sym}`;
         
         let today = new Date();
         let period1Date = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
