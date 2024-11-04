@@ -20,10 +20,11 @@ async function setupZaireOrders() {
         niftyList = niftyList.map(stock => stock[0])
 
         await kiteSession.authenticate();
-        const positions = await kiteSession.kc.getPositions();
-        const orders = await kiteSession.kc.getOrders();
-
+        
         const selectedStocks = await scanZaireStocks(niftyList);
+        
+        const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
 
         sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
 
@@ -33,7 +34,8 @@ async function setupZaireOrders() {
             try {
                 // Skip if stock is already in position or open orders
                 if (
-                    positions.net.find(p => p.tradingsymbol === stock.sym) || 
+                    positions.net.find(p => p.tradingsymbol === stock.sym) 
+                    || 
                     orders.find(o => o.tradingsymbol === stock.sym)
                 )
                     continue
@@ -57,11 +59,11 @@ async function cancelZaireOrders() {
         await sendMessageToChannel('⌛️ Executing Zaire Cancel Orders Job');
 
         const orders = await kiteSession.kc.getOrders();
-        const zaireOrders = orders.filter(o => o.status === 'OPEN');
+        // const zaireOrders = orders.filter(o => o.status === 'OPEN');
 
-        for (const order of zaireOrders) {
+        for (const order of orders) {
             try {
-                if (zaireOrders.filter(o => o.tradingsymbol === order.tradingsymbol).length > 1)
+                if (orders.filter(o => o.tradingsymbol === order.tradingsymbol).length > 1)
                     continue
 
                 await kiteSession.kc.cancelOrder('regular', order.order_id);
