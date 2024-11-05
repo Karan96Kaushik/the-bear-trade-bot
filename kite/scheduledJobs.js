@@ -19,6 +19,9 @@ async function setupZaireOrders() {
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
+        let stockData = await readSheetData('MIS-ALPHA!A2:W100')
+        stockData = processMISSheetData(stockData)
+
         await kiteSession.authenticate();
         
         const selectedStocks = await scanZaireStocks(niftyList);
@@ -39,6 +42,11 @@ async function setupZaireOrders() {
                     orders.find(o => o.tradingsymbol === stock.sym)
                 )
                     continue
+
+                if (stockData.find(s => s.stockSymbol === stock.sym)) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in sheet', stock.sym)
+                    continue
+                }
 
                 let sheetEntry = await createZaireOrders(stock);
                 // sheetEntries.push(sheetEntry)
@@ -297,11 +305,11 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    // const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
-    //     setupOrdersFromSheet()
-    //     sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
-    // });
-    // sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
+        setupOrdersFromSheet()
+        sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    });
+    sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();

@@ -381,7 +381,7 @@ const createOrders = async (stock) => {
         let orderResponse;
         if (stock.triggerPrice == 'mkt') {
 
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'MKT-PS')
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'MKT-MS')
             // orderResponse = await kiteSession.kc.placeOrder("regular", {
             //     exchange: "NSE",
             //     tradingsymbol: stock.stockSymbol,
@@ -395,7 +395,7 @@ const createOrders = async (stock) => {
         }
         else {
 
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-PS')
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-MS')
 
             // orderResponse = await kiteSession.kc.placeOrder("regular", {
             //     exchange: "NSE",
