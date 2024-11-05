@@ -245,12 +245,12 @@ async function createZaireOrders(stock) {
             // Place SL-M BUY order at price higher than trigger price
             if (ltp > triggerPrice) {
                 if ((targetPrice - ltp) / targetGain > 0.8)
-                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock)
+                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, 'ZAIRE')
                 else
                     return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else
-                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock);
+                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'ZAIRE');
 
 
             // Place SL-M SELL order
@@ -288,12 +288,12 @@ async function createZaireOrders(stock) {
             // Place SELL order at price lower than trigger price
             if (ltp < triggerPrice) {
                 if ((ltp - targetPrice) / targetGain > 0.8)
-                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock)
+                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, 'ZAIRE')
                 else
                     return sendMessageToChannel('🔔 Zaire: SELL order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else {
-                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock);
+                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'ZAIRE');
             }
 
 
@@ -319,7 +319,7 @@ async function createZaireOrders(stock) {
 }
 
 // Helper function to place orders
-async function placeOrder(transactionType, orderType, price, quantity, stock) {
+async function placeOrder(transactionType, orderType, price, quantity, stock, initiatedBy='-') {
     const order = {
         exchange: "NSE",
         tradingsymbol: stock.sym,
@@ -328,6 +328,7 @@ async function placeOrder(transactionType, orderType, price, quantity, stock) {
         order_type: orderType,
         product: "MIS",
         validity: "DAY",
+        tag: initiatedBy,
     };
 
     if (orderType === "SL-M") {

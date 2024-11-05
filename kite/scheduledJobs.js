@@ -59,16 +59,12 @@ async function cancelZaireOrders() {
         await sendMessageToChannel('⌛️ Executing Zaire Cancel Orders Job');
 
         const orders = await kiteSession.kc.getOrders();
-        // const zaireOrders = orders.filter(o => o.status === 'OPEN');
+        const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag === 'ZAIRE');
 
-        for (const order of orders) {
+        for (const order of zaireOrders) {
             try {
-                await sendMessageToChannel('⌛️ zaire orders DEBUG: ', orders, order);
 
-                if (orders.filter(o => o.tradingsymbol === order.tradingsymbol).length > 1)
-                    continue
-
-                // await kiteSession.kc.cancelOrder('regular', order.order_id);
+                await kiteSession.kc.cancelOrder('regular', order.order_id);
                 await sendMessageToChannel('❎ Cancelled Zaire order:', order.tradingsymbol, order.quantity);
             } catch (error) {
                 console.error(error)
