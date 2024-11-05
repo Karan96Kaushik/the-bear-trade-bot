@@ -63,6 +63,8 @@ async function cancelZaireOrders() {
 
         for (const order of orders) {
             try {
+                await sendMessageToChannel('⌛️ zaire orders DEBUG: ', orders, order);
+
                 if (orders.filter(o => o.tradingsymbol === order.tradingsymbol).length > 1)
                     continue
 
