@@ -26,7 +26,7 @@ const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
 
-    let orderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, stock.quantity, stock)
+    let orderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, stock.quantity, stock, 'SLM-BLSL')
     
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -43,7 +43,7 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
-    orderResponse = await placeOrder('BUY', 'LIMIT', stock.targetPrice, stock.quantity, stock)
+    orderResponse = await placeOrder('BUY', 'LIMIT', stock.targetPrice, stock.quantity, stock, 'LIM-BLSL')
 
     // orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -65,7 +65,7 @@ const createBuyLimSLOrders = async (stock, order) => {
 const createSellLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
-    let orderResponse = await placeOrder('SELL', 'SL-M', stock.stopLossPrice, stock.quantity, stock)
+    let orderResponse = await placeOrder('SELL', 'SL-M', stock.stopLossPrice, stock.quantity, stock, 'SLM-SLSL')
 
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -82,7 +82,7 @@ const createSellLimSLOrders = async (stock, order) => {
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
-    orderResponse = await placeOrder('SELL', 'LIMIT', stock.targetPrice, Math.abs(stock.quantity), stock)
+    orderResponse = await placeOrder('SELL', 'LIMIT', stock.targetPrice, Math.abs(stock.quantity), stock, 'LIM-SLSL')
 
     // orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -347,7 +347,7 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
     }
 
     const orderResponse = await kiteSession.kc.placeOrder("regular", order);
-    await sendMessageToChannel(`✅ Zaire: Placed ${orderType} ${transactionType} order`, stock.sym, quantity, price);
+    await sendMessageToChannel(`✅ ${initiatedBy}: Placed ${orderType} ${transactionType} order`, stock.sym || stock.stockSymbol || stock.tradingsymbol, quantity, price);
 
     return orderResponse
 }
@@ -381,7 +381,7 @@ const createOrders = async (stock) => {
         let orderResponse;
         if (stock.triggerPrice == 'mkt') {
 
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock)
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'MKT-PS')
             // orderResponse = await kiteSession.kc.placeOrder("regular", {
             //     exchange: "NSE",
             //     tradingsymbol: stock.stockSymbol,
@@ -395,7 +395,7 @@ const createOrders = async (stock) => {
         }
         else {
 
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock)
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-PS')
 
             // orderResponse = await kiteSession.kc.placeOrder("regular", {
             //     exchange: "NSE",
