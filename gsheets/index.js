@@ -46,7 +46,7 @@ function processMISSheetData (stockData) {
     })).filter(s => s.stockSymbol)
     return data.map(d => ({
         ...d,
-        type: d.quantity < 0 ? 'DOWN' : 'UP',
+        type: d.quantity < 0 ? 'BEARISH' : 'BULLISH',
         quantity: Math.abs(d.quantity),
     }))
 }
@@ -163,6 +163,28 @@ async function appendRowsToMISD(stocks) {
     }
 }
 
+
+async function appendRowsToSheet(range, rowsToAppend) {
+    try {
+        // Append the new rows
+        const response = await sheets.spreadsheets.values.append({
+            spreadsheetId: SPREADSHEET_ID,
+            range,
+            valueInputOption: 'USER_ENTERED',
+            insertDataOption: 'INSERT_ROWS',
+            resource: {
+                values: rowsToAppend
+            }
+        });
+        
+        console.log(`${rowsToAppend.length} new rows appended successfully.`);
+        return response.data;
+    } catch (error) {
+        console.error('Error appending rows to MIS-ALPHA sheet:', error);
+        throw error;
+    }
+}
+
 module.exports = {
     bulkUpdateCells,
     readSheetData,
@@ -170,5 +192,6 @@ module.exports = {
     numberToExcelColumn,
     processMISSheetData,
     getOrderLoc,
-    appendRowsToMISD
+    appendRowsToMISD,
+    appendRowsToSheet
 }

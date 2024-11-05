@@ -20,10 +20,13 @@ async function setupZaireOrders() {
         niftyList = niftyList.map(stock => stock[0])
 
         await kiteSession.authenticate();
-        const positions = await kiteSession.kc.getPositions();
-        const orders = await kiteSession.kc.getOrders();
-
+        
         const selectedStocks = await scanZaireStocks(niftyList);
+        
+        const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
+
+        sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
 
         const sheetEntries = []
 
@@ -31,8 +34,9 @@ async function setupZaireOrders() {
             try {
                 // Skip if stock is already in position or open orders
                 if (
-                    positions.net.find(p => p.tradingsymbol === stock.stockSymbol) || 
-                    orders.find(o => o.tradingsymbol === stock.stockSymbol)
+                    positions.net.find(p => p.tradingsymbol === stock.sym) 
+                    || 
+                    orders.find(o => o.tradingsymbol === stock.sym)
                 )
                     continue
 
@@ -50,6 +54,51 @@ async function setupZaireOrders() {
     }
 }
 
+async function cancelZaireOrders() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Zaire Cancel Orders Job');
+
+        const orders = await kiteSession.kc.getOrders();
+        const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag === 'ZAIRE');
+
+        for (const order of zaireOrders) {
+            try {
+
+                await kiteSession.kc.cancelOrder('regular', order.order_id);
+                await sendMessageToChannel('❎ Cancelled Zaire order:', order.tradingsymbol, order.quantity, order.status, order.tag);
+            } catch (error) {
+                console.error(error)
+                await sendMessageToChannel('🚨 Error cancelling Zaire order:', order.tradingsymbol, order.quantity, error?.message);
+            }
+        }
+
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Zaire Cancel Orders Job', error?.message);
+    }
+}
+
+async function setupSpecialOrdersFromSheet() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Special MIS Jobs');
+    
+        let niftyList = await getDhanNIFTY50Data()
+
+        niftyList = niftyList.map(stock => stock.Sym)
+    
+        await kiteSession.authenticate();
+    
+        for (const stock of niftyList) {
+            try {
+                const orderResponse = await createSpecialOrders(stock);
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel('🚨 Error running special schedule jobs', stock.stockSymbol, stock.quantity, stock.triggerPrice, error?.message);
+            }
+        }
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running special schedule jobs', error?.message);
+    }
+}
 
 async function validateOrdersFromSheet() {
     try {
@@ -67,11 +116,11 @@ async function validateOrdersFromSheet() {
                 ltp = ltp[sym].last_price
                 let order_value = Math.abs(stock.quantity) * Number(ltp)
                 
-                if (stock.type === 'DOWN' && Number(stock.triggerPrice) > ltp) {
+                if (stock.type === 'BEARISH' && Number(stock.triggerPrice) > ltp) {
                     await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
                 }
-                if (stock.type === 'UP' && Number(stock.triggerPrice) < ltp) {
+                if (stock.type === 'BULLISH' && Number(stock.triggerPrice) < ltp) {
                     await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Buy Price.', stock.stockSymbol, stock.quantity, "Buy Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
                 }
@@ -188,7 +237,7 @@ async function updateStopLossOrders() {
             if (!stock.lastAction) continue;
 
             const sym = stock.stockSymbol;
-            const isDown = stock.type === 'DOWN';
+            const isDown = stock.type === 'BEARISH';
 
             const position = positions.net.find(p => p.tradingsymbol === sym);
             if (!position) continue;
@@ -249,11 +298,11 @@ async function updateStopLossOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
-        setupOrdersFromSheet()
-        sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
-    });
-    sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    // const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
+    //     setupOrdersFromSheet()
+    //     sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    // });
+    // sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
@@ -261,11 +310,11 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ MIS Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
-    const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
-        validateOrdersFromSheet();
-        sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
-    });
-    sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    // const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
+    //     validateOrdersFromSheet();
+    //     sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    // });
+    // sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
     const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
@@ -280,12 +329,17 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
-    // const zaireJob = schedule.scheduleJob('11 4 * * *', () => {
-    const zaireJob = schedule.scheduleJob('1 4 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
     sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+
+    const zaireCancelJob = schedule.scheduleJob('30 15,30 4 * * 1-5', () => {
+        sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+        cancelZaireOrders();
+    });
+    sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 }
 
 module.exports = {

@@ -62,7 +62,8 @@ async function getInstrumentToken(tradingSymbol) {
  */
 async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', startDate, endDate) {
     try {
-        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${sym}.NS`;
+        const _sym = sym.includes('^') ? sym : sym + '.NS'
+        const url = `https://query1.finance.yahoo.com/v8/finance/chart/${_sym}`;
         
         let today = new Date();
         let period1Date = new Date(today.getTime() - days * 24 * 60 * 60 * 1000);
@@ -185,30 +186,26 @@ async function getDhanNIFTY50Data(params = {}) {
         const url = 'https://ow-scanx-analytics.dhan.co/customscan/fetchdt';
         
         const defaultData = {
-            sort: "Mcap",
+            sort: params.sort || "Year1ROCE",
+            // sort: "Mcap",
             sorder: "desc",
-            count: 1000,
+            count: 500,
             params: [
-                { field: "idxlist.Indexid", op: "", val: "13" },
-                { field: "Exch", op: "", val: "NSE" },
-                { field: "OgInst", op: "", val: "ES" }
+                { field: "OgInst", op: "", val: "ES" },
+                { field: "Exch", op: "", val: "NSE" }
             ],
             fields: [
-                "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue", "Year1RevenueGrowth",
-                "NetProfitMargin", "YoYLastQtrlyProfitGrowth", "EBIDTAMargin", "volume",
-                "PricePerchng1year", "PricePerchng3year", "PricePerchng5year", "Ind_Pe",
-                "Pb", "DivYeild", "Eps", "DaySMA50CurrentCandle", "DaySMA200CurrentCandle",
-                "DayRSI14CurrentCandle", "ROCE", "Roe", "Sym", "PricePerchng1mon", "PricePerchng3mon"
+                "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue",
+                "Year1RevenueGrowth", "NetProfitMargin", "YoYLastQtrlyProfitGrowth",
+                "Year1ROCE", "EBIDTAMargin", "volume", "PricePerchng1year",
+                "PricePerchng3year", "PricePerchng5year", "Ind_Pe", "Pb", "DivYeild",
+                "Eps", "DaySMA50CurrentCandle", "DaySMA200CurrentCandle",
+                "DayRSI14CurrentCandle", "Year1ROCE", "Year1ROE", "Sym"
             ],
-            pgno: 1
+            // pgno: params.pgno || 1
         };
 
-        const requestData = {
-            data: {
-                ...defaultData,
-                ...params
-            }
-        };
+        const requestData = { data: defaultData };
 
         const headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0',

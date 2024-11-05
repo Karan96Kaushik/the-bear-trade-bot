@@ -42,7 +42,9 @@ const run = async () => {
 
 	setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 
-	scheduleMISJobs()
+	if (process.env.NODE_ENV === 'production') {
+		scheduleMISJobs()
+	}
 
 }
 

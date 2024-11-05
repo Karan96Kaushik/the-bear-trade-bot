@@ -65,7 +65,7 @@ describe('scheduled orders', () => {
         // jest.resetModules();
     });
 	
-	test('should Update SL from sheet for DOWN', async () => {
+	test('should Update SL from sheet for BEARISH', async () => {
 		jest.spyOn(kiteSession, 'authenticate');
 		jest.spyOn(kiteSession.kc, 'placeOrder');
 		jest.spyOn(kiteSession.kc, 'cancelOrder').mockResolvedValue(true);

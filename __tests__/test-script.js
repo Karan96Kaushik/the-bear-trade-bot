@@ -1,31 +1,21 @@
-// console.error = console.trace
-
+const { scanZaireStocks } = require("../analytics")
 const { readSheetData, processMISSheetData, getStockLoc } = require("../gsheets")
-const { kiteSession } = require("./setup")
-
-// console.debug = console.trace
-// console.warn = console.trace
-// console.info = console.trace
-
-const checkValue = async () => {
-
-    let pos = await kiteSession.kc.getPositions()
-    console.log(pos.net.map(c=> [c.tradingsymbol, c.pnl]))
-    console.log(pos.net.reduce((p,c) => p+c.pnl,0))
-
-    let hol = await kiteSession.kc.getHoldings()
-    console.log(hol.map(c=> [c.tradingsymbol, c.pnl]))
-    console.log(hol.reduce((p,c) => p+c.pnl,0))
-
-}
+const { kiteSession } = require("../kite/setup")
 
 const run = async () => {
 
     try {
 
-        await kiteSession.authenticate()
+        let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
+        niftyList = niftyList.map(stock => stock[0])
 
-        await checkValue()
+        // await kiteSession.authenticate();
+        // const positions = await kiteSession.kc.getPositions();
+        // const orders = await kiteSession.kc.getOrders();
+
+        const selectedStocks = await scanZaireStocks(niftyList, new Date('2024-10-30T04:01:10Z'));
+        console.table(selectedStocks.map(a => ({...a, qty: Math.ceil(200/(a.high - a.low))})))
+
         
         // console.log(pos)
 

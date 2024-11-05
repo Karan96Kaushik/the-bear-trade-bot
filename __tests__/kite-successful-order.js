@@ -38,7 +38,7 @@ describe('scheduled orders', () => {
 		jest.clearAllMocks();
 	});
 	
-	test('should create valid SL and target order from sheet for DOWN', async () => {
+	test('should create valid SL and target order from sheet for BEARISH', async () => {
 		jest.spyOn(kiteSession, 'authenticate');
 		jest.spyOn(kiteSession.kc, 'placeOrder');
 
@@ -81,7 +81,7 @@ describe('scheduled orders', () => {
 		//   expect(kiteSession.kc.getLTP).toHaveBeenCalledTimes(2);
 	});
 	
-	test('should create valid SL and target order from sheet for UP', async () => {
+	test('should create valid SL and target order from sheet for BULLISH', async () => {
 		jest.spyOn(kiteSession, 'authenticate');
 		jest.spyOn(kiteSession.kc, 'placeOrder');
 
