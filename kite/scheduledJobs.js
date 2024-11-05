@@ -307,46 +307,46 @@ const scheduleMISJobs = () => {
 
     const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
         setupOrdersFromSheet()
-        sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+        sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     });
-    sendMessageToChannel('⏰ MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
-        sendMessageToChannel('⏰ MIS Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
+        sendMessageToChannel('⏰ Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
     });
-    sendMessageToChannel('⏰ MIS Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
+    sendMessageToChannel('⏰ Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
-    // const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
-    //     validateOrdersFromSheet();
-    //     sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
-    // });
-    // sendMessageToChannel('⏰ MIS Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
+        validateOrdersFromSheet();
+        sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+    });
+    sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
     const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
         updateStopLossOrders();
         sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
     });
-    sendMessageToChannel('⏰ MIS UPDATE Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
+    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
 
     // const specialJob = schedule.scheduleJob('1 16 * * 1-5', () => {
     //     setupSpecialOrdersFromSheet();
-    //     sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
+    //     sendMessageToChannel('⏰ Special Manual MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
     // });
-    // sendMessageToChannel('⏰ Special MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
+    // sendMessageToChannel('⏰ Special Manual MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
     const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
-        sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+        sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
-    sendMessageToChannel('⏰ MIS Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+    sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 
     const zaireCancelJob = schedule.scheduleJob('30 15,30 4 * * 1-5', () => {
-        sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+        sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
         cancelZaireOrders();
     });
-    sendMessageToChannel('⏰ MIS Zaire Cancel Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+    sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 }
 
 module.exports = {
