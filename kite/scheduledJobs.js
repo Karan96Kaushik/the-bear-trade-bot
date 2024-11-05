@@ -65,7 +65,7 @@ async function cancelZaireOrders() {
             try {
 
                 await kiteSession.kc.cancelOrder('regular', order.order_id);
-                await sendMessageToChannel('❎ Cancelled Zaire order:', order.tradingsymbol, order.quantity);
+                await sendMessageToChannel('❎ Cancelled Zaire order:', order.tradingsymbol, order.quantity, order.status, order.tag);
             } catch (error) {
                 console.error(error)
                 await sendMessageToChannel('🚨 Error cancelling Zaire order:', order.tradingsymbol, order.quantity, error?.message);
