@@ -25,8 +25,11 @@ const logOrder = async (status, initiator, orderResponse) => {
 const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
+    let slPrice = stock.stopLossPrice
+    if (!slPrice)
+        slPrice = stock.triggerPrice * 0.98
 
-    let orderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, stock.quantity, stock, 'SLM-BLSL')
+    let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'SLM-BLSL')
     
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
