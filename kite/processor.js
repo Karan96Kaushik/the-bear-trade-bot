@@ -25,33 +25,38 @@ const logOrder = async (status, initiator, orderResponse) => {
 const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
-    let orderResponse = await kiteSession.kc.placeOrder("regular", {
-        exchange: "NSE",
-        tradingsymbol: stock.stockSymbol,
-        transaction_type: "BUY",
-        quantity: stock.quantity,
-        order_type: "SL-M",    // Stop Loss Market
-        product: "MIS",        // Intraday
-        validity: "DAY",
-        trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
-        // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
-    });
+
+    let orderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, stock.quantity, stock)
+    
+    // let orderResponse = await kiteSession.kc.placeOrder("regular", {
+    //     exchange: "NSE",
+    //     tradingsymbol: stock.stockSymbol,
+    //     transaction_type: "BUY",
+    //     quantity: stock.quantity,
+    //     order_type: "SL-M",    // Stop Loss Market
+    //     product: "MIS",        // Intraday
+    //     validity: "DAY",
+    //     trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
+    //     // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
+    // });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
-    orderResponse = await kiteSession.kc.placeOrder("regular", {
-        exchange: "NSE",
-        tradingsymbol: stock.stockSymbol,
-        transaction_type: "BUY",
-        quantity: Math.abs(stock.quantity),
-        order_type: "LIMIT",    // Stop Loss Market
-        product: "MIS",        // Intraday
-        validity: "DAY",
-        price: Number(stock.targetPrice),  // Stop-loss trigger price
-        // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
-        // price: stock.targetPrice  // Stop-loss trigger price
-    });
+    orderResponse = await placeOrder('BUY', 'LIMIT', stock.targetPrice, stock.quantity, stock)
+
+    // orderResponse = await kiteSession.kc.placeOrder("regular", {
+    //     exchange: "NSE",
+    //     tradingsymbol: stock.stockSymbol,
+    //     transaction_type: "BUY",
+    //     quantity: Math.abs(stock.quantity),
+    //     order_type: "LIMIT",    // Stop Loss Market
+    //     product: "MIS",        // Intraday
+    //     validity: "DAY",
+    //     price: Number(stock.targetPrice),  // Stop-loss trigger price
+    //     // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
+    //     // price: stock.targetPrice  // Stop-loss trigger price
+    // });
     await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
@@ -60,33 +65,37 @@ const createBuyLimSLOrders = async (stock, order) => {
 const createSellLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
-    let orderResponse = await kiteSession.kc.placeOrder("regular", {
-        exchange: "NSE",
-        tradingsymbol: stock.stockSymbol,
-        transaction_type: "SELL",
-        quantity: stock.quantity,
-        order_type: "SL-M",    // Stop Loss Market
-        product: "MIS",        // Intraday
-        validity: "DAY",
-        trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
-        // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
-    });
+    let orderResponse = await placeOrder('SELL', 'SL-M', stock.stopLossPrice, stock.quantity, stock)
+
+    // let orderResponse = await kiteSession.kc.placeOrder("regular", {
+    //     exchange: "NSE",
+    //     tradingsymbol: stock.stockSymbol,
+    //     transaction_type: "SELL",
+    //     quantity: stock.quantity,
+    //     order_type: "SL-M",    // Stop Loss Market
+    //     product: "MIS",        // Intraday
+    //     validity: "DAY",
+    //     trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
+    //     // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
+    // });
     await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
-    orderResponse = await kiteSession.kc.placeOrder("regular", {
-        exchange: "NSE",
-        tradingsymbol: stock.stockSymbol,
-        transaction_type: "SELL",
-        quantity: Math.abs(stock.quantity),
-        order_type: "LIMIT",    // Stop Loss Market
-        product: "MIS",        // Intraday
-        validity: "DAY",
-        price: Number(stock.targetPrice),  // Stop-loss trigger price
-        // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
-        // price: stock.targetPrice  // Stop-loss trigger price
-    });
+    orderResponse = await placeOrder('SELL', 'LIMIT', stock.targetPrice, Math.abs(stock.quantity), stock)
+
+    // orderResponse = await kiteSession.kc.placeOrder("regular", {
+    //     exchange: "NSE",
+    //     tradingsymbol: stock.stockSymbol,
+    //     transaction_type: "SELL",
+    //     quantity: Math.abs(stock.quantity),
+    //     order_type: "LIMIT",    // Stop Loss Market
+    //     product: "MIS",        // Intraday
+    //     validity: "DAY",
+    //     price: Number(stock.targetPrice),  // Stop-loss trigger price
+    //     // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
+    //     // price: stock.targetPrice  // Stop-loss trigger price
+    // });
     await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
@@ -322,9 +331,9 @@ async function createZaireOrders(stock) {
 async function placeOrder(transactionType, orderType, price, quantity, stock, initiatedBy='-') {
     const order = {
         exchange: "NSE",
-        tradingsymbol: stock.sym,
+        tradingsymbol: stock.sym || stock.stockSymbol || stock.tradingsymbol,
         transaction_type: transactionType,
-        quantity: quantity,
+        quantity: Math.abs(quantity),
         order_type: orderType,
         product: "MIS",
         validity: "DAY",
@@ -341,75 +350,6 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
     await sendMessageToChannel(`✅ Zaire: Placed ${orderType} ${transactionType} order`, stock.sym, quantity, price);
 
     return orderResponse
-}
-
-async function createSpecialOrders(stock) {
-    const sym = `NSE:${stock}`;
-    const startTime = new Date().setHours(0, 0, 0, 0) / 1000;
-    const endTime = new Date() / 1000;
-    const data = await getDataFromYahoo(sym, 1, '1m', startTime, endTime);
-    let candles = processYahooData(data)
-
-    // Add moving average
-    candles = addMovingAverage(candles, 'close', 44, 'sma44');
-
-    // Get the 4:01 candle
-    const targetTime = new Date().setHours(16, 1, 0, 0) / 1000;
-    const firstCandleIndex = timestamps.findIndex(t => t >= targetTime);
-    const firstCandle = candles[firstCandleIndex];
-
-    if (!firstCandle) {
-        throw new Error('First candle not found');
-    }
-
-    // Check conditions
-    if (firstCandle.close <= firstCandle.open) {
-        throw new Error('First candle is not green');
-    }
-
-    const priceDifference = (firstCandle.close - firstCandle.open) / firstCandle.open;
-    if (priceDifference < 0.01 || priceDifference > 0.05) {
-        throw new Error('Price difference not between 1-5%');
-    }
-
-    if (firstCandle.low > firstCandle.sma44 || firstCandle.high < firstCandle.sma44 * 0.99) {
-        throw new Error('Candle not on or slightly above 44 MA');
-    }
-
-    // Calculate order details
-    const targetBuyPrice = firstCandle.high * 1.002;
-    const stopLossPrice = firstCandle.low;
-    const quantity = Math.floor(1000 / (firstCandle.high - firstCandle.low));
-    const targetSellPrice = (firstCandle.high - firstCandle.low) * 2 + targetBuyPrice;
-
-    // Place the order
-    const orderResponse = await kiteSession.kc.placeOrder("regular", {
-        exchange: "NSE",
-        tradingsymbol: stock.stockSymbol,
-        transaction_type: "BUY",
-        quantity: quantity,
-        order_type: "SL-M",
-        product: "MIS",
-        validity: "DAY",
-        trigger_price: targetBuyPrice,
-    });
-
-    await sendMessageToChannel('✅ Successfully placed Special SL-M BUY order', stock.stockSymbol, quantity, targetBuyPrice);
-
-    await logOrder('PLACED', 'SPECIAL', orderResponse)
-
-    // Schedule order cancellation
-    const cancelTime = new Date().setHours(16, 16, 0, 0);
-    setTimeout(async () => {
-        try {
-            await kiteSession.kc.cancelOrder("regular", orderResponse.order_id);
-            await sendMessageToChannel('🚫 Cancelled unfilled Special BUY order', stock.stockSymbol);
-        } catch (error) {
-            console.error('Error cancelling order:', error);
-        }
-    }, cancelTime - Date.now());
-
-    return orderResponse;
 }
 
 const createOrders = async (stock) => {
@@ -440,36 +380,42 @@ const createOrders = async (stock) => {
 
         let orderResponse;
         if (stock.triggerPrice == 'mkt') {
-            orderResponse = await kiteSession.kc.placeOrder("regular", {
-                exchange: "NSE",
-                tradingsymbol: stock.stockSymbol,
-                transaction_type: stock.type == 'BEARISH' ? "SELL" : "BUY",
-                quantity: Number(stock.quantity),
-                order_type: "MARKET",
-                product: "MIS",
-                validity: "DAY"
-            });
+
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock)
+            // orderResponse = await kiteSession.kc.placeOrder("regular", {
+            //     exchange: "NSE",
+            //     tradingsymbol: stock.stockSymbol,
+            //     transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
+            //     quantity: Number(stock.quantity),
+            //     order_type: "MARKET",
+            //     product: "MIS",
+            //     validity: "DAY"
+            // });
             await sendMessageToChannel('✅ Successfully placed Market SELL order', stock.stockSymbol, stock.quantity)
         }
         else {
-            orderResponse = await kiteSession.kc.placeOrder("regular", {
-                exchange: "NSE",
-                tradingsymbol: stock.stockSymbol,
-                transaction_type: stock.type == 'BEARISH' ? "SELL" : "BUY",
-                quantity: Number(stock.quantity),
 
-                order_type: "SL-M",
-                trigger_price: Number(stock.triggerPrice),
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock)
 
-                // order_type: stock.type == 'BEARISH' ? "SL-M" : "LIMIT",
-                // ...(stock.type == 'BEARISH' 
-                //     ? { trigger_price: Number(stock.triggerPrice) }
-                //     : { price: Number(stock.triggerPrice) }
-                // ),
+            // orderResponse = await kiteSession.kc.placeOrder("regular", {
+            //     exchange: "NSE",
+            //     tradingsymbol: stock.stockSymbol,
+            //     transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
+            //     quantity: Number(stock.quantity),
 
-                product: "MIS",
-                validity: "DAY",
-            });
+            //     order_type: "SL-M",
+            //     trigger_price: Number(stock.triggerPrice),
+
+            //     // order_type: stock.type == "DOWN" ? "SL-M" : "LIMIT",
+            //     // ...(stock.type == "DOWN" 
+            //     //     ? { trigger_price: Number(stock.triggerPrice) }
+            //     //     : { price: Number(stock.triggerPrice) }
+            //     // ),
+
+            //     product: "MIS",
+            //     validity: "DAY",
+            // });
+
             await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
 
@@ -485,6 +431,7 @@ const createOrders = async (stock) => {
 module.exports = {
     processSuccessfulOrder,
     createOrders,
-    createSpecialOrders,
-    createZaireOrders
+    createZaireOrders,
+    placeOrder,
+    logOrder
 }

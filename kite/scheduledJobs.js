@@ -4,7 +4,7 @@ const { readSheetData, processMISSheetData, appendRowsToMISD } = require('../gsh
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data } = require('./utils');
-const { createOrders, createSpecialOrders, createZaireOrders } = require('./processor');
+const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
 const { scanZaireStocks } = require('../analytics');
 
 // const OrderLog = require('../models/OrderLog');
@@ -181,15 +181,17 @@ async function closePositions() {
 
         for (const position of allPositions) {
             try {
-                await kiteSession.kc.placeOrder("regular", {
-                    exchange: position.exchange,
-                    tradingsymbol: position.tradingsymbol,
-                    transaction_type: position.quantity < 0 ? "BUY" : "SELL",
-                    quantity: Math.abs(position.quantity),
-                    order_type: "MARKET",
-                    product: "MIS",
-                    validity: "DAY"
-                });
+                await placeOrder(position.quantity < 0 ? 'BUY' : 'SELL', 'MARKET', null, position.quantity, position)
+
+                // await kiteSession.kc.placeOrder("regular", {
+                //     exchange: position.exchange,
+                //     tradingsymbol: position.tradingsymbol,
+                //     transaction_type: position.quantity < 0 ? "BUY" : "SELL",
+                //     quantity: Math.abs(position.quantity),
+                //     order_type: "MARKET",
+                //     product: "MIS",
+                //     validity: "DAY"
+                // });
                 await sendMessageToChannel(`✅ Successfully placed Market ${position.quantity < 0 ? "BUY" : "SELL"} order to close position`, position.tradingsymbol, Math.abs(position.quantity));
             } catch (error) {
                 await sendMessageToChannel('🚨 Error placing  order to close position', position.tradingsymbol, position.quantity, error?.message);
@@ -268,17 +270,20 @@ async function updateStopLossOrders() {
                 // Cancel the existing order
                 await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
 
+                await logOrder('')
+
+                await placeOrder(isDown ? "BUY" : "SELL", 'SL-M', newPrice, stock.quantity, stock)
                 // Place a new order with updated stop loss
-                await kiteSession.kc.placeOrder("regular", {
-                    exchange: "NSE",
-                    tradingsymbol: stock.stockSymbol,
-                    transaction_type: isDown ? "BUY" : "SELL",
-                    quantity: Number(stock.quantity),
-                    order_type: "SL-M",
-                    trigger_price: newPrice,
-                    product: "MIS",
-                    validity: "DAY",
-                });
+                // await kiteSession.kc.placeOrder("regular", {
+                //     exchange: "NSE",
+                //     tradingsymbol: stock.stockSymbol,
+                //     transaction_type: isDown ? "BUY" : "SELL",
+                //     quantity: Number(stock.quantity),
+                //     order_type: "SL-M",
+                //     trigger_price: newPrice,
+                //     product: "MIS",
+                //     validity: "DAY",
+                // });
 
                 await sendMessageToChannel(`🔄 Updated SL-M ${isDown ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
             }
