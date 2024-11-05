@@ -217,7 +217,7 @@ async function createZaireOrders(stock) {
         const sheetEntry = {
             stockSymbol: stock.sym,
             reviseSL: true,
-            ignore: '',    // False
+            ignore: true,    // False
         }
 
         const sym = `NSE:${stock.sym}`
