@@ -254,12 +254,12 @@ async function createZaireOrders(stock) {
             // Place SL-M BUY order at price higher than trigger price
             if (ltp > triggerPrice) {
                 if ((targetPrice - ltp) / targetGain > 0.8)
-                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, 'ZAIRE')
+                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, 'zaire')
                 else
                     return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else
-                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'ZAIRE');
+                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'zaire');
 
 
             // Place SL-M SELL order
@@ -297,12 +297,12 @@ async function createZaireOrders(stock) {
             // Place SELL order at price lower than trigger price
             if (ltp < triggerPrice) {
                 if ((ltp - targetPrice) / targetGain > 0.8)
-                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, 'ZAIRE')
+                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, 'zaire')
                 else
                     return sendMessageToChannel('🔔 Zaire: SELL order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else {
-                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'ZAIRE');
+                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'zaire');
             }
 
 
