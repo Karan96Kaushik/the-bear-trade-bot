@@ -8,9 +8,8 @@ router.get('/logs', async (req, res) => {
         const { page = 1, limit = 50, symbol, action, status, date } = req.query;
         
         const query = {};
-        if (symbol) query.tradingsymbol = symbol;
-        if (action) query.action = action;
-        if (status) query.bear_status = status;
+        if (symbol) query.tradingsymbol = { $regex: new RegExp(symbol, 'i') };
+        if (status) query.bear_status = { $regex: new RegExp(status, 'i') };
         if (date) {
             const startDate = new Date(date);
             const endDate = new Date(date);
