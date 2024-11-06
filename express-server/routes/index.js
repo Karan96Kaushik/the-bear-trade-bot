@@ -4,4 +4,5 @@ module.exports = {
     orders: require('./orders'),
     kite: require('./kite'),
     zaire: require('./zaire'),
+    db_orders: require('./db_orders'),
 }

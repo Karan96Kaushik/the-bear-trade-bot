@@ -1,0 +1,76 @@
+const express = require('express');
+const router = express.Router();
+const OrderLog = require('../../models/OrderLog');
+
+// Get all orders with pagination and filtering
+router.get('/logs', async (req, res) => {
+    try {
+        const { page = 1, limit = 50, symbol, action, status, date } = req.query;
+        
+        const query = {};
+        if (symbol) query.tradingsymbol = symbol;
+        if (action) query.action = action;
+        if (status) query.bear_status = status;
+        if (date) {
+            const startDate = new Date(date);
+            const endDate = new Date(date);
+            endDate.setDate(endDate.getDate() + 1);
+            query.timestamp = { 
+                $gte: startDate,
+                $lt: endDate
+            };
+        }
+
+        const orders = await OrderLog.find(query)
+            .sort({ timestamp: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .exec();
+
+        const count = await OrderLog.countDocuments(query);
+
+        res.json({
+            orders,
+            totalPages: Math.ceil(count / limit),
+            currentPage: page,
+            totalOrders: count
+        });
+    } catch (error) {
+        console.error('Error fetching order logs:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+// Get order statistics
+router.get('/stats', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const query = {};
+        if (date) {
+            const startDate = new Date(date);
+            const endDate = new Date(date);
+            endDate.setDate(endDate.getDate() + 1);
+            query.timestamp = { 
+                $gte: startDate,
+                $lt: endDate
+            };
+        }
+
+        const stats = await OrderLog.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: '$bear_status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching order stats:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+module.exports = router;
