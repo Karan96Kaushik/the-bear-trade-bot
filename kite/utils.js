@@ -175,40 +175,37 @@ function processYahooData(yahooData) {
 }
 
 /**
- * Fetch stock data from Dhan API
- * @param {Object} params - Parameters for the API request
- * @param {number} [params.count=1000] - Number of records to fetch
- * @param {number} [params.pgno=1] - Page number for pagination
- * @returns {Promise<Object>} The stock data from Dhan API
+ * Fetch NIFTY50 stock data from Dhan API
+ * @param {number} [pgno=0] - Page number for pagination
+ * @returns {Promise<Object>} The stock data containing various financial metrics
  */
-async function getDhanNIFTY50Data(params = {}) {
+async function getDhanNIFTY50Data(pgno = 0) {
     try {
         const url = 'https://ow-scanx-analytics.dhan.co/customscan/fetchdt';
         
-        const defaultData = {
-            sort: params.sort || "Year1ROCE",
-            // sort: "Mcap",
-            sorder: "desc",
-            count: 500,
-            params: [
-                { field: "OgInst", op: "", val: "ES" },
-                { field: "Exch", op: "", val: "NSE" }
-            ],
-            fields: [
-                "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue",
-                "Year1RevenueGrowth", "NetProfitMargin", "YoYLastQtrlyProfitGrowth",
-                "Year1ROCE", "EBIDTAMargin", "volume", "PricePerchng1year",
-                "PricePerchng3year", "PricePerchng5year", "Ind_Pe", "Pb", "DivYeild",
-                "Eps", "DaySMA50CurrentCandle", "DaySMA200CurrentCandle",
-                "DayRSI14CurrentCandle", "Year1ROCE", "Year1ROE", "Sym"
-            ],
-            // pgno: params.pgno || 1
+        const requestData = {
+            data: {
+                sort: "Mcap",
+                sorder: "desc",
+                count: 500,
+                params: [
+                    { field: "OgInst", op: "", val: "ES" },
+                    { field: "Exch", op: "", val: "NSE" }
+                ],
+                fields: [
+                    "Isin", "DispSym", "Mcap", "Pe", "DivYeild", "Revenue",
+                    "Year1RevenueGrowth", "NetProfitMargin", "YoYLastQtrlyProfitGrowth",
+                    "Year1ROCE", "EBIDTAMargin", "volume", "PricePerchng1year",
+                    "PricePerchng3year", "PricePerchng5year", "Ind_Pe", "Pb", "DivYeild",
+                    "Eps", "DaySMA50CurrentCandle", "DaySMA200CurrentCandle",
+                    "DayRSI14CurrentCandle", "Year1ROCE", "Year1ROE", "Sym"
+                ],
+                pgno
+            }
         };
 
-        const requestData = { data: defaultData };
-
         const headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:131.0) Gecko/20100101 Firefox/131.0',
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0',
             'Accept': '*/*',
             'Accept-Language': 'en-US,en;q=0.5',
             'Accept-Encoding': 'gzip, deflate, br, zstd',
@@ -224,9 +221,14 @@ async function getDhanNIFTY50Data(params = {}) {
         };
 
         const response = await axios.post(url, requestData, { headers });
-        return response.data?.data;
+        
+        if (!response.data?.data) {
+            throw new Error('Unexpected JSON structure or missing data');
+        }
+        
+        return response.data.data;
     } catch (error) {
-        console.error(`Error fetching data from Dhan API:`, error?.response?.data);
+        console.error(`Error fetching data from Dhan API:`, error?.response?.data || error.message);
         throw error;
     }
 }
