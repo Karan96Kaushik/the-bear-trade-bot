@@ -116,6 +116,35 @@ const createSellLimSLOrders = async (stock, order) => {
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 }
 
+const setupReversalOrders = async (order) => {
+    try {
+        const triggerPrice = order.trigger_price || order.price
+        const quantity = order.quantity
+        const stockSymbol = order.tradingsymbol
+        let direction, targetPrice, stopLossPrice, transaction_type
+
+        if (order.transaction_type == 'BUY') {
+            direction = 'BULLISH'
+            transaction_type = 'SELL'
+            stopLossPrice = triggerPrice - (RISK_AMOUNT/quantity)
+            targetPrice = triggerPrice + ((RISK_AMOUNT*2)/quantity)
+        }
+        else {
+            direction = 'BEARISH'
+            transaction_type = 'BUY'
+            stopLossPrice = triggerPrice + (RISK_AMOUNT/quantity)
+            targetPrice = triggerPrice - ((RISK_AMOUNT*2)/quantity)
+        }
+
+        await placeOrder(transaction_type, 'SL-M', stopLossPrice, quantity, stockSymbol, 'stoploss-RV')
+        await placeOrder(transaction_type, 'LIMIT', targetPrice, quantity, stockSymbol, 'target-RV')
+
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error setting up reversal orders', error?.message)
+        console.error('🚨 Error setting up reversal orders', error)
+    }
+}
+
 const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
@@ -184,36 +213,23 @@ const processSuccessfulOrder = async (order) => {
             else if (order.transaction_type == 'BUY' && stock?.type == 'BEARISH' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
                 let orders = await kiteSession.kc.getOrders()
-                orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'BUY')
+                orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'BUY')
 
-                if (orders.length > 1)
-                    await sendMessageToChannel('😱 Multiple pending buy orders found!!')
-                else if (orders.length < 1)
-                    await sendMessageToChannel('😱 Pending order not found!!')
-                else {
-                    await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
-                    
-                    await logOrder('CANCELLED', 'PROCESS SUCCESS', order)
-
-                    await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
+                if (orders.length < 1) {
+                    await sendMessageToChannel('⭐️ Possible reversal happening!', order.tag)
+                    await setupReversalOrders(order)
                 }
             }            
             else if (order.transaction_type == 'SELL' && stock?.type == 'BULLISH' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
                 let orders = await kiteSession.kc.getOrders()
-                orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && o.status == 'OPEN' && o.transaction_type == 'SELL')
-
-                if (orders.length > 1)
-                    await sendMessageToChannel('😱 Multiple pending buy orders found!!')
-                else if (orders.length < 1)
-                    await sendMessageToChannel('😱 Pending order not found!!')
-                else {
-                    await kiteSession.kc.cancelOrder('regular', orders[0].order_id)
-                    
-                    await logOrder('CANCELLED', 'PROCESS SUCCESS', order)
-
-                    await sendMessageToChannel('📁 Closed order', order.tradingsymbol, order.order_type)
+                orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'SELL')
+                
+                if (orders.length < 1) {
+                    await sendMessageToChannel('⭐️ Possible reversal happening!', order.tag)
+                    await setupReversalOrders(order)
                 }
+
             }
         }
         
