@@ -384,7 +384,7 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
     const orderResponse = await kiteSession.kc.placeOrder("regular", order);
     await sendMessageToChannel(`✅ ${initiatedBy}: Placed ${orderType} ${transactionType} order`, stock.sym || stock.stockSymbol || stock.tradingsymbol, quantity, price);
 
-    return orderResponse
+    return {...orderResponse, ...order}
 }
 
 const shouldPlaceMarketOrder = (ltp, triggerPrice, targetPrice, direction) => {
