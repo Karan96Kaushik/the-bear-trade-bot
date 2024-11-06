@@ -19,8 +19,8 @@ async function setupZaireOrders() {
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        let stockData = await readSheetData('MIS-ALPHA!A2:W100')
-        stockData = processMISSheetData(stockData)
+        let sheetData = await readSheetData('MIS-ALPHA!A2:W100')
+        sheetData = processMISSheetData(sheetData)
 
         await kiteSession.authenticate();
         
@@ -38,12 +38,14 @@ async function setupZaireOrders() {
                 // Skip if stock is already in position or open orders
                 if (
                     positions.net.find(p => p.tradingsymbol === stock.sym) 
-                    || 
-                    orders.find(o => o.tradingsymbol === stock.sym)
-                )
+                    // || 
+                    // orders.find(o => o.tradingsymbol === stock.sym)
+                ) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
                     continue
+                }
 
-                if (stockData.find(s => s.stockSymbol === stock.sym)) {
+                if (sheetData.find(s => s.stockSymbol === stock.sym)) {
                     await sendMessageToChannel('🔔 Ignoring coz already in sheet', stock.sym)
                     continue
                 }
