@@ -30,10 +30,10 @@ const createBuyLimSLOrders = async (stock, order) => {
         if (stock.triggerPrice.toString().toLowerCase().includes('mkt')) {
             ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
             ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
-            slPrice = Number(ltp) * 0.98 
+            slPrice = Number(ltp) * 1.02
         }
         else
-            slPrice = Number(stock.triggerPrice) * 0.98
+            slPrice = Number(stock.triggerPrice) * 1.02
 
     let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'SLM-BLSL')
     
@@ -76,7 +76,13 @@ const createSellLimSLOrders = async (stock, order) => {
 
     let slPrice = stock.stopLossPrice
     if (!slPrice)
-        slPrice = stock.triggerPrice * 1.02
+        if (stock.triggerPrice.toString().toLowerCase().includes('mkt')) {
+            ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
+            ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
+            slPrice = Number(ltp) * 0.98 
+        }
+        else
+            slPrice = Number(stock.triggerPrice) * 0.98
 
     let orderResponse = await placeOrder('SELL', 'SL-M', slPrice, stock.quantity, stock, 'SLM-SLSL')
 
