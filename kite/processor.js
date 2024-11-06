@@ -27,7 +27,13 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     let slPrice = stock.stopLossPrice
     if (!slPrice)
-        slPrice = Number(stock.triggerPrice) * 0.98
+        if (stock.triggerPrice.toString().toLowerCase().includes('mkt')) {
+            ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
+            ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
+            slPrice = Number(ltp) * 0.98 
+        }
+        else
+            slPrice = Number(stock.triggerPrice) * 0.98
 
     let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'SLM-BLSL')
     
