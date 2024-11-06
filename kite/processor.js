@@ -35,7 +35,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         else
             slPrice = Number(stock.triggerPrice) * 1.02
 
-    let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'SLM-BLSL')
+    let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CBLS')
     
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -51,7 +51,7 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
-    orderResponse = await placeOrder('BUY', 'LIMIT', stock.targetPrice, stock.quantity, stock, 'LIM-BLSL')
+    orderResponse = await placeOrder('BUY', 'LIMIT', stock.targetPrice, stock.quantity, stock, 'target-CBLS')
 
     // orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -82,7 +82,7 @@ const createSellLimSLOrders = async (stock, order) => {
         else
             slPrice = Number(stock.triggerPrice) * 0.98
 
-    let orderResponse = await placeOrder('SELL', 'SL-M', slPrice, stock.quantity, stock, 'SLM-SLSL')
+    let orderResponse = await placeOrder('SELL', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CSLS')
 
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -98,7 +98,7 @@ const createSellLimSLOrders = async (stock, order) => {
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
-    orderResponse = await placeOrder('SELL', 'LIMIT', stock.targetPrice, Math.abs(stock.quantity), stock, 'LIM-SLSL')
+    orderResponse = await placeOrder('SELL', 'LIMIT', stock.targetPrice, Math.abs(stock.quantity), stock, 'target-CSLS')
 
     // orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -273,12 +273,12 @@ async function createZaireOrders(stock) {
             // Place SL-M BUY order at price higher than trigger price
             if (ltp > triggerPrice) {
                 if ((targetPrice - ltp) / targetGain > 0.8)
-                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, 'zaire')
+                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, 'trigger-m-zaire')
                 else
                     return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else
-                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'zaire');
+                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'trigger-zaire');
 
 
             // Place SL-M SELL order
@@ -316,12 +316,12 @@ async function createZaireOrders(stock) {
             // Place SELL order at price lower than trigger price
             if (ltp < triggerPrice) {
                 if ((ltp - targetPrice) / targetGain > 0.8)
-                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, 'zaire')
+                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, 'trigger-m-zaire')
                 else
                     return sendMessageToChannel('🔔 Zaire: SELL order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else {
-                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'zaire');
+                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'trigger-zaire');
             }
 
 
@@ -417,7 +417,7 @@ const createOrders = async (stock) => {
         let orderResponse;
         if (stock.triggerPrice == 'mkt') {
 
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'MKT-MS')
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'trigger-m-CO')
 
         }
         else {
@@ -427,14 +427,14 @@ const createOrders = async (stock) => {
                 (stock.type == 'BULLISH' && ltp > stock.triggerPrice)
             ) {
                 if (shouldPlaceMarketOrder(ltp, stock.triggerPrice, stock.targetPrice, stock.type)) {
-                    orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", "MARKET", null, stock.quantity, stock, 'SLM-MS')
+                    orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", "MARKET", null, stock.quantity, stock, 'trigger-mkt-CO')
                 }
                 else {
                     return sendMessageToChannel('🔔 Sheet: SELL order not placed: LTP too close to target price', stock.stockSymbol, stock.quantity, stock.targetPrice, ltp)
                 }
             }
             else {
-                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-MS');
+                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'trigger-CO');
             }
 
         }

@@ -196,7 +196,7 @@ async function closePositions() {
 
         for (const position of allPositions) {
             try {
-                await placeOrder(position.quantity < 0 ? 'BUY' : 'SELL', 'MARKET', null, position.quantity, position, 'CP')
+                await placeOrder(position.quantity < 0 ? 'BUY' : 'SELL', 'MARKET', null, position.quantity, position, 'close')
 
                 // await kiteSession.kc.placeOrder("regular", {
                 //     exchange: position.exchange,
@@ -283,9 +283,10 @@ async function updateStopLossOrders() {
             if (shouldUpdate) {
                 // Cancel the existing order
                 await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
+                await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
 
-                let orderResponse = await placeOrder(isDown ? "BUY" : "SELL", 'SL-M', newPrice, stock.quantity, stock, 'UPD-SL')
-                await logOrder('PLACED', 'Update SL', orderResponse)
+                let orderResponse = await placeOrder(isDown ? "BUY" : "SELL", 'SL-M', newPrice, stock.quantity, stock, 'stoploss-UD')
+                await logOrder('PLACED', 'UPDATE SL', orderResponse)
                 // Place a new order with updated stop loss
                 // await kiteSession.kc.placeOrder("regular", {
                 //     exchange: "NSE",
