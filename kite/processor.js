@@ -27,7 +27,7 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     let slPrice = stock.stopLossPrice
     if (!slPrice)
-        slPrice = stock.triggerPrice * 0.98
+        slPrice = Number(stock.triggerPrice) * 0.98
 
     let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'SLM-BLSL')
     
@@ -229,7 +229,11 @@ async function createZaireOrders(stock) {
 
         const sym = `NSE:${stock.sym}`
         let ltp = await kiteSession.kc.getLTP([sym]);
-        ltp = ltp[sym].last_price
+        ltp = ltp[sym]?.last_price
+        if (!ltp) {
+            await sendMessageToChannel('🔕 LTP not found for', stock.sym)
+            return
+        }
 
         if (stock.direction === 'BULLISH') {
             // Trigger price is 0.05% above high
