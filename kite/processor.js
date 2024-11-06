@@ -27,7 +27,7 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     let slPrice = stock.stopLossPrice
     if (!slPrice)
-        if (stock.triggerPrice.toString().toLowerCase().includes('mkt')) {
+        if (stock.triggerPrice == 'mkt') {
             ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
             ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
             slPrice = Number(ltp) * 1.02
@@ -76,7 +76,7 @@ const createSellLimSLOrders = async (stock, order) => {
 
     let slPrice = stock.stopLossPrice
     if (!slPrice)
-        if (stock.triggerPrice.toString().toLowerCase().includes('mkt')) {
+        if (stock.triggerPrice == 'mkt') {
             ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
             ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
             slPrice = Number(ltp) * 0.98 
@@ -375,6 +375,18 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
     return orderResponse
 }
 
+const shouldPlaceMarketOrder = (ltp, triggerPrice, targetPrice, direction) => {
+    const targetGain = direction === 'BULLISH' 
+        ? targetPrice - triggerPrice
+        : triggerPrice - targetPrice;
+
+    if (direction === 'BULLISH') {
+        return ltp > triggerPrice && ((targetPrice - ltp) / targetGain > 0.8);
+    } else {
+        return ltp < triggerPrice && ((ltp - targetPrice) / targetGain > 0.8);
+    }
+}
+
 const createOrders = async (stock) => {
     try {
         if (stock.ignore)
@@ -386,7 +398,12 @@ const createOrders = async (stock) => {
 
         const sym = `NSE:${stock.stockSymbol}`
         let ltp = await kiteSession.kc.getLTP([sym]);
-        ltp = ltp[sym].last_price
+        ltp = ltp[sym]?.last_price
+        if (!ltp) {
+            await sendMessageToChannel('🔕 LTP not found for', stock.stockSymbol)
+            return
+        }
+
         let order_value = Number(stock.quantity) * Number(ltp)
 
         if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
@@ -405,39 +422,25 @@ const createOrders = async (stock) => {
         if (stock.triggerPrice == 'mkt') {
 
             orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'MKT-MS')
-            // orderResponse = await kiteSession.kc.placeOrder("regular", {
-            //     exchange: "NSE",
-            //     tradingsymbol: stock.stockSymbol,
-            //     transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
-            //     quantity: Number(stock.quantity),
-            //     order_type: "MARKET",
-            //     product: "MIS",
-            //     validity: "DAY"
-            // });
+
             await sendMessageToChannel('✅ Successfully placed Market SELL order', stock.stockSymbol, stock.quantity)
         }
         else {
-
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-MS')
-
-            // orderResponse = await kiteSession.kc.placeOrder("regular", {
-            //     exchange: "NSE",
-            //     tradingsymbol: stock.stockSymbol,
-            //     transaction_type: stock.type == "DOWN" ? "SELL" : "BUY",
-            //     quantity: Number(stock.quantity),
-
-            //     order_type: "SL-M",
-            //     trigger_price: Number(stock.triggerPrice),
-
-            //     // order_type: stock.type == "DOWN" ? "SL-M" : "LIMIT",
-            //     // ...(stock.type == "DOWN" 
-            //     //     ? { trigger_price: Number(stock.triggerPrice) }
-            //     //     : { price: Number(stock.triggerPrice) }
-            //     // ),
-
-            //     product: "MIS",
-            //     validity: "DAY",
-            // });
+            
+            if (
+                (stock.type == 'BEARISH' && ltp < stock.triggerPrice) ||
+                (stock.type == 'BULLISH' && ltp > stock.triggerPrice)
+            ) {
+                if (shouldPlaceMarketOrder(ltp, stock.triggerPrice, stock.targetPrice, stock.type)) {
+                    orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", "MARKET", null, stock.quantity, stock, 'SLM-MS')
+                }
+                else {
+                    return sendMessageToChannel('🔔 Sheet: SELL order not placed: LTP too close to target price', stock.stockSymbol, stock.quantity, stock.targetPrice, ltp)
+                }
+            }
+            else {
+                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-MS');
+            }
 
             await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
