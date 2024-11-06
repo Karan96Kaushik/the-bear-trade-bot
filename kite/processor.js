@@ -364,9 +364,9 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
     };
 
     if (orderType === "SL-M") {
-        order.trigger_price = price;
+        order.trigger_price = Math.round(price * 20) / 20;
     } else if (orderType === "LIMIT") {
-        order.price = price;
+        order.price = Math.round(price * 20) / 20;
     }
 
     const orderResponse = await kiteSession.kc.placeOrder("regular", order);
