@@ -121,7 +121,12 @@ async function validateOrdersFromSheet() {
             try {
                 const sym = `NSE:${stock.stockSymbol}`
                 let ltp = await kiteSession.kc.getLTP([sym]);
-                ltp = ltp[sym].last_price
+                ltp = ltp[sym]?.last_price
+                if (!ltp) {
+                    await sendMessageToChannel('🔕 LTP not found for', stock.stockSymbol)
+                    continue
+                }
+
                 let order_value = Math.abs(stock.quantity) * Number(ltp)
                 
                 if (stock.type === 'BEARISH' && Number(stock.triggerPrice) > ltp) {
