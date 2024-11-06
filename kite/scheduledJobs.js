@@ -69,7 +69,7 @@ async function cancelZaireOrders() {
         await sendMessageToChannel('⌛️ Executing Zaire Cancel Orders Job');
 
         const orders = await kiteSession.kc.getOrders();
-        const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag === 'zaire');
+        const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag.includes('zaire') && o.tag.includes('trigger'));
 
         for (const order of zaireOrders) {
             try {
