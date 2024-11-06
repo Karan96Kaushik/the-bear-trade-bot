@@ -196,7 +196,7 @@ async function closePositions() {
 
         for (const position of allPositions) {
             try {
-                await placeOrder(position.quantity < 0 ? 'BUY' : 'SELL', 'MARKET', null, position.quantity, position, 'close')
+                await placeOrder(position.quantity < 0 ? 'BUY' : 'SELL', 'MARKET', null, position.quantity, position, 'squareoff')
 
                 // await kiteSession.kc.placeOrder("regular", {
                 //     exchange: position.exchange,
