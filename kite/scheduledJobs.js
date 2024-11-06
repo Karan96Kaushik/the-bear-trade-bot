@@ -207,7 +207,6 @@ async function closePositions() {
                 //     product: "MIS",
                 //     validity: "DAY"
                 // });
-                await sendMessageToChannel(`✅ Successfully placed Market ${position.quantity < 0 ? "BUY" : "SELL"} order to close position`, position.tradingsymbol, Math.abs(position.quantity));
             } catch (error) {
                 await sendMessageToChannel('🚨 Error placing  order to close position', position.tradingsymbol, position.quantity, error?.message);
                 console.error("🚨 Error placing  order to close position: ", position.tradingsymbol, position.quantity, error?.message);

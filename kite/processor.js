@@ -48,7 +48,6 @@ const createBuyLimSLOrders = async (stock, order) => {
     //     trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
     //     // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     // });
-    await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
@@ -66,7 +65,6 @@ const createBuyLimSLOrders = async (stock, order) => {
     //     // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
     //     // price: stock.targetPrice  // Stop-loss trigger price
     // });
-    await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 }
@@ -97,7 +95,6 @@ const createSellLimSLOrders = async (stock, order) => {
     //     trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
     //     // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
     // });
-    await sendMessageToChannel('✅ Successfully placed SL-M buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
@@ -115,7 +112,6 @@ const createSellLimSLOrders = async (stock, order) => {
     //     // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
     //     // price: stock.targetPrice  // Stop-loss trigger price
     // });
-    await sendMessageToChannel('✅ Successfully placed LIMIT buy order', stock.stockSymbol, stock.quantity)
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 }
@@ -423,7 +419,6 @@ const createOrders = async (stock) => {
 
             orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'MKT-MS')
 
-            await sendMessageToChannel('✅ Successfully placed Market SELL order', stock.stockSymbol, stock.quantity)
         }
         else {
             
@@ -442,7 +437,6 @@ const createOrders = async (stock) => {
                 orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'SLM-MS');
             }
 
-            await sendMessageToChannel('✅ Successfully placed SL-M SELL order', stock.stockSymbol, stock.quantity)
         }
 
         await logOrder('PLACED', 'SHEET', orderResponse)
