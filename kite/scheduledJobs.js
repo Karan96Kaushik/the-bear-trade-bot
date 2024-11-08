@@ -282,11 +282,13 @@ async function updateStopLossOrders() {
 
             if (shouldUpdate) {
                 // Cancel the existing order
-                await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
-                await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
-
+                
                 let orderResponse = await placeOrder(isDown ? "BUY" : "SELL", 'SL-M', newPrice, stock.quantity, stock, 'stoploss-UD')
                 await logOrder('PLACED', 'UPDATE SL', orderResponse)
+
+                await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
+                await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
+                
                 // Place a new order with updated stop loss
                 // await kiteSession.kc.placeOrder("regular", {
                 //     exchange: "NSE",
