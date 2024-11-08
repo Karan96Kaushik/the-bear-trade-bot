@@ -136,8 +136,8 @@ const setupReversalOrders = async (order) => {
             targetPrice = triggerPrice - ((RISK_AMOUNT*2)/quantity)
         }
 
-        await placeOrder(stockSymbol, transaction_type, 'SL-M', stopLossPrice, quantity, 'stoploss-RV')
-        await placeOrder(stockSymbol, transaction_type, 'LIMIT', targetPrice, quantity, 'target-RV')
+        await placeOrder(transaction_type, 'SL-M', stopLossPrice, quantity, order, 'stoploss-RV')
+        await placeOrder(transaction_type, 'LIMIT', targetPrice, quantity, order, 'target-RV')
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error setting up reversal orders', error?.message)
