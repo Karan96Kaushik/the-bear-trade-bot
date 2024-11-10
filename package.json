@@ -10,7 +10,8 @@
     "test:close-negative": "jest --no-watchman __tests__/close-negative.js",
     "test:kite-validation": "jest --no-watchman __tests__/kite-validation.js",
     "test:kite-schedule": "jest --no-watchman __tests__/kite-schedule-order.js",
-    "test:kite-schedule-update": "jest --no-watchman __tests__/kite-schedule-update.js"
+    "test:kite-schedule-update": "jest --no-watchman __tests__/kite-schedule-update.js",
+    "test:zaire-orders": "jest --no-watchman __tests__/zaire-orders.test.js"
   },
   "author": "",
   "license": "ISC",
