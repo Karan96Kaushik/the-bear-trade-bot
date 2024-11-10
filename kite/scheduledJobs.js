@@ -271,38 +271,35 @@ async function updateStopLossOrders() {
             let newPrice = isDown 
                 ? await calculateExtremePrice(sym, 'highest')
                 : await calculateExtremePrice(sym, 'lowest');
-            
-            // if (isDown) {
-            //     newPrice = newPrice * 1.02
-            // }
-            // else {
-            //     newPrice = newPrice * 0.98
-            // }
+
+            // Get current LTP to validate the new SL price
+            const ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
+            const currentPrice = ltp[`NSE:${sym}`]?.last_price;
+
+            let type = 'SL-M'
 
             const shouldUpdate = isDown 
                 ? newPrice < existingOrder.trigger_price
                 : newPrice > existingOrder.trigger_price;
 
+            // For bearish trades, new SL should be below LTP
+            // For bullish trades, new SL should be above LTP
+            if (shouldUpdate && isDown && newPrice >= currentPrice) {
+                type = 'MARKET'
+                newPrice = null
+                await sendMessageToChannel(`ℹ️ Exiting as new SL would be above LTP for ${sym}`);
+            } else if (shouldUpdate && !isDown && newPrice <= currentPrice) {
+                type = 'MARKET'
+                newPrice = null
+                await sendMessageToChannel(`ℹ️ Exiting as new SL would be below LTP for ${sym}`);
+            }
+
             if (shouldUpdate) {
-                // Cancel the existing order
-                
-                let orderResponse = await placeOrder(isDown ? "BUY" : "SELL", 'SL-M', newPrice, stock.quantity, stock, 'stoploss-UD')
+                let orderResponse = await placeOrder(isDown ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
                 await logOrder('PLACED', 'UPDATE SL', orderResponse)
 
                 await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
                 await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
-                
-                // Place a new order with updated stop loss
-                // await kiteSession.kc.placeOrder("regular", {
-                //     exchange: "NSE",
-                //     tradingsymbol: stock.stockSymbol,
-                //     transaction_type: isDown ? "BUY" : "SELL",
-                //     quantity: Number(stock.quantity),
-                //     order_type: "SL-M",
-                //     trigger_price: newPrice,
-                //     product: "MIS",
-                //     validity: "DAY",
-                // });
 
                 await sendMessageToChannel(`🔄 Updated SL-M ${isDown ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
             }
@@ -369,5 +366,5 @@ module.exports = {
     validateOrdersFromSheet,
     calculateExtremePrice,
     setupSpecialOrdersFromSheet,
-    // createSpecialOrders,
+    setupZaireOrders
 };
