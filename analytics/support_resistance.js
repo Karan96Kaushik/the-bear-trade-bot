@@ -66,8 +66,9 @@ async function scanSupportResistance(tolerance = DEFAULT_TOLERANCE) {
     console.log(`Starting scan with tolerance: ${tolerance * 100}%`);
     
     try {
-        const stocks = await getDhanNIFTY50Data();
+        let stocks = await getDhanNIFTY50Data();
         totalStocks = stocks.length;
+        stocks = ['']
         
         for (const stock of stocks) {
             processedStocks++;
@@ -80,12 +81,14 @@ async function scanSupportResistance(tolerance = DEFAULT_TOLERANCE) {
             }
             
             try {
+                console.log(`Processing ${sym}`)
                 const yahooData = await getDataFromYahoo(sym, 60);
                 const df = processYahooData(yahooData);
                 
                 if (!df || df.length === 0) continue;
                 
                 const currentPrice = df[df.length - 1].close;
+                
                 if (df[df.length - 1].volume < 100000) continue;
                 
                 const { supportLevels, resistanceLevels, supportTouches, resistanceTouches } = 
@@ -93,6 +96,7 @@ async function scanSupportResistance(tolerance = DEFAULT_TOLERANCE) {
                 
                 // Check support levels
                 for (const level of supportLevels) {
+                    console.log(`Checking support ${level}`, currentPrice, tolerance, sym, isNearLevel(currentPrice, level, tolerance))
                     if (isNearLevel(currentPrice, level, tolerance)) {
                         const distance = ((currentPrice - level) / level * 100).toFixed(2);
                         const touches = supportTouches[level];
