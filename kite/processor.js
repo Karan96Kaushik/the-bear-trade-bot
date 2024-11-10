@@ -217,7 +217,7 @@ const processSuccessfulOrder = async (order) => {
                 let orders = allOrders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'BUY')
 
                 if (orders.length < 1 && order.tag == 'stoploss-UD') {
-                    await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tag)
+                    await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tradingsymbol, order.quantity, order.tag)
                     await setupReversalOrders(order)
                 }
                 else if (orders.length == 1 && orders[0].tag == 'target-UD') {
@@ -235,7 +235,7 @@ const processSuccessfulOrder = async (order) => {
                 let orders = allOrders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'SELL')
                 
                 if (orders.length < 1 && order.tag == 'stoploss-UD') {
-                    await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tag)
+                    await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tradingsymbol, order.quantity, order.tag)
                     await setupReversalOrders(order)
                 }
                 else if (orders.length == 1 && orders[0].tag == 'target-UD') {
