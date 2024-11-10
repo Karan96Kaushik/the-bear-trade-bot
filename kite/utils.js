@@ -140,7 +140,7 @@ async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
         };
         
         let response = await axios.get(url, { params, headers });
-        console.log(response.data)
+        // console.log(response.data)
         response = response.data.data.searchList.map(item => ({
             tradingSymbol: item.attributes.tradingSymbol,
             name: item.attributes.name,

@@ -16,8 +16,11 @@ async function setupZaireOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Zaire MIS Jobs');
 
-        let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
-        niftyList = niftyList.map(stock => stock[0])
+        // let niftyList = await readSheetData('Nifty!A1:A200') 
+        // niftyList = niftyList.map(stock => stock[0])
+
+        let niftyList = await readSheetData('HIGHBETA!B2:B150')
+        niftyList = niftyList.map(stock => stock[0]).filter(a => a !== 'NOT FOUND')
 
         let sheetData = await readSheetData('MIS-ALPHA!A2:W100')
         sheetData = processMISSheetData(sheetData)
