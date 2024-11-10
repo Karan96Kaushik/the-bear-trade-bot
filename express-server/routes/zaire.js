@@ -5,6 +5,8 @@ const { readSheetData } = require('../../gsheets');
 const { scanZaireStocks } = require('../../analytics');
 const { getDhanNIFTY50Data } = require('../../kite/utils');
 
+const RISK_AMOUNT = 100
+
 router.get('/selected-stocks', async (req, res) => {
     // Get date from query or use current date
     let date = req.query.date ? new Date(req.query.date) : new Date();
@@ -27,6 +29,12 @@ router.get('/selected-stocks', async (req, res) => {
         niftyList = await readSheetData('Nifty!A1:A200')
         niftyList = niftyList.map(stock => stock[0])
     }
+    else if (req.query.source == 'highbeta') {
+        niftyList = (await readSheetData('HIGHBETA!B2:B150'))
+                        .map(a => a[0]).filter(a => a !== 'NOT FOUND')
+        // niftyList = niftyList.slice(0, 50)
+        // console.log(niftyList)
+    }
     else if (req.query.source == 'roce') {
         niftyList = (await getDhanNIFTY50Data({sort: 'Year1ROCE'}))
                         .filter(a => a.Volume > 100000)
@@ -43,7 +51,7 @@ router.get('/selected-stocks', async (req, res) => {
     }
 
     let selectedStocks = await scanZaireStocks(niftyList, date, interval);
-    selectedStocks = selectedStocks.map(a => ({...a, qty: Math.ceil(200/(a.high - a.low))}))
+    selectedStocks = selectedStocks.map(a => ({...a, qty: Math.ceil(RISK_AMOUNT/(a.high - a.low))}))
 
     res.json({stocks: selectedStocks})
 });
