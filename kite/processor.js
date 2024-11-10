@@ -216,9 +216,13 @@ const processSuccessfulOrder = async (order) => {
                 let orders = await kiteSession.kc.getOrders()
                 orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'BUY')
 
-                if (orders.length < 1) {
-                    await sendMessageToChannel('⭐️ Possible reversal happening!', order.tag)
+                if (orders.length < 1 && order.tag == 'stoploss-UD') {
+                    await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tag)
                     await setupReversalOrders(order)
+                }
+                else if (orders.length == 1 && orders[0].tag == 'target-UD') {
+                    await kiteSession.kc.cancelOrder(orders[0].order_id)
+                    await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
                 }
             }            
             else if (order.transaction_type == 'SELL' && stock?.type == 'BULLISH' && order.placed_by !== 'ADMINSQF') {
@@ -226,9 +230,13 @@ const processSuccessfulOrder = async (order) => {
                 let orders = await kiteSession.kc.getOrders()
                 orders = orders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'SELL')
                 
-                if (orders.length < 1) {
-                    await sendMessageToChannel('⭐️ Possible reversal happening!', order.tag)
+                if (orders.length < 1 && order.tag == 'stoploss-UD') {
+                    await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tag)
                     await setupReversalOrders(order)
+                }
+                else if (orders.length == 1 && orders[0].tag == 'target-UD') {
+                    await kiteSession.kc.cancelOrder(orders[0].order_id)
+                    await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
                 }
 
             }
