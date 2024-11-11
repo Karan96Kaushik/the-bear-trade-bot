@@ -3,7 +3,7 @@ const { sendMessageToChannel } = require('../slack-actions');
 const { readSheetData, processMISSheetData, appendRowsToMISD, getStockLoc, numberToExcelColumn, bulkUpdateCells } = require('../gsheets');
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
-const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data } = require('./utils');
+const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
 const { scanZaireStocks } = require('../analytics');
 
@@ -239,15 +239,15 @@ async function closePositions() {
 }
 
 async function calculateExtremePrice(sym, type) {
-    const data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
-    const historicalData = data.chart.result[0].indicators.quote[0];
-    const timestamps = data.chart.result[0].timestamp;
-    // Extract the last 30 minutes of data
-    const thirtyMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60;
+    let data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
+    data = processYahooData(data)
+    const thirtyMinutesAgo = (Math.floor(Date.now() / 1000)*1000) - (30 * 60 * 1000);
     const priceType = type === 'highest' ? 'high' : 'low';
-    // const last30MinData = historicalData[priceType].slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
-    const last30MinData = historicalData[priceType].filter(p => p).slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
-    // Calculate the extreme price in the last 30 minutes
+    const last30MinData = data
+                            .filter(p => p)
+                            .slice(-30)
+                            // .filter((d) => d.time >= thirtyMinutesAgo)
+                            .map(p => p[priceType]);
     return type === 'highest' ? Math.max(...last30MinData) : Math.min(...last30MinData);
 }
 
@@ -272,54 +272,54 @@ async function updateStopLossOrders() {
             if (!stock.lastAction) continue;
 
             const sym = stock.stockSymbol;
-            const isDown = stock.type === 'BEARISH';
+            const isBearish = stock.type === 'BEARISH';
 
             const position = positions.net.find(p => p.tradingsymbol === sym);
             if (!position) continue;
 
             const existingOrder = orders.find(order => 
                 order.tradingsymbol === stock.stockSymbol && 
-                order.transaction_type === (isDown ? 'BUY' : 'SELL') && 
+                order.transaction_type === (isBearish ? 'BUY' : 'SELL') && 
                 order.order_type === 'SL-M' &&
                 order.status === 'TRIGGER PENDING'
             );
 
             if (!existingOrder) continue;
 
-            let newPrice = isDown 
+            let newPrice = isBearish 
                 ? await calculateExtremePrice(sym, 'highest')
                 : await calculateExtremePrice(sym, 'lowest');
 
             // Get current LTP to validate the new SL price
-            const ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
-            const currentPrice = ltp[`NSE:${sym}`]?.last_price;
+            let ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
+            ltp = ltp[`NSE:${sym}`]?.last_price;
 
             let type = 'SL-M'
 
-            const shouldUpdate = isDown 
+            const shouldUpdate = isBearish 
                 ? newPrice < existingOrder.trigger_price
                 : newPrice > existingOrder.trigger_price;
 
-            // For bearish trades, new SL should be below LTP
-            // For bullish trades, new SL should be above LTP
-            if (shouldUpdate && isDown && newPrice >= currentPrice) {
+            // For bearish trades, new SL should be above LTP
+            // For bullish trades, new SL should be below LTP
+            if (shouldUpdate && isBearish && newPrice <= ltp) {
                 type = 'MARKET'
                 newPrice = null
                 await sendMessageToChannel(`ℹ️ Exiting as new SL would be above LTP for ${sym}`);
-            } else if (shouldUpdate && !isDown && newPrice <= currentPrice) {
+            } else if (shouldUpdate && !isBearish && newPrice >= ltp) {
                 type = 'MARKET'
                 newPrice = null
                 await sendMessageToChannel(`ℹ️ Exiting as new SL would be below LTP for ${sym}`);
             }
 
             if (shouldUpdate) {
-                let orderResponse = await placeOrder(isDown ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
+                let orderResponse = await placeOrder(isBearish ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
                 await logOrder('PLACED', 'UPDATE SL', orderResponse)
 
                 await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
                 await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
 
-                await sendMessageToChannel(`🔄 Updated SL-M ${isDown ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
+                await sendMessageToChannel(`🔄 Updated SL-M ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
             }
         }
 
