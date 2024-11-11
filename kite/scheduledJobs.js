@@ -245,7 +245,8 @@ async function calculateExtremePrice(sym, type) {
     // Extract the last 30 minutes of data
     const thirtyMinutesAgo = Math.floor(Date.now() / 1000) - 30 * 60;
     const priceType = type === 'highest' ? 'high' : 'low';
-    const last30MinData = historicalData[priceType].slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
+    // const last30MinData = historicalData[priceType].slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
+    const last30MinData = historicalData[priceType].filter(p => p).slice(-30).filter((_, index) => timestamps[timestamps.length - 30 + index] >= thirtyMinutesAgo);
     // Calculate the extreme price in the last 30 minutes
     return type === 'highest' ? Math.max(...last30MinData) : Math.min(...last30MinData);
 }
