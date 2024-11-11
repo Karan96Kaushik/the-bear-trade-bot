@@ -415,6 +415,8 @@ const shouldPlaceMarketOrder = (ltp, triggerPrice, targetPrice, direction) => {
     }
 }
 
+console.log(shouldPlaceMarketOrder(1735, 100, 110, 'BULLISH'))
+
 const createOrders = async (stock) => {
     try {
         if (stock.ignore)
@@ -437,14 +439,14 @@ const createOrders = async (stock) => {
         if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE)
             throw new Error(`Order value ${order_value} not within limits!`)
 
-        if (stock.type == 'BEARISH' && Number(stock.triggerPrice) > ltp) {
-            await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
-            return
-        }
-        if (stock.type == 'BULLISH' && Number(stock.triggerPrice) < ltp) {
-            await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Trigger Price.', stock.stockSymbol, stock.quantity, "Trigger Price:", stock.triggerPrice, 'LTP: ', ltp)
-            return
-        }
+        // if (stock.type == 'BEARISH' && Number(stock.triggerPrice) > ltp) {
+        //     await sendMessageToChannel('🔔 Cannot place trigger sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
+        //     return
+        // }
+        // if (stock.type == 'BULLISH' && Number(stock.triggerPrice) < ltp) {
+        //     await sendMessageToChannel('🔔 Cannot place trigger buy order: LTP higher than Trigger Price.', stock.stockSymbol, stock.quantity, "Trigger Price:", stock.triggerPrice, 'LTP: ', ltp)
+        //     return
+        // }
 
         let orderResponse;
         if (stock.triggerPrice == 'mkt') {
