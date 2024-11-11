@@ -238,7 +238,7 @@ const processSuccessfulOrder = async (order) => {
                     await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tradingsymbol, order.quantity, order.tag)
                     await setupReversalOrders(order)
                 }
-                else if (orders.length == 1 && orders[0].tag == 'target-UD') {
+                else if (orders.length == 1 && orders[0].tag.includes('target')) {
                     // Resetting trigger after stoploss hit and target not hit
                     await kiteSession.kc.cancelOrder(orders[0].order_id)
                     await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
