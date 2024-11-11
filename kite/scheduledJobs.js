@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const { sendMessageToChannel } = require('../slack-actions');
-const { readSheetData, processMISSheetData, appendRowsToMISD } = require('../gsheets');
+const { readSheetData, processMISSheetData, appendRowsToMISD, getStockLoc, numberToExcelColumn, bulkUpdateCells } = require('../gsheets');
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data } = require('./utils');
@@ -74,16 +74,33 @@ async function cancelZaireOrders() {
         const orders = await kiteSession.kc.getOrders();
         const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag.includes('zaire') && o.tag.includes('trigger'));
 
+        let sheetData = await readSheetData('MIS-ALPHA!A1:W150')
+        const rowHeaders = sheetData.map(a => a[1])
+        const colHeaders = sheetData[0]
+
+        const updates = [
+
+        ];
+
         for (const order of zaireOrders) {
             try {
 
                 await kiteSession.kc.cancelOrder('regular', order.order_id);
                 await sendMessageToChannel('❎ Cancelled Zaire order:', order.tradingsymbol, order.quantity, order.status, order.tag);
+
+                const [row, col] = getStockLoc(order.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
+                updates.push({
+                    range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+                    values: [['-' + order.tradingsymbol]], 
+                })
             } catch (error) {
                 console.error(error)
                 await sendMessageToChannel('🚨 Error cancelling Zaire order:', order.tradingsymbol, order.quantity, error?.message);
             }
         }
+
+        await bulkUpdateCells(updates)
+
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Zaire Cancel Orders Job', error?.message);
