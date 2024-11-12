@@ -280,8 +280,8 @@ async function updateStopLossOrders() {
             const existingOrder = orders.find(order => 
                 order.tradingsymbol === stock.stockSymbol && 
                 order.transaction_type === (isBearish ? 'BUY' : 'SELL') && 
-                order.order_type === 'SL-M' &&
-                order.status === 'TRIGGER PENDING'
+                order.order_type === 'SL' &&
+                (order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
             );
 
             if (!existingOrder) continue;
@@ -294,7 +294,7 @@ async function updateStopLossOrders() {
             let ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
             ltp = ltp[`NSE:${sym}`]?.last_price;
 
-            let type = 'SL-M'
+            let type = 'SL'
 
             const shouldUpdate = isBearish 
                 ? newPrice < existingOrder.trigger_price
@@ -319,7 +319,7 @@ async function updateStopLossOrders() {
                 await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
                 await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
 
-                await sendMessageToChannel(`🔄 Updated SL-M ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
+                await sendMessageToChannel(`🔄 Updated SL ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
             }
         }
 

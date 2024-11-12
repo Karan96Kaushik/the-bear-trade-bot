@@ -35,7 +35,7 @@ const createBuyLimSLOrders = async (stock, order) => {
         else
             slPrice = Number(stock.triggerPrice) * 1.02
 
-    let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CBLS')
+    let orderResponse = await placeOrder('BUY', 'SL', slPrice, stock.quantity, stock, 'stoploss-CBLS')
     
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -82,7 +82,7 @@ const createSellLimSLOrders = async (stock, order) => {
         else
             slPrice = Number(stock.triggerPrice) * 0.98
 
-    let orderResponse = await placeOrder('SELL', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CSLS')
+    let orderResponse = await placeOrder('SELL', 'SL', slPrice, stock.quantity, stock, 'stoploss-CSLS')
 
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -136,7 +136,7 @@ const setupReversalOrders = async (order) => {
             targetPrice = triggerPrice - ((RISK_AMOUNT*2)/quantity)
         }
 
-        await placeOrder(transaction_type, 'SL-M', stopLossPrice, quantity, order, 'stoploss-RV')
+        await placeOrder(transaction_type, 'SL', stopLossPrice, quantity, order, 'stoploss-RV')
         await placeOrder(transaction_type, 'LIMIT', targetPrice, quantity, order, 'target-RV')
 
     } catch (error) {
@@ -226,7 +226,7 @@ const processSuccessfulOrder = async (order) => {
                     // const triggerPrice = allOrders.find(o => o.tradingsymbol == order.tradingsymbol && o.transaction_type == 'SELL' && o.tag.includes('trigger'))?.trigger_price
 
                     await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, triggerPrice)
-                    await placeOrder('SELL', 'SL-M', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
+                    await placeOrder('SELL', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
                 }
             }            
             else if (order.transaction_type == 'SELL' && stock?.type == 'BULLISH' && order.placed_by !== 'ADMINSQF') {
@@ -243,7 +243,7 @@ const processSuccessfulOrder = async (order) => {
                     await kiteSession.kc.cancelOrder(orders[0].order_id)
                     await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
                     await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, triggerPrice)
-                    await placeOrder('BUY', 'SL-M', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
+                    await placeOrder('BUY', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
                 }
 
             }
@@ -310,11 +310,11 @@ async function createZaireOrders(stock) {
                     return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else
-                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'trigger-zaire');
+                orderResponse = await placeOrder('BUY', 'SL', triggerPrice, quantity, stock, 'trigger-zaire');
 
 
             // Place SL-M SELL order
-            // await placeOrder("SELL", "SL-M", sellTriggerPrice, quantity, stock);
+            // await placeOrder("SELL", "SL", sellTriggerPrice, quantity, stock);
 
             // Place LIMIT SELL order
             // await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
@@ -353,7 +353,7 @@ async function createZaireOrders(stock) {
                     return sendMessageToChannel('🔔 Zaire: SELL order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else {
-                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'trigger-zaire');
+                orderResponse = await placeOrder('SELL', 'SL', triggerPrice, quantity, stock, 'trigger-zaire');
             }
 
 
@@ -391,9 +391,14 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
         tag: initiatedBy,
     };
 
-    if (orderType === "SL-M") {
+    if ( orderType === "SL-M") {
         order.trigger_price = Math.round(price * 20) / 20;
-    } else if (orderType === "LIMIT") {
+    }
+    else if (orderType === "SL") {
+        order.trigger_price = Math.round(price * 20) / 20;
+        order.price = Math.round(price * 20) / 20;
+    }
+    else if (orderType === "LIMIT") {
         order.price = Math.round(price * 20) / 20;
     }
 
@@ -468,7 +473,7 @@ const createOrders = async (stock) => {
                 }
             }
             else {
-                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'trigger-CO');
+                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-CO');
             }
 
         }
