@@ -1,10 +1,28 @@
 const { scanZaireStocks } = require("../analytics")
 const { readSheetData, processMISSheetData, getStockLoc } = require("../gsheets")
 const { kiteSession } = require("../kite/setup")
-
+const { placeOrder } = require("../kite/processor")
 const run = async () => {
 
     try {
+
+        await kiteSession.authenticate()
+
+        // let res1  = await placeOrder('SELL', 'SL', 31, 1, {stockSymbol: 'TRIDENT', quantity: 1, triggerPrice: 100}, 'stoploss-test')
+        // console.log(res1)
+        console.time('ltp')
+        let ltp = await kiteSession.kc.getLTP(['NSE:TRIDENT']);
+        console.timeEnd('ltp')
+
+        console.time('quote')
+        let quote = await kiteSession.kc.getQuote(['NSE:TRIDENT']);
+        console.timeEnd('quote')
+        console.log(quote)
+
+        quote = quote['NSE:TRIDENT']?.last_price
+        console.log(quote)
+
+        return
 
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
