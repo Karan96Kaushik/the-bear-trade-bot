@@ -234,7 +234,7 @@ const processSuccessfulOrder = async (order) => {
                 let allOrders = await kiteSession.kc.getOrders()
                 let orders = allOrders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'BUY')
 
-                if (orders.length < 1 && order.tag == 'stoploss-UD') {
+                if (orders.length < 1 && order.tag.includes('stoploss')) {
                     await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tradingsymbol, order.quantity, order.tag)
                     await setupReversalOrders(order)
                 }
@@ -252,7 +252,7 @@ const processSuccessfulOrder = async (order) => {
                 let allOrders = await kiteSession.kc.getOrders()
                 let orders = allOrders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'SELL')
                 
-                if (orders.length < 1 && order.tag == 'stoploss-UD') {
+                if (orders.length < 1 && order.tag.includes('stoploss')) {
                     await sendMessageToChannel('⭐️ Possible reversal happening - reinitiated stoploss trade!', order.tradingsymbol, order.quantity, order.tag)
                     await setupReversalOrders(order)
                 }
@@ -268,8 +268,9 @@ const processSuccessfulOrder = async (order) => {
         }
         
     } catch (error) {
-        console.error('Error processing message', error)
+        // console.error('Error processing message', error)
         await sendMessageToChannel('📛 Error processing order update', order.tradingsymbol, order.quantity, order.tag, error?.message)
+        console.trace('Error processing message', error)
     }
 }
 
