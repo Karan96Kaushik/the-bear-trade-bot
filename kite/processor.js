@@ -230,7 +230,9 @@ const processSuccessfulOrder = async (order) => {
             }
             else if (order.transaction_type == 'BUY' && stock?.type == 'BEARISH' && order.placed_by !== 'ADMINSQF') {
                 // Closing opposite end order
+                console.log('Processing', order.tradingsymbol, order.quantity, order.tag, stock.type, order.transaction_type)
                 let allOrders = await kiteSession.kc.getOrders()
+                console.log('allOrders', allOrders.length)
                 let orders = allOrders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'BUY')
 
                 if (orders.length < 1 && order.tag?.includes('stoploss')) {
