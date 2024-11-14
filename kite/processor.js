@@ -187,6 +187,11 @@ const processSuccessfulOrder = async (order) => {
 
             let stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)
 
+            let quote = await kiteSession.kc.getQuote([`NSE:${order.tradingsymbol}`])
+            let ltp = quote[`NSE:${order.tradingsymbol}`]?.last_price
+            let upper_circuit_limit = quote[`NSE:${order.tradingsymbol}`]?.upper_circuit_limit
+            let lower_circuit_limit = quote[`NSE:${order.tradingsymbol}`]?.lower_circuit_limit
+
             try {
                 let sheetData = await readSheetData('MIS-ALPHA!A1:W100')
                 const rowHeaders = sheetData.map(a => a[1])
@@ -240,8 +245,8 @@ const processSuccessfulOrder = async (order) => {
                     await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                     await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
                     // const triggerPrice = allOrders.find(o => o.tradingsymbol == order.tradingsymbol && o.transaction_type == 'SELL' && o.tag.includes('trigger'))?.trigger_price
-                    await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, stock.triggerPrice)
-                    await placeOrder('SELL', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
+                    // await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, stock.triggerPrice)
+                    // await placeOrder('SELL', 'LIMIT', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
                 }
             }            
             else if (order.transaction_type == 'SELL' && stock?.type == 'BULLISH' && order.placed_by !== 'ADMINSQF') {
@@ -256,8 +261,8 @@ const processSuccessfulOrder = async (order) => {
                     // Resetting trigger after stoploss hit and target not hit
                     await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                     await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
-                    await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, stock.triggerPrice)
-                    await placeOrder('BUY', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
+                    // await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, stock.triggerPrice)
+                    // await placeOrder('BUY', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
                 }
 
             }
