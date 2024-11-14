@@ -26,10 +26,11 @@ const createBuyLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
     let slPrice = stock.stopLossPrice
+    let quote = await kiteSession.kc.getQuote([`NSE:${stock.stockSymbol}`]) 
+    let upper_circuit_limit = quote[`NSE:${stock.stockSymbol}`]?.upper_circuit_limit
     if (!slPrice)
         if (stock.triggerPrice == 'mkt') {
-            ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
-            ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
+            let ltp = quote[`NSE:${stock.stockSymbol}`]?.last_price
             slPrice = Number(ltp) * 1.02
         }
         else
@@ -51,7 +52,11 @@ const createBuyLimSLOrders = async (stock, order) => {
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
-    orderResponse = await placeOrder('BUY', 'LIMIT', stock.targetPrice, stock.quantity, stock, 'target-CBLS')
+    let targetPrice = stock.targetPrice
+    if (stock.targetPrice > upper_circuit_limit)
+        targetPrice = upper_circuit_limit - 0.1
+
+    orderResponse = await placeOrder('BUY', 'LIMIT', targetPrice, stock.quantity, stock, 'target-CBLS')
 
     // orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -73,10 +78,11 @@ const createSellLimSLOrders = async (stock, order) => {
     await kiteSession.authenticate()
 
     let slPrice = stock.stopLossPrice
+    let quote = await kiteSession.kc.getQuote([`NSE:${stock.stockSymbol}`]) 
+    let lower_circuit_limit = quote[`NSE:${stock.stockSymbol}`]?.lower_circuit_limit
     if (!slPrice)
         if (stock.triggerPrice == 'mkt') {
-            ltp = await kiteSession.kc.getLTP([`NSE:${stock.stockSymbol}`]) 
-            ltp = ltp[`NSE:${stock.stockSymbol}`]?.last_price
+            let ltp = quote[`NSE:${stock.stockSymbol}`]?.last_price
             slPrice = Number(ltp) * 0.98 
         }
         else
@@ -98,7 +104,11 @@ const createSellLimSLOrders = async (stock, order) => {
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
-    orderResponse = await placeOrder('SELL', 'LIMIT', stock.targetPrice, Math.abs(stock.quantity), stock, 'target-CSLS')
+    let targetPrice = stock.targetPrice
+    if (targetPrice < lower_circuit_limit)
+        targetPrice = lower_circuit_limit + 0.1
+
+    orderResponse = await placeOrder('SELL', 'LIMIT', targetPrice, Math.abs(stock.quantity), stock, 'target-CSLS')
 
     // orderResponse = await kiteSession.kc.placeOrder("regular", {
     //     exchange: "NSE",
@@ -123,17 +133,25 @@ const setupReversalOrders = async (order) => {
         const stockSymbol = order.tradingsymbol
         let direction, targetPrice, stopLossPrice, transaction_type
 
+        let quote = await kiteSession.kc.getQuote([`NSE:${stockSymbol}`]) 
+        let upper_circuit_limit = quote[`NSE:${stockSymbol}`]?.upper_circuit_limit
+        let lower_circuit_limit = quote[`NSE:${stockSymbol}`]?.lower_circuit_limit
+
         if (order.transaction_type == 'BUY') {
             direction = 'BULLISH'
             transaction_type = 'SELL'
             stopLossPrice = triggerPrice - (RISK_AMOUNT/quantity)
             targetPrice = triggerPrice + ((RISK_AMOUNT*2)/quantity)
+            if (targetPrice > upper_circuit_limit)
+                targetPrice = upper_circuit_limit - 0.1
         }
         else {
             direction = 'BEARISH'
             transaction_type = 'BUY'
             stopLossPrice = triggerPrice + (RISK_AMOUNT/quantity)
             targetPrice = triggerPrice - ((RISK_AMOUNT*2)/quantity)
+            if (targetPrice < lower_circuit_limit)
+                targetPrice = lower_circuit_limit + 0.1
         }
 
         await placeOrder(transaction_type, 'SL', stopLossPrice, quantity, order, 'stoploss-RV')
@@ -268,7 +286,7 @@ async function createZaireOrders(stock) {
         }
 
         const sym = `NSE:${stock.sym}`
-        let ltp = await kiteSession.kc.getLTP([sym]);
+        let ltp = await kiteSession.kc.getQuote([sym]);
         ltp = ltp[sym]?.last_price
         if (!ltp) {
             await sendMessageToChannel('🔕 LTP not found for', stock.sym)
@@ -432,7 +450,7 @@ const createOrders = async (stock) => {
         await kiteSession.authenticate()
 
         const sym = `NSE:${stock.stockSymbol}`
-        let ltp = await kiteSession.kc.getLTP([sym]);
+        let ltp = await kiteSession.kc.getQuote([sym]);
         ltp = ltp[sym]?.last_price
         if (!ltp) {
             await sendMessageToChannel('🔕 LTP not found for', stock.stockSymbol)
