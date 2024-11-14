@@ -237,11 +237,10 @@ const processSuccessfulOrder = async (order) => {
                     await setupReversalOrders(order)
                 }
                 else if (orders.length == 1 && orders[0].tag?.includes('target')) {
-                    await sendMessageToChannel('😥 Cancelling Open Target Order', orders[0].tradingsymbol, orders[0].quantity, orders[0].tag)
                     await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                     await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
                     // const triggerPrice = allOrders.find(o => o.tradingsymbol == order.tradingsymbol && o.transaction_type == 'SELL' && o.tag.includes('trigger'))?.trigger_price
-                    await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, triggerPrice)
+                    await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, stock.triggerPrice)
                     await placeOrder('SELL', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
                 }
             }            
@@ -257,7 +256,7 @@ const processSuccessfulOrder = async (order) => {
                     // Resetting trigger after stoploss hit and target not hit
                     await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                     await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
-                    await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, triggerPrice)
+                    await sendMessageToChannel('🔔 Resetting trigger after stoploss hit PLEASE CHECK!', order.tradingsymbol, order.quantity, stock.triggerPrice)
                     await placeOrder('BUY', 'SL', stock.triggerPrice, stock.quantity, stock, 'trigger-r')
                 }
 
