@@ -236,7 +236,7 @@ const processSuccessfulOrder = async (order) => {
             else if (order.transaction_type == 'BUY' && stock?.type == 'BEARISH' && order.placed_by !== 'ADMINSQF') {
                 let allOrders = await kiteSession.kc.getOrders()
                 let orders = allOrders.filter(o => o.tradingsymbol == order.tradingsymbol && (o.status == 'OPEN' || o.status == 'TRIGGER PENDING') && o.transaction_type == 'BUY')
-                
+
                 await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                 await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
 
@@ -295,7 +295,7 @@ async function createZaireOrders(stock) {
 
         const sheetEntry = {
             stockSymbol: stock.sym,
-            reviseSL: true,
+            reviseSL: '',
             ignore: true,    // False
         }
 
