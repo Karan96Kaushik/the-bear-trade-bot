@@ -311,7 +311,7 @@ async function createZaireOrders(stock) {
             // Trigger price is 0.05% above high
             triggerPrice = stock.high + 1;
             // Stop loss is low
-            stopLossPrice = stock.low;
+            stopLossPrice = stock.low - 1;
             // Target price is double the difference between high and low plus trigger price
             targetPrice = ((stock.high - stock.low) * 3) + triggerPrice;
 
@@ -354,7 +354,7 @@ async function createZaireOrders(stock) {
             // Trigger price is 0.05% below low 
             triggerPrice = stock.low - 1;
             // Stop loss is high
-            stopLossPrice = stock.high;
+            stopLossPrice = stock.high + 1;
             // Target price is double the difference between trigger price and low
             targetPrice = (triggerPrice - (stock.high - stock.low)* 3);
 

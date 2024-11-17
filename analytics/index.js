@@ -292,9 +292,9 @@ function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { //
   }
   
   if (direction === 'BULLISH') {
-    return maValue <= high && maValue >= (low * 0.99);
+    return maValue <= high && maValue >= (low * 0.995);
   } else if (direction === 'BEARISH') {
-    return maValue <= (high * 1.01) && maValue >= low;
+    return maValue <= (high * 1.005) && maValue >= low;
   }
   
   return false;
