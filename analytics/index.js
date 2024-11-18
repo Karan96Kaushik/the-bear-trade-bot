@@ -54,7 +54,8 @@ function checkUpwardTrend(df, i, tolerance = 0.002) {
   const currentCandle = df[i];
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44'], 'BULLISH', tolerance) &&
-    (isBullishCandle(currentCandle) || isDojiCandle(currentCandle))
+    (isBullishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
+    isNarrowRange(currentCandle)
   );
 }
 
@@ -94,7 +95,8 @@ function checkDownwardTrend(df, i, tolerance = 0.002) {
   const currentCandle = df[i];
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44'], 'BEARISH', tolerance) &&
-    (isBearishCandle(currentCandle) || isDojiCandle(currentCandle))
+    (isBearishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
+    isNarrowRange(currentCandle)
   );
 }
 
@@ -265,6 +267,12 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
     }
 
     return selectedStocks;
+}
+
+function isNarrowRange(candle) {
+  const { high, low } = candle;
+  const range = (high - low) / ((high + low) / 2);
+  return range < 0.02;
 }
 
 function isBullishCandle(candle) {
