@@ -1,6 +1,6 @@
-const { getDataFromYahoo, processYahooData, getDateStringIND } = require("./kite/utils");
-const { appendRowsToSheet, readSheetData } = require("./gsheets");
-const { addMovingAverage, scanZaireStocks, countMATrendRising, countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, checkDownwardTrend } = require("./analytics");
+const { getDataFromYahoo, processYahooData, getDateStringIND } = require("../kite/utils");
+const { appendRowsToSheet, readSheetData } = require("../gsheets");
+const { addMovingAverage, scanZaireStocks, countMATrendRising, countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, checkDownwardTrend } = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 
 
