@@ -282,7 +282,7 @@ function isBullishCandle(candle) {
 }
 
 function isBearishCandle(candle) {
-  const { high, low, close } = candle;
+  const { high, low, close, open } = candle;
   const candleLength = (high - low) * 0.3;
   return (open < candleLength && close < candleLength) || close < open;
 }
