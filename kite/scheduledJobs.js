@@ -248,7 +248,7 @@ async function calculateExtremePrice(sym, type) {
                             // .filter((d) => d.time >= thirtyMinutesAgo)
                             .map(p => p[priceType])
                             .filter(p => p);
-                            
+
     return type === 'highest' ? Math.max(...last30MinData) : Math.min(...last30MinData);
 }
 
@@ -314,6 +314,7 @@ async function updateStopLossOrders() {
             }
 
             if (shouldUpdate) {
+                newPrice = isBearish ? newPrice + 1 : newPrice - 1
                 let orderResponse = await placeOrder(isBearish ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
                 await logOrder('PLACED', 'UPDATE SL', orderResponse)
 
