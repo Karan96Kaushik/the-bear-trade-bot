@@ -244,10 +244,11 @@ async function calculateExtremePrice(sym, type) {
     const thirtyMinutesAgo = (Math.floor(Date.now() / 1000)*1000) - (30 * 60 * 1000);
     const priceType = type === 'highest' ? 'high' : 'low';
     const last30MinData = data
-                            .filter(p => p)
                             .slice(-30)
                             // .filter((d) => d.time >= thirtyMinutesAgo)
-                            .map(p => p[priceType]);
+                            .map(p => p[priceType])
+                            .filter(p => p);
+                            
     return type === 'highest' ? Math.max(...last30MinData) : Math.min(...last30MinData);
 }
 
