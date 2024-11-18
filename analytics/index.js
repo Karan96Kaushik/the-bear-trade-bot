@@ -269,23 +269,21 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
 
 function isBullishCandle(candle) {
   const { high, low, open, close } = candle;
-  const avgPrice = (high + low) / 2;
-  // Either both open and close are above average, or just close is above average
-  return (open > avgPrice && close > avgPrice) || close > avgPrice;
+  const candleLength = (high - low) * 0.3;
+  return (open > candleLength && close > candleLength) || close > open;
 }
 
 function isBearishCandle(candle) {
   const { high, low, close } = candle;
-  const avgPrice = (high + low) / 2;
-  return close < avgPrice;
+  const candleLength = (high - low) * 0.3;
+  return (open < candleLength && close < candleLength) || close < open;
 }
 
 function isDojiCandle(candle) {
   const { high, low, open, close } = candle;
-  // Check if the difference between open and close is less than 0.25% of the candle range
-  const candleRange = high - low;
-  const bodyRange = Math.abs(open - close);
-  return bodyRange < (0.0025 * candleRange);
+  const lower = ((high + low) / 2) * 0.9;
+  const upper = ((high + low) / 2) * 1.1;
+  return (open > lower && open < upper) && (close > lower && close < upper);
 }
 
 function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { // Changed default tolerance to 1%
