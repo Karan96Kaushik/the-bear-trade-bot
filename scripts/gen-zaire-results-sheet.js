@@ -8,7 +8,7 @@ const { scanZaireStocks } = require('../analytics');
 
 */ 
 
-async function calculateAndLogExtremes() {
+async function genZaireReport() {
     try {
 
         // const times = ['04:15'];
@@ -41,9 +41,9 @@ async function calculateAndLogExtremes() {
         console.log('Successfully logged extreme prices for', timestamp);
 
     } catch (error) {
-        console.error('Error in calculateAndLogExtremes:', error);
+        console.error('Error in genZaireReport:', error);
     }
 }
 
 // Run the function
-calculateAndLogExtremes(); 
+genZaireReport(); 
