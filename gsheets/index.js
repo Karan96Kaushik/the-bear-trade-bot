@@ -164,11 +164,11 @@ async function appendRowsToMISD(stocks) {
 }
 
 
-async function appendRowsToSheet(range, rowsToAppend) {
+async function appendRowsToSheet(range, rowsToAppend, spreadsheetId=SPREADSHEET_ID) {
     try {
         // Append the new rows
         const response = await sheets.spreadsheets.values.append({
-            spreadsheetId: SPREADSHEET_ID,
+            spreadsheetId,
             range,
             valueInputOption: 'USER_ENTERED',
             insertDataOption: 'INSERT_ROWS',
