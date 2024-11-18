@@ -2,6 +2,7 @@ const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data } = require("../k
 
 const MA_TREND_WINDOW = 10;
 const DEBUG = process.env.DEBUG || false;
+const MAX_STOCK_PRICE = 5000;
 
 function analyzeDataForTrends(df, sym, tolerance = 0.01) {
   try {
@@ -227,6 +228,8 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
         }
 
         if (!df || df.length === 0) continue;
+
+        if (df[df.length - 1].high > MAX_STOCK_PRICE) continue;
         
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
