@@ -28,6 +28,7 @@ const createBuyLimSLOrders = async (stock, order) => {
     let slPrice = stock.stopLossPrice
     let quote = await kiteSession.kc.getQuote([`NSE:${stock.stockSymbol}`]) 
     let upper_circuit_limit = quote[`NSE:${stock.stockSymbol}`]?.upper_circuit_limit
+    let lower_circuit_limit = quote[`NSE:${stock.stockSymbol}`]?.lower_circuit_limit
     if (!slPrice)
         if (stock.triggerPrice == 'mkt') {
             let ltp = quote[`NSE:${stock.stockSymbol}`]?.last_price
@@ -55,6 +56,8 @@ const createBuyLimSLOrders = async (stock, order) => {
     let targetPrice = stock.targetPrice
     if (stock.targetPrice > upper_circuit_limit)
         targetPrice = upper_circuit_limit - 0.1
+    if (targetPrice < lower_circuit_limit)
+        targetPrice = lower_circuit_limit + 0.1
 
     orderResponse = await placeOrder('BUY', 'LIMIT', targetPrice, stock.quantity, stock, 'target-CBLS')
 
@@ -79,6 +82,7 @@ const createSellLimSLOrders = async (stock, order) => {
 
     let slPrice = stock.stopLossPrice
     let quote = await kiteSession.kc.getQuote([`NSE:${stock.stockSymbol}`]) 
+    let upper_circuit_limit = quote[`NSE:${stock.stockSymbol}`]?.upper_circuit_limit
     let lower_circuit_limit = quote[`NSE:${stock.stockSymbol}`]?.lower_circuit_limit
     if (!slPrice)
         if (stock.triggerPrice == 'mkt') {
@@ -107,6 +111,8 @@ const createSellLimSLOrders = async (stock, order) => {
     let targetPrice = stock.targetPrice
     if (targetPrice < lower_circuit_limit)
         targetPrice = lower_circuit_limit + 0.1
+    if (targetPrice > upper_circuit_limit)
+        targetPrice = upper_circuit_limit - 0.1
 
     orderResponse = await placeOrder('SELL', 'LIMIT', targetPrice, Math.abs(stock.quantity), stock, 'target-CSLS')
 
