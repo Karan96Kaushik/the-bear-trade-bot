@@ -72,7 +72,7 @@ async function cancelZaireOrders() {
         await sendMessageToChannel('⌛️ Executing Zaire Cancel Orders Job');
 
         const orders = await kiteSession.kc.getOrders();
-        const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag.includes('zaire') && o.tag.includes('trigger'));
+        const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag?.includes('zaire') && o.tag?.includes('trigger'));
 
         let sheetData = await readSheetData('MIS-ALPHA!A1:W150')
         const rowHeaders = sheetData.map(a => a[1])
