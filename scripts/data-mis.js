@@ -21,7 +21,9 @@ async function generateMIS() {
         // const times = ['04:15'];
         const times = ['04:01', '04:16'];
         // const dates = ['2024-11-12'];
-        const dates = ['2024-11-12', '2024-11-13', '2024-11-14'];
+        // const dates = ['2024-11-12', '2024-11-13', '2024-11-14'];
+        const dates = ['2024-11-19'];
+
         const timestamp = getDateStringIND(new Date());
 
         let results = [];
