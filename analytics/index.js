@@ -277,20 +277,22 @@ function isNarrowRange(candle) {
 
 function isBullishCandle(candle) {
   const { high, low, open, close } = candle;
-  const candleLength = (high - low) * 0.3;
+  const candleLength = high - ((high - low) * 0.3);
   return (open > candleLength && close > candleLength) || close > open;
 }
 
 function isBearishCandle(candle) {
   const { high, low, close, open } = candle;
-  const candleLength = (high - low) * 0.3;
+  const candleLength = low + ((high - low) * 0.3);
   return (open < candleLength && close < candleLength) || close < open;
 }
 
 function isDojiCandle(candle) {
   const { high, low, open, close } = candle;
-  const lower = ((high + low) / 2) * 0.9;
-  const upper = ((high + low) / 2) * 1.1;
+  const mid = (high + low) / 2;
+  const range = ((high - low) / 2) * 0.05;
+  const lower = mid - range;
+  const upper = mid + range;
   return (open > lower && open < upper) && (close > lower && close < upper);
 }
 
@@ -325,7 +327,8 @@ module.exports = {
     isDojiCandle,
     checkCandlePlacement,
     countMATrendRising,
-    countMATrendFalling
+    countMATrendFalling,
+    isNarrowRange
 };
 
 
