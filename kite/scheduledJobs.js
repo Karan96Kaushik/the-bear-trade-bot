@@ -340,6 +340,13 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     
+    const sheetSetupJob = schedule.scheduleJob('40 2 * * 1-5', () => {
+        setupOrdersFromSheet()
+        sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    });
+    sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+    
+
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
         sendMessageToChannel('⏰ Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
@@ -383,8 +390,6 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 }
-
-setupOrdersFromSheet()
 
 module.exports = {
     scheduleMISJobs,
