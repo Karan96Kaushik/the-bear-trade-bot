@@ -384,6 +384,8 @@ const scheduleMISJobs = () => {
     sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 }
 
+setupOrdersFromSheet()
+
 module.exports = {
     scheduleMISJobs,
     setupOrdersFromSheet,

@@ -458,8 +458,6 @@ const shouldPlaceMarketOrder = (ltp, triggerPrice, targetPrice, direction) => {
     }
 }
 
-console.log(shouldPlaceMarketOrder(1735, 100, 110, 'BULLISH'))
-
 const createOrders = async (stock) => {
     try {
         if (stock.ignore)
@@ -493,6 +491,19 @@ const createOrders = async (stock) => {
 
         let orderResponse;
         if (stock.triggerPrice == 'mkt') {
+
+            if (stock.type == 'BULLISH') {
+                if (ltp > stock.targetPrice || ltp < stock.stopLossPrice) {
+                    await sendMessageToChannel('🔔 Sheet: BUY order not placed: LTP too close to target or stoploss price', stock.stockSymbol, stock.quantity, stock.targetPrice, stock.stopLossPrice, 'LTP:', ltp)
+                    return
+                }
+            }
+            else if (stock.type == 'BEARISH') {
+                if (ltp < stock.targetPrice || ltp > stock.stopLossPrice) {
+                    await sendMessageToChannel('🔔 Sheet: SELL order not placed: LTP too close to target or stoploss price', stock.stockSymbol, stock.quantity, stock.targetPrice, stock.stopLossPrice, 'LTP:', ltp)
+                    return
+                }
+            }
 
             orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'trigger-m-CO')
 
