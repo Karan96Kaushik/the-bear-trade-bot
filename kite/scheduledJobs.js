@@ -353,7 +353,13 @@ const scheduleMISJobs = () => {
     sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
     // Schedule the new job to run every 15 minutes
-    const updateStopLossJob = schedule.scheduleJob('*/15 4-9 * * 1-5', () => {
+    const updateStopLossJob = schedule.scheduleJob('*/15 5-9 * * 1-5', () => {
+        updateStopLossOrders();
+        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
+    });
+    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
+
+    const updateStopLossJob2 = schedule.scheduleJob('15,30,45 4 * * 1-5', () => {
         updateStopLossOrders();
         sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
     });
