@@ -361,9 +361,9 @@ const scheduleMISJobs = () => {
 
     const updateStopLossJob2 = schedule.scheduleJob('15,30,45 4 * * 1-5', () => {
         updateStopLossOrders();
-        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
+        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()));
     });
-    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
+    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()))
 
     // const specialJob = schedule.scheduleJob('1 16 * * 1-5', () => {
     //     setupSpecialOrdersFromSheet();
