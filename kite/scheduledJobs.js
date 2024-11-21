@@ -341,7 +341,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     
-    const sheetSetupJob1 = schedule.scheduleJob('43 14 * * 1-5', () => {
+    const sheetSetupJob1 = schedule.scheduleJob('47,52,57 14 * * 1-5', () => {
         setupOrdersFromSheet()
         sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob1.nextInvocation()))
     });
