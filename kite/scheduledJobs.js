@@ -183,6 +183,8 @@ async function setupOrdersFromSheet() {
         let stockData = await readSheetData('MIS-ALPHA!A2:W100')
         stockData = processMISSheetData(stockData)
 
+        console.log(stockData)
+
         const orders = await kiteSession.kc.getOrders();
 
         await kiteSession.authenticate()
