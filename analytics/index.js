@@ -315,6 +315,21 @@ function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { //
   return false;
 }
 
+function printTrendEmojis(values) {
+  const trends = [];
+  for (let i = 1; i < values.length; i++) {
+    if (values[i] > values[i-1]) {
+      trends.push('⬆️');
+    } else if (values[i] < values[i-1]) {
+      trends.push('⬇️'); 
+    } else {
+      trends.push('➡️');
+    }
+  }
+  return trends.join(' ');
+}
+
+
 module.exports = { 
     analyzeDataForTrends,
     calculateMovingAverage,
@@ -332,7 +347,8 @@ module.exports = {
     checkCandlePlacement,
     countMATrendRising,
     countMATrendFalling,
-    isNarrowRange
+    isNarrowRange,
+    printTrendEmojis
 };
 
 
