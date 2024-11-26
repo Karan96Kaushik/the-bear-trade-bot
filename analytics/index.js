@@ -240,18 +240,16 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
 
-        const isRising = checkMARising(df, MA_TREND_WINDOW) ? 'BULLISH' : checkMAFalling(df, MA_TREND_WINDOW) ? 'BEARISH' : null;
-        if (DEBUG) {
-          console.log(sym, isRising)
-        }
-        if (!isRising) continue;
+        // const isRising = checkMARising(df, MA_TREND_WINDOW) ? 'BULLISH' : checkMAFalling(df, MA_TREND_WINDOW) ? 'BEARISH' : null;
+        // if (DEBUG) {
+        //   console.log(sym, isRising)
+        // }
+        // if (!isRising) continue;
 
         const firstCandle = df[df.length - 1];
         const maValue = firstCandle['sma44'];
 
-        const conditionsMet = isRising == 'BULLISH'
-            ? checkUpwardTrend(df, df.length - 1)
-            : checkDownwardTrend(df, df.length - 1);
+        const conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
 
         if (conditionsMet) {
             selectedStocks.push({
@@ -262,7 +260,7 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
                 low: firstCandle.low,
                 'sma44': maValue,
                 volume: firstCandle.volume,
-                direction: isRising
+                direction: conditionsMet
             });
         }
       } catch (e) {
