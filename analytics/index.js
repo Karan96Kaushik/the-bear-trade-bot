@@ -147,7 +147,10 @@ function addMovingAverage(data, key, window, newKey) {
 }
 
 function countMATrendRising(maValues) {
-  const _maValues = maValues.reverse()
+  const _maValues = [...maValues]
+  _maValues.reverse()
+  // console.log(`${_maValues[0]} <= ${_maValues[1]}`)
+  if (_maValues[0] <= _maValues[1]) return 0
   for (let i = 0; i < _maValues.length - 1; i++) {
     if (_maValues[i] <= _maValues[i+1])
       return i + 1
@@ -162,7 +165,10 @@ function checkMARising(df, window = 10) {
 }
 
 function countMATrendFalling(maValues) {
-    const _maValues = maValues.reverse()
+    const _maValues = [...maValues]
+    _maValues.reverse()
+    // console.log(`${_maValues[0]} >= ${_maValues[1]}`)
+    if (_maValues[0] >= _maValues[1]) return 0
     for (let i = 0; i < _maValues.length - 1; i++) {
       if (_maValues[i] >= _maValues[i+1])
         return i + 1
