@@ -17,7 +17,7 @@ async function getDailyStats(startTime, endTime) {
         let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        niftyList = ['BLUESTARCO', 'ADANIPORTS']
+        // niftyList = ['BLUESTARCO', 'ADANIPORTS']
 
         // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
         // console.log(data)
@@ -51,7 +51,7 @@ async function getDailyStats(startTime, endTime) {
                 const dataDay = await getDataFromYahoo(stock, 1, '1d', startTimeDay, endTimeDay);
                 let candlesDay = processYahooData(dataDay);
 
-                console.log(candlesDay, new Date(candlesDay[candlesDay.length - 1].time))
+                // console.log(candlesDay, new Date(candlesDay[candlesDay.length - 1].time))
 
                 // console.log(candles[candles.length - 2])
                 // console.log(new Date(candles[candles.length - 2].time))
@@ -68,10 +68,13 @@ async function getDailyStats(startTime, endTime) {
                 // }
 
                 const maValues = candles.map(row => row['sma44']) //.reverse() //.slice(0, -2);
-
+                
                 const countRising = countMATrendRising(maValues)
                 const countFalling = countMATrendFalling(maValues)
 
+                // console.log(maValues.reverse().slice(0, 10))
+                // console.log(countRising, countFalling)
+                
                 let isRising = null
 
                 if (countRising == countFalling) {
@@ -127,7 +130,7 @@ async function getDailyStats(startTime, endTime) {
                     stopLossPrice = low - 1;
                     targetPrice = ((high - low) * 3) + triggerPrice;
                     acheieved = highDay > targetPrice ? true : false
-                    count = countMATrendRising(maValues);
+                    count = countRising
                     console.log(stock, 'bullish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
                 }
                 else if (trend === 'BEARISH' ) {
@@ -136,7 +139,7 @@ async function getDailyStats(startTime, endTime) {
                     stopLossPrice = high + 1;
                     targetPrice = (triggerPrice - (high - low)* 3);
                     acheieved = lowDay < targetPrice ? true : false
-                    count = countMATrendFalling(maValues);
+                    count = countFalling
                     console.log(stock, 'bearish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
                 }
 
@@ -186,6 +189,14 @@ async function getDailyStats(startTime, endTime) {
 }
 
 const run = async () => {
+
+
+    let startTime = new Date(`2024-11-05`).setUTCHours(4, 0, 10, 0);
+    let endTime = new Date(`2024-11-19`).setUTCHours(4, 1, 10, 0);
+
+    await getDailyStats(startTime, endTime)
+
+    return
 
     for (let i = 18; i <= 22; i++) {    
         let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
