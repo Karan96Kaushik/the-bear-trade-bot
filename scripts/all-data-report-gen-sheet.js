@@ -17,7 +17,7 @@ async function getDailyStats(startTime, endTime) {
         let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        niftyList = ['ELECON']
+        // niftyList = ['AKZOINDIA', 'BLUESTARCO']
 
         // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
         // console.log(data)
@@ -30,7 +30,6 @@ async function getDailyStats(startTime, endTime) {
         const interval = '15m'
 
         const rows = [
-            ['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']
         ];
 
         for (const stock of niftyList) {
@@ -53,7 +52,7 @@ async function getDailyStats(startTime, endTime) {
 
                 // console.log(candlesDay, new Date(candlesDay[candlesDay.length - 1].time))
 
-                console.log(candles[candles.length - 2])
+                // console.log(candles[candles.length - 2])
                 // console.log(new Date(candles[candles.length - 2].time))
                 // return
                 // Calculate SMA44
@@ -191,14 +190,18 @@ async function getDailyStats(startTime, endTime) {
 const run = async () => {
 
 
-    let startTime = new Date(`2024-11-15`).setUTCHours(4, 0, 10, 0);
-    let endTime = new Date(`2024-11-26`).setUTCHours(4, 15, 10, 0);
+    // let startTime = new Date(`2024-11-15`).setUTCHours(4, 0, 10, 0);
+    // let endTime = new Date(`2024-11-26`).setUTCHours(4, 15, 10, 0);
 
-    await getDailyStats(startTime, endTime)
+    // await getDailyStats(startTime, endTime)
 
-    return
+    // return
 
-    for (let i = 21; i <= 22; i++) {    
+    const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
+
+    await appendRowsToSheet('26Nov!A1:G', headers, sheetID);
+
+    for (let i = 25; i <= 26; i++) {    
         let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
         let endTime = new Date(`2024-11-${i}`).setUTCHours(4, 1, 10, 0);
 
