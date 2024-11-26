@@ -2,8 +2,7 @@ const { getDataFromYahoo, processYahooData, getDateStringIND } = require("../kit
 const { appendRowsToSheet, readSheetData } = require("../gsheets");
 const { addMovingAverage, scanZaireStocks, countMATrendRising, 
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
-    checkDownwardTrend, 
-    isBullishCandle} = require("../analytics");
+    checkDownwardTrend, printTrendEmojis, isBullishCandle} = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
@@ -17,7 +16,7 @@ async function getDailyStats(startTime, endTime) {
         let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        // niftyList = ['AKZOINDIA', 'BLUESTARCO']
+        niftyList = ['APARINDS']
 
         // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
         // console.log(data)
@@ -70,6 +69,9 @@ async function getDailyStats(startTime, endTime) {
                 
                 const countRising = countMATrendRising(maValues)
                 const countFalling = countMATrendFalling(maValues)
+
+                const trendEmojis = printTrendEmojis(maValues.reverse().slice(0, 10))
+                console.log(trendEmojis)
 
                 // console.log(maValues.reverse().slice(0, 10))
                 // console.log(countRising, countFalling)
