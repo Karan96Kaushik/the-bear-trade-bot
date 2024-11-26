@@ -17,7 +17,7 @@ async function getDailyStats(startTime, endTime) {
         let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        // niftyList = ['BLUESTARCO', 'ADANIPORTS']
+        niftyList = ['ELECON']
 
         // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
         // console.log(data)
@@ -53,7 +53,7 @@ async function getDailyStats(startTime, endTime) {
 
                 // console.log(candlesDay, new Date(candlesDay[candlesDay.length - 1].time))
 
-                // console.log(candles[candles.length - 2])
+                console.log(candles[candles.length - 2])
                 // console.log(new Date(candles[candles.length - 2].time))
                 // return
                 // Calculate SMA44
@@ -125,7 +125,7 @@ async function getDailyStats(startTime, endTime) {
                 let candleCleared, triggerPrice, stopLossPrice, targetPrice, acheieved, count
 
                 if (trend === 'BULLISH' ) {
-                    candleCleared = checkUpwardTrend(candles, candles.length - 1) ? true : false
+                    candleCleared = checkUpwardTrend(candles, candles.length - 2) ? true : false
                     triggerPrice = high + 1;
                     stopLossPrice = low - 1;
                     targetPrice = ((high - low) * 3) + triggerPrice;
@@ -134,7 +134,7 @@ async function getDailyStats(startTime, endTime) {
                     console.log(stock, 'bullish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
                 }
                 else if (trend === 'BEARISH' ) {
-                    candleCleared = checkDownwardTrend(candles, candles.length - 1) ? true : false
+                    candleCleared = checkDownwardTrend(candles, candles.length - 2) ? true : false
                     triggerPrice = low - 1;
                     stopLossPrice = high + 1;
                     targetPrice = (triggerPrice - (high - low)* 3);
@@ -145,7 +145,7 @@ async function getDailyStats(startTime, endTime) {
 
                 // console.log(stock, trendCountRising, trendCountFalling, trend, candleCleared)
                 // console.log(scanZaireStocks())
-                console.log({...candles[candles.length - 2], time: new Date(candles[candles.length - 2].time)})
+                // console.log({...candles[candles.length - 2], time: new Date(candles[candles.length - 2].time)})
                 // return
                 // if (false)
 
@@ -191,14 +191,14 @@ async function getDailyStats(startTime, endTime) {
 const run = async () => {
 
 
-    let startTime = new Date(`2024-11-05`).setUTCHours(4, 0, 10, 0);
-    let endTime = new Date(`2024-11-19`).setUTCHours(4, 1, 10, 0);
+    let startTime = new Date(`2024-11-15`).setUTCHours(4, 0, 10, 0);
+    let endTime = new Date(`2024-11-26`).setUTCHours(4, 15, 10, 0);
 
     await getDailyStats(startTime, endTime)
 
     return
 
-    for (let i = 18; i <= 22; i++) {    
+    for (let i = 21; i <= 22; i++) {    
         let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
         let endTime = new Date(`2024-11-${i}`).setUTCHours(4, 1, 10, 0);
 
