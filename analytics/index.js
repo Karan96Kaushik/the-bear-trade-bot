@@ -307,9 +307,9 @@ function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { //
   }
   
   if (direction === 'BULLISH') {
-    return maValue <= high && maValue >= (low * 0.995);
+    return maValue <= high && maValue >= (low * 0.99);
   } else if (direction === 'BEARISH') {
-    return maValue <= (high * 1.005) && maValue >= low;
+    return maValue <= (high * 1.01) && maValue >= low;
   }
   
   return false;
@@ -319,11 +319,11 @@ function printTrendEmojis(values) {
   const trends = [];
   for (let i = 1; i < values.length; i++) {
     if (values[i] > values[i-1]) {
-      trends.push('⬆️');
+      trends.push('🟢');
     } else if (values[i] < values[i-1]) {
-      trends.push('⬇️'); 
+      trends.push('🔴'); 
     } else {
-      trends.push('➡️');
+      trends.push('🔵');
     }
   }
   return trends.join(' ');
