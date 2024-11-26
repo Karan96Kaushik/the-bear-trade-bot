@@ -1,27 +1,40 @@
 const { getDataFromYahoo, processYahooData, getDateStringIND } = require("../kite/utils");
 const { appendRowsToSheet, readSheetData } = require("../gsheets");
-const { addMovingAverage, scanZaireStocks, countMATrendRising, countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, checkDownwardTrend } = require("../analytics");
+const { addMovingAverage, scanZaireStocks, countMATrendRising, 
+    countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
+    checkDownwardTrend, 
+    isBullishCandle} = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 
+const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
+const DEBUG = false
 
-async function getDailyStats() {
+const MA_TREND_WINDOW = 10
+
+async function getDailyStats(startTime, endTime) {
     try {
 
-        let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
+        let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        // niftyList = ['ADANIENT']
+        niftyList = ['BLUESTARCO', 'ADANIPORTS']
 
-        let startTime = new Date('2024-10-20').setUTCHours(4, 0, 10, 0);
-        let endTime = new Date('2024-10-30').setUTCHours(4, 15, 10, 0);
-        console.log(endTime)
+        // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
+        // console.log(data)
+        console.log('---')
+        // return
+
+
+        // console.log(endTime)
+
         const interval = '15m'
 
-        const rows = [];
+        const rows = [
+            ['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']
+        ];
 
         for (const stock of niftyList) {
             try {
-
 
                 // startTime = new Date().setUTCHours(4, 0, 10, 0) / 1000;
                 // endTime = new Date() / 1000;
@@ -32,13 +45,13 @@ async function getDailyStats() {
                 const data = await getDataFromYahoo(stock, 1, interval, startTime, endTime);
                 let candles = processYahooData(data);
 
-                let startTimeDay = new Date('2024-10-31').setUTCHours(0, 0, 10, 0);
-                let endTimeDay = new Date('2024-10-31').setUTCHours(23, 0, 10, 0);
+                let startTimeDay = new Date('2024-10-22').setUTCHours(0, 0, 10, 0);
+                let endTimeDay = new Date(endTime).setUTCHours(23, 0, 10, 0);
 
                 const dataDay = await getDataFromYahoo(stock, 1, '1d', startTimeDay, endTimeDay);
                 let candlesDay = processYahooData(dataDay);
 
-                // console.log(candlesDay, new Date(candlesDay[0].time))
+                console.log(candlesDay, new Date(candlesDay[candlesDay.length - 1].time))
 
                 // console.log(candles[candles.length - 2])
                 // console.log(new Date(candles[candles.length - 2].time))
@@ -48,91 +61,149 @@ async function getDailyStats() {
                 candles = addMovingAverage(candles, 'close', 44, 'sma44');
 
                 const { high, low, open, close, sma44, time } = candles[candles.length - 2]
-                const { high: highDay, low: lowDay } = candlesDay[0]
+                const { high: highDay, low: lowDay } = candlesDay[candlesDay.length - 1]
 
-                if (rows.length == 0) {
-                    rows.push(['' + interval + ' - ' + getDateStringIND(new Date(time))]);
+                // if (rows.length == 0) {
+                //     rows.push(['' + interval + ' - ' + getDateStringIND(new Date(time))]);
+                // }
+
+                const maValues = candles.map(row => row['sma44']) //.reverse() //.slice(0, -2);
+
+                const countRising = countMATrendRising(maValues)
+                const countFalling = countMATrendFalling(maValues)
+
+                let isRising = null
+
+                if (countRising == countFalling) {
+                    if (maValues[maValues.length - 1] > maValues[maValues.length - 2]) {
+                        isRising = 'BULLISH'
+                    }
+                    else if (maValues[maValues.length - 1] < maValues[maValues.length - 2]) {
+                        isRising = 'BEARISH'
+                    }
+                    else if (maValues[maValues.length - 2] > maValues[maValues.length - 3]) {
+                        isRising = 'BULLISH'
+                    }
+                    else if (maValues[maValues.length - 2] < maValues[maValues.length - 3]) {
+                        isRising = 'BEARISH'
+                    }
+                }
+                else {
+                    isRising = countRising > countFalling ? 'BULLISH' : 'BEARISH'
                 }
 
-                const maValues = candles.map(row => row['sma44']).slice(0, -2);
+                if (DEBUG) {
+                    console.log(stock, isRising)
+                }
+                // if (!isRising) continue;
 
-                // console.log(maValues)
+                const firstCandle = candles[candles.length - 1];
+                const maValue = firstCandle['sma44'];
 
-                const trendCountRising = countMATrendRising(maValues);
-                const trendCountFalling = countMATrendFalling(maValues);
+                // let trend = isRising == 'BULLISH'
+                //     ? checkUpwardTrend(candles, candles.length - 1)
+                //     : checkDownwardTrend(candles, candles.length - 1);
 
-                const trend = (trendCountRising > trendCountFalling ? 'BULLISH' : 'BEARISH')
-                let candleCleared
+                // const candleMatched
 
-                if (trend === 'BULLISH' )
-                    candleCleared = checkUpwardTrend(candles, candles.length - 2) ? 'TRUE' : 'FALSE'
-                else if (trend === 'BEARISH' )
-                    candleCleared = checkDownwardTrend(candles, candles.length - 2) ? 'TRUE' : 'FALSE'
+                // if (!trend) {
+                let trend = isRising // (trendCountRising > trendCountFalling ? 'BULLISH' : 'BEARISH')
+                // }
 
-                console.log(stock, trendCountRising, trendCountFalling, trend, candleCleared)
+                // if (!trend) {
+                //     if (isBullishCandle(candles[candles.length - 2])) {
+                //         trend = 'BULLISH'
+                //     }
+                //     else {
+                //         trend = 'BEARISH'
+                //     }
+                // }
+
+                let candleCleared, triggerPrice, stopLossPrice, targetPrice, acheieved, count
+
+                if (trend === 'BULLISH' ) {
+                    candleCleared = checkUpwardTrend(candles, candles.length - 1) ? true : false
+                    triggerPrice = high + 1;
+                    stopLossPrice = low - 1;
+                    targetPrice = ((high - low) * 3) + triggerPrice;
+                    acheieved = highDay > targetPrice ? true : false
+                    count = countMATrendRising(maValues);
+                    console.log(stock, 'bullish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
+                }
+                else if (trend === 'BEARISH' ) {
+                    candleCleared = checkDownwardTrend(candles, candles.length - 1) ? true : false
+                    triggerPrice = low - 1;
+                    stopLossPrice = high + 1;
+                    targetPrice = (triggerPrice - (high - low)* 3);
+                    acheieved = lowDay < targetPrice ? true : false
+                    count = countMATrendFalling(maValues);
+                    console.log(stock, 'bearish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
+                }
+
+                // console.log(stock, trendCountRising, trendCountFalling, trend, candleCleared)
                 // console.log(scanZaireStocks())
                 console.log({...candles[candles.length - 2], time: new Date(candles[candles.length - 2].time)})
-// return
+                // return
                 // if (false)
+
                 rows.push([
+                    getDateStringIND(new Date(time)),
+
                     stock,          // Stock
                     high,           // H
                     low,            // L
                     open,           // O
                     close,          // C
-                    sma44,        // SMA44
+                    sma44,          // SMA44
 
                     lowDay,         // L
                     highDay,        // H
 
-                    trend + ' - ' + candleCleared,      // Continuous Up/Down MA
-                    trendCountRising > trendCountFalling ? trendCountRising : trendCountFalling         // Count
+                    trend,      // Continuous Up/Down MA
+                    count,         // Count
+
+                    candleCleared,
+                    targetPrice,
+                    stopLossPrice,
+
+                    acheieved
                 ]);
 
             } catch (error) {
-                console.error(`Error processing ${stock}:`, error?.response?.data || error?.message);
+                console.trace(`Error processing ${stock}:`, error?.response?.data || error?.message);
                 // await sendMessageToChannel(`❌ Error processing ${stock}:`, error.message);
             }
         }
 
         // Update Google Sheet
-        await appendRowsToSheet('Analysis 20Oct24!A2:G', rows);
+        await appendRowsToSheet('26Nov!A1:G', rows, sheetID);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
-        console.error('Error in getDailyStats:', error?.response?.data || error?.message);
+        console.trace('Error in getDailyStats:', error?.response?.data || error?.message);
         // await sendMessageToChannel('❌ Error updating daily stats:', error.message);
     }
 }
 
-function calculateMATrend(candles) {
-    let trend = '';
-    let count = 0;
-    
-    // Start from the second-to-last candle and move backwards
-    for (let i = candles.length - 2; i > 0; i--) {
-        const currentValue = candles[i].sma44;
-        const previousValue = candles[i - 1].sma44;
-        
-        // Skip if either value is null/undefined
-        if (!currentValue || !previousValue) break;
-        
-        if (count === 0) {
-            // First comparison establishes the trend
-            trend = currentValue > previousValue ? 'BULLISH' : 'BEARISH';
-            count = 1;
-        } else {
-            // Check if the trend continues
-            const isUp = currentValue > previousValue;
-            if ((trend === 'BULLISH' && isUp) || (trend === 'BEARISH' && !isUp)) {
-                count++;
-            } else {
-                break;
-            }
-        }
+const run = async () => {
+
+    for (let i = 18; i <= 22; i++) {    
+        let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
+        let endTime = new Date(`2024-11-${i}`).setUTCHours(4, 1, 10, 0);
+
+        await getDailyStats(startTime, endTime)
+
+        startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
+        endTime = new Date(`2024-11-${i}`).setUTCHours(4, 16, 10, 0);
+
+        await getDailyStats(startTime, endTime)
+
+
+        startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
+        endTime = new Date(`2024-11-${i}`).setUTCHours(4, 31, 10, 0);
+
+        await getDailyStats(startTime, endTime)
     }
-    
-    return `${trend} ${count}`;
 }
 
-getDailyStats()
+run()
