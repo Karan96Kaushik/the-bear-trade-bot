@@ -16,7 +16,7 @@ async function getDailyStats(startTime, endTime) {
         let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
 
-        niftyList = ['APARINDS']
+        // niftyList = ['APARINDS']
 
         // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
         // console.log(data)
@@ -129,7 +129,7 @@ async function getDailyStats(startTime, endTime) {
                     candleCleared = checkUpwardTrend(candles, candles.length - 2) ? true : false
                     triggerPrice = high + 1;
                     stopLossPrice = low - 1;
-                    targetPrice = ((high - low) * 3) + triggerPrice;
+                    targetPrice = ((high - low) * 2) + triggerPrice;
                     acheieved = highDay > targetPrice ? true : false
                     count = countRising
                     console.log(stock, 'bullish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
@@ -138,7 +138,7 @@ async function getDailyStats(startTime, endTime) {
                     candleCleared = checkDownwardTrend(candles, candles.length - 2) ? true : false
                     triggerPrice = low - 1;
                     stopLossPrice = high + 1;
-                    targetPrice = (triggerPrice - (high - low)* 3);
+                    targetPrice = (triggerPrice - (high - low)* 2);
                     acheieved = lowDay < targetPrice ? true : false
                     count = countFalling
                     console.log(stock, 'bearish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
@@ -180,7 +180,7 @@ async function getDailyStats(startTime, endTime) {
         }
 
         // Update Google Sheet
-        await appendRowsToSheet('26Nov!A1:G', rows, sheetID);
+        await appendRowsToSheet('26Nov1!A1:G', rows, sheetID);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
@@ -201,9 +201,9 @@ const run = async () => {
 
     const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
 
-    await appendRowsToSheet('26Nov!A1:G', headers, sheetID);
+    await appendRowsToSheet('26Nov1!A1:G', headers, sheetID);
 
-    for (let i = 25; i <= 26; i++) {    
+    for (let i = 27; i <= 27; i++) {    
         let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
         let endTime = new Date(`2024-11-${i}`).setUTCHours(4, 1, 10, 0);
 
