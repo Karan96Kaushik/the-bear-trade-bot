@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const OrderLog = require('../../models/OrderLog');
-
+const { getRetrospective, getTradeAnalysis } = require('../../analytics/orders');
 // Get all orders with pagination and filtering
 router.get('/logs', async (req, res) => {
     try {
@@ -68,6 +68,36 @@ router.get('/stats', async (req, res) => {
         res.json(stats);
     } catch (error) {
         console.error('Error fetching order stats:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/retrospective', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+        const results = await getRetrospective(startDate, endDate);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching retrospective:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/trade-analysis', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+        const results = await getTradeAnalysis(startDate, endDate);
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching trade analysis:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
