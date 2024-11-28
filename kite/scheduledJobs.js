@@ -372,13 +372,13 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Special Manual MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
 
-    const zaireJob = schedule.scheduleJob('31 4 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
     sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 
-    const zaireCancelJob = schedule.scheduleJob('30 45 4 * * 1-5', () => {
+    const zaireCancelJob = schedule.scheduleJob('15,30 4 * * 1-5', () => {
         sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
         cancelZaireOrders();
     });
