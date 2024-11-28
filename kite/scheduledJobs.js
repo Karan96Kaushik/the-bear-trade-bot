@@ -256,7 +256,7 @@ async function closeZaireOppositePositions() {
 
         for (const position of zairePositions) {
             try {
-                const lastCandle = getLastCandle(position.tradingsymbol)
+                const lastCandle = await getLastCandle(position.tradingsymbol)
                 if (position.quantity > 0) {
                     if (isBearishCandle(lastCandle)) {
                         await sendMessageToChannel('🔔 Closing Zaire Bullish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
