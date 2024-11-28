@@ -201,6 +201,51 @@ function checkReverseCandleConditions(row, maValue, tolerance = 0.01) {
     return (condition1 || condition2) && condition3;
 }
 
+
+async function getLastCandle(sym, endDateNew, interval = '15m') {
+    try {
+
+      let endDate = new Date();
+      endDate.setUTCSeconds(10);
+
+      if (endDateNew) {
+          endDate = new Date(endDateNew);
+      }
+
+      const startDate = new Date(endDate);
+      startDate.setDate(startDate.getDate() - 6);
+
+      let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate);
+      df = processYahooData(df);
+
+      /*
+        Remove incomplete candles
+      */
+      df.pop()
+      // Confirm that the final candle will be for today only and then remve the additional incomplete one
+      if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
+          df.pop()
+      }
+
+      if (DEBUG) {
+        console.log('----')
+      }
+
+      if (!df || df.length === 0) return null;
+
+      df = addMovingAverage(df, 'close', 44, 'sma44');
+      df = df.filter(r => r.close);
+
+      const firstCandle = df[df.length - 1];
+
+      return firstCandle;
+
+    } catch (e) {
+      console.error(e?.response?.data || e.message || e, sym);
+    }
+    return null;
+}
+
 async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
     const selectedStocks = [];
 
@@ -346,7 +391,8 @@ module.exports = {
     countMATrendRising,
     countMATrendFalling,
     isNarrowRange,
-    printTrendEmojis
+    printTrendEmojis,
+    getLastCandle
 };
 
 

@@ -5,7 +5,7 @@ const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
-const { scanZaireStocks } = require('../analytics');
+const { scanZaireStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
 
 // const OrderLog = require('../models/OrderLog');
 
@@ -239,6 +239,47 @@ async function closePositions() {
     }
 }
 
+async function closeZaireOppositePositions() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Close Zaire Opposite Positions Job');
+
+        await kiteSession.authenticate();
+
+        const positions = await kiteSession.kc.getPositions();
+        const allPositions = positions.net.filter(position => (position.quantity || 0) != 0);
+        const orders = await kiteSession.kc.getOrders();
+
+        const zairePositions = allPositions.filter(p => 
+            orders.find(o => o.tradingsymbol === p.tradingsymbol && o.tag?.includes('zaire') && 
+            o.tag?.includes('trigger'))
+        )
+
+        for (const position of zairePositions) {
+            try {
+                const lastCandle = getLastCandle(position.tradingsymbol)
+                if (position.quantity > 0) {
+                    if (!isBullishCandle(lastCandle)) {
+                        await sendMessageToChannel('🔔 Closing Zaire Bullish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
+                        await placeOrder('SELL', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
+                    }
+                } else {
+                    if (!isBearishCandle(lastCandle)) {
+                        await sendMessageToChannel('🔔 Closing Zaire Bearish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
+                        await placeOrder('BUY', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
+                    }
+                }
+
+            } catch (error) {
+                await sendMessageToChannel('🚨 Error placing  order to close position', position.tradingsymbol, position.quantity, error?.message);
+                console.error("🚨 Error placing  order to close position: ", position.tradingsymbol, position.quantity, error?.message);
+            }
+        }
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running close negative positions job', error?.message);
+        console.error("🚨 Error running close negative positions job: ", error?.message);
+    }
+}
+
 async function calculateExtremePrice(sym, type) {
     let data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
     data = processYahooData(data)
@@ -383,6 +424,12 @@ const scheduleMISJobs = () => {
         cancelZaireOrders();
     });
     sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+
+    const zaireCloseJob = schedule.scheduleJob('10 15,30 4 * * 1-5', () => {
+        sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
+        closeZaireOppositePositions();
+    });
+    sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
 }
 
 module.exports = {
@@ -393,5 +440,6 @@ module.exports = {
     validateOrdersFromSheet,
     calculateExtremePrice,
     setupSpecialOrdersFromSheet,
-    setupZaireOrders
+    setupZaireOrders,
+    closeZaireOppositePositions
 };
