@@ -258,14 +258,18 @@ async function closeZaireOppositePositions() {
             try {
                 const lastCandle = getLastCandle(position.tradingsymbol)
                 if (position.quantity > 0) {
-                    if (!isBullishCandle(lastCandle)) {
+                    if (isBearishCandle(lastCandle)) {
                         await sendMessageToChannel('🔔 Closing Zaire Bullish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
-                        await placeOrder('SELL', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
+                        // await placeOrder('SELL', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
+                        await sendMessageToChannel(lastCandle)
+
                     }
                 } else {
-                    if (!isBearishCandle(lastCandle)) {
+                    if (isBullishCandle(lastCandle)) {
                         await sendMessageToChannel('🔔 Closing Zaire Bearish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
-                        await placeOrder('BUY', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
+                        // await placeOrder('BUY', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
+                        await sendMessageToChannel(lastCandle)
+
                     }
                 }
 
