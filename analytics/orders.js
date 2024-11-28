@@ -150,8 +150,8 @@ async function getTradeAnalysis(startDate, endDate) {
     
     // Calculate overall statistics
     const closedTrades = analysis.filter(t => t.status === 'CLOSED');
-    const totalPnL = closedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
-    const unrealisedPnL = analysis.reduce((sum, trade) => sum + trade.pnl, 0);
+    const realisedPnL = closedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
+    const totalPnL = analysis.reduce((sum, trade) => sum + trade.pnl, 0);
     const winningTrades = closedTrades.filter(t => t.pnl > 0);
     
     return {
@@ -162,7 +162,7 @@ async function getTradeAnalysis(startDate, endDate) {
             openTrades: analysis.length - closedTrades.length,
             totalPnL: parseFloat(totalPnL.toFixed(2)),
             winRate: closedTrades.length ? parseFloat(((winningTrades.length / closedTrades.length) * 100).toFixed(2)) : 0,
-            unrealisedPnL: parseFloat(unrealisedPnL.toFixed(2)),
+            realisedPnL: parseFloat(realisedPnL.toFixed(2)),
             zaireTrades: zaireTrades.length,
             zaireWinRate: zaireTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'zaire').length / zaireTrades.length) * 100).toFixed(2)) : 0,
             zairePnL: parseFloat(zaireTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2))

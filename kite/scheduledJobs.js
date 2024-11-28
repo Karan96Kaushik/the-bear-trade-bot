@@ -254,6 +254,8 @@ async function closeZaireOppositePositions() {
             o.tag?.includes('trigger'))
         )
 
+        let updates = []
+
         for (const position of zairePositions) {
             try {
                 const lastCandle = await getLastCandle(position.tradingsymbol)
@@ -262,16 +264,28 @@ async function closeZaireOppositePositions() {
                         await sendMessageToChannel('🔔 Closing Zaire Bullish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
                         // await placeOrder('SELL', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
                         await sendMessageToChannel(lastCandle)
-
+                        // const [row, col] = getStockLoc(position.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
+                        // updates.push({
+                        //     range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+                        //     values: [['-' + position.tradingsymbol]], 
+                        // })
                     }
                 } else {
                     if (isBullishCandle(lastCandle)) {
                         await sendMessageToChannel('🔔 Closing Zaire Bearish position', position.tradingsymbol, position.quantity, 'Last Candle:', lastCandle)
                         // await placeOrder('BUY', 'MARKET', null, position.quantity, position, 'zaire-opp-cl')
                         await sendMessageToChannel(lastCandle)
+                        // const [row, col] = getStockLoc(position.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
+                        // updates.push({
+                        //     range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+                        //     values: [['-' + position.tradingsymbol]], 
+                        // })
 
                     }
                 }
+
+                // if (updates.length > 0)
+                //     await bulkUpdateCells(updates)
 
             } catch (error) {
                 await sendMessageToChannel('🚨 Error placing  order to close position', position.tradingsymbol, position.quantity, error?.message);
