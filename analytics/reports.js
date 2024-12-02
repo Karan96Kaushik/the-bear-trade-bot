@@ -1,4 +1,9 @@
 const { readSheetData, appendRowsToSheet } = require('../gsheets');
+const { checkUpwardTrend,
+    checkDownwardTrend, addMovingAverage, countMATrendRising,
+    countMATrendFalling, printTrendEmojis } = require('../analytics');
+const { getDateStringIND } = require('../kite/utils');
+const { getDataFromYahoo, processYahooData } = require('../kite/utils')
 
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE';
 
