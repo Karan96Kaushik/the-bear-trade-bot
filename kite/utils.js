@@ -153,6 +153,8 @@ async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
     }
 }
 
+
+
 /**
  * Process Yahoo Finance data into an ordered array of OHLCV objects
  * @param {Object} yahooData - The raw data from Yahoo Finance
@@ -233,11 +235,47 @@ async function getDhanNIFTY50Data(pgno = 0) {
     }
 }
 
+/**
+ * Fetch historical stock data from Upstox API
+ * @param {string} isin - The ISIN number of the stock
+ * @param {string} [interval='day'] - Time interval ('day', 'week', 'month')
+ * @param {string} [endDate] - End date in YYYY-MM-DD format
+ * @returns {Promise<Object>} The historical stock data
+ */
+async function getUpstoxHistoricalData(isin, interval = 'day', endDate = '2024-12-02') {
+    try {
+        const requestId = `WUPW-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const url = `https://service.upstox.com/charts/v2/open/historical/IN/NSE_EQ|${isin}/${interval}/${endDate}/`;
+        
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Accept': 'application/json, text/plain, */*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'x-request-id': requestId,
+            'Origin': 'https://upstox.com',
+            'Referer': 'https://upstox.com/',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-site',
+            'TE': 'trailers'
+        };
+
+        const response = await axios.get(url, { headers });
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching Upstox historical data:`, error.response?.data || error.message);
+        throw error;
+    }
+}
+
 module.exports = {
     getInstrumentToken,
     getDateStringIND,
     getDataFromYahoo,
     searchUpstoxStocks,
     processYahooData,
-    getDhanNIFTY50Data
+    getDhanNIFTY50Data,
+    getUpstoxHistoricalData
 };
