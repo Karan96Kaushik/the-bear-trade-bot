@@ -201,19 +201,27 @@ const run = async () => {
 
     await appendRowsToSheet('29Nov!A1:G', headers, sheetID);
 
-    for (let i = 25; i <= 29; i++) {    
-        let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
-        let endTime = new Date(`2024-11-${i}`).setUTCHours(4, 1, 10, 0);
+    for (let i = 2; i <= 2; i++) {    
+        let startTime = new Date(`2024-12-${i}`)
+        startTime.setUTCHours(4, 0, 10, 0);
+        startTime.setDate(startTime.getDate() - 5)
+        let endTime = new Date(`2024-12-${i}`).setUTCHours(4, 1, 10, 0);
 
         await getDailyStats(startTime, endTime)
 
-        startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
-        endTime = new Date(`2024-11-${i}`).setUTCHours(4, 16, 10, 0);
+        startTime = new Date(`2024-12-${i}`)
+        startTime.setUTCHours(4, 0, 10, 0);
+        startTime.setDate(startTime.getDate() - 5)
+
+        endTime = new Date(`2024-12-${i}`).setUTCHours(4, 16, 10, 0);
 
         await getDailyStats(startTime, endTime)
 
-        startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
-        endTime = new Date(`2024-11-${i}`).setUTCHours(4, 31, 10, 0);
+        startTime = new Date(`2024-12-${i}`)
+        startTime.setUTCHours(4, 0, 10, 0);
+        startTime.setDate(startTime.getDate() - 5)
+
+        endTime = new Date(`2024-12-${i}`).setUTCHours(4, 31, 10, 0);
 
         await getDailyStats(startTime, endTime)
     }
