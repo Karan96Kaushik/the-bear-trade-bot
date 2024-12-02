@@ -32,7 +32,7 @@ async function getInstrumentToken(tradingSymbol) {
         await kiteSession.authenticate();
 
         // Fetch all instruments
-        const instruments = await kiteSession.kc.getInstruments();
+        const instruments = await kiteSession.kc.getInstruments('NSE');
 
         // Find the matching instrument
         const instrument = instruments.find(
@@ -270,6 +270,90 @@ async function getUpstoxHistoricalData(isin, interval = 'day', endDate = '2024-1
     }
 }
 
+/**
+ * Fetch stock data from NSE Charting API
+ * @param {string} tradingSymbol - The trading symbol (e.g., "TCS-EQ")
+ * @param {number} fromDate - Start timestamp in seconds
+ * @param {number} toDate - End timestamp in seconds
+ * @param {number} [timeInterval=15] - Time interval in minutes
+ * @param {string} [chartPeriod='I'] - Chart period ('I' for intraday)
+ * @returns {Promise<Object>} The stock data
+ */
+async function getNSEChartData(tradingSymbol, fromDate, toDate, timeInterval = 15, chartPeriod = 'I') {
+    try {
+        const url = 'https://charting.nseindia.com/Charts/ChartData/';
+        
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0',
+            'Accept': '*/*',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Content-Type': 'application/json; charset=utf-8',
+            'Origin': 'https://charting.nseindia.com',
+            'Connection': 'keep-alive',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'cors',
+            'Sec-Fetch-Site': 'same-origin',
+            'TE': 'trailers'
+        };
+
+        if (typeof toDate == 'object') toDate = new Date(toDate).getTime() / 1000
+        if (typeof fromDate == 'object') fromDate = new Date(fromDate).getTime() / 1000
+
+        console.log(fromDate, toDate)
+
+        const data = {
+            exch: 'N',
+            tradingSymbol: tradingSymbol + '-EQ',
+            fromDate,
+            toDate,
+            timeInterval,
+            chartPeriod,
+            chartStart: 0
+        };
+
+        const response = await axios.post(url, data, { headers });
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching NSE chart data for ${tradingSymbol}:`, error?.response?.data || error.message);
+        throw error;
+    }
+}
+
+const processNSEChartData = (data) => {
+    return data.t.map((timestamp, index) => ({
+        time: timestamp * 1000,
+        open: data.o[index],
+        high: data.h[index],
+        low: data.l[index],
+        close: data.c[index],
+        volume: data.v[index]
+    }))
+}
+
+const dates = [
+    ['2024-11-29', '2024-12-02'],
+    ['2024-11-28', '2024-12-01'], 
+    ['2024-11-27', '2024-11-30'],
+    ['2024-11-26', '2024-11-29'],
+    ['2024-11-25', '2024-11-28'],
+    ['2024-11-24', '2024-11-27'],
+
+
+];
+
+for (const [startDate, endDate] of dates) {
+    console.log(`Fetching data for ${startDate} to ${endDate}`);
+    const start = Date.now();
+    getNSEChartData('TCS', new Date(startDate), new Date(endDate))
+        .then(data => {
+            const duration = Date.now() - start;
+            console.log(`Completed in ${duration}ms`);
+            // console.log(data);
+        })
+        .catch(err => console.error(`Error fetching data for ${startDate}-${endDate}:`, err));
+}
+
 module.exports = {
     getInstrumentToken,
     getDateStringIND,
@@ -277,5 +361,7 @@ module.exports = {
     searchUpstoxStocks,
     processYahooData,
     getDhanNIFTY50Data,
-    getUpstoxHistoricalData
+    getUpstoxHistoricalData,
+    getNSEChartData,
+    processNSEChartData
 };

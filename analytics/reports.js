@@ -1,4 +1,4 @@
-const { readSheetData, appendRowsToSheet } = require('../../gsheets');
+const { readSheetData, appendRowsToSheet } = require('../gsheets');
 
 async function generateDailyReport(sheetName) {
     const stockList = await readSheetData('HIGHBETA!B2:B200');
