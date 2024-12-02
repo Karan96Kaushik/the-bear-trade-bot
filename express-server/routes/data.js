@@ -49,6 +49,30 @@ router.get('/yahoo', async (req, res) => {
 	}
 });
 
+router.get('/nse', async (req, res) => {
+	try {
+		let { symbol, fromDate, toDate } = req.query;
+
+		if (!symbol) {
+			return res.status(400).json({ message: 'Symbol is required' });
+		}
+
+		if (!fromDate) fromDate = new Date()
+		if (!toDate) toDate = new Date()
+
+		if (typeof fromDate == 'string') fromDate = new Date(fromDate)
+		if (typeof toDate == 'string') toDate = new Date(toDate)
+
+		const data = await getNSEChartData(symbol, fromDate, toDate)
+		data = processNSEChartData(data)
+
+		res.json(data);
+	} catch (error) {
+		console.error('Error fetching NSE data:', error?.data || error);
+		res.status(500).json({ message: ('Error fetching NSE data:', error?.data || error) });
+	}
+});
+
 router.get('/stocks/suggest', async (req, res) => {
 	try {
 		let { query } = req.query;
