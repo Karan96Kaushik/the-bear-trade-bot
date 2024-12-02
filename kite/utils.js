@@ -331,28 +331,28 @@ const processNSEChartData = (data) => {
     }))
 }
 
-const dates = [
-    ['2024-11-29', '2024-12-02'],
-    ['2024-11-28', '2024-12-01'], 
-    ['2024-11-27', '2024-11-30'],
-    ['2024-11-26', '2024-11-29'],
-    ['2024-11-25', '2024-11-28'],
-    ['2024-11-24', '2024-11-27'],
+// const dates = [
+//     ['2024-11-29', '2024-12-02'],
+//     ['2024-11-28', '2024-12-01'], 
+//     ['2024-11-27', '2024-11-30'],
+//     ['2024-11-26', '2024-11-29'],
+//     ['2024-11-25', '2024-11-28'],
+//     ['2024-11-24', '2024-11-27'],
 
 
-];
+// ];
 
-for (const [startDate, endDate] of dates) {
-    console.log(`Fetching data for ${startDate} to ${endDate}`);
-    const start = Date.now();
-    getNSEChartData('TCS', new Date(startDate), new Date(endDate))
-        .then(data => {
-            const duration = Date.now() - start;
-            console.log(`Completed in ${duration}ms`);
-            // console.log(data);
-        })
-        .catch(err => console.error(`Error fetching data for ${startDate}-${endDate}:`, err));
-}
+// for (const [startDate, endDate] of dates) {
+//     console.log(`Fetching data for ${startDate} to ${endDate}`);
+//     const start = Date.now();
+//     getNSEChartData('TCS', new Date(startDate), new Date(endDate))
+//         .then(data => {
+//             const duration = Date.now() - start;
+//             console.log(`Completed in ${duration}ms`);
+//             // console.log(data);
+//         })
+//         .catch(err => console.error(`Error fetching data for ${startDate}-${endDate}:`, err));
+// }
 
 module.exports = {
     getInstrumentToken,
