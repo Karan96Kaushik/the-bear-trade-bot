@@ -8,8 +8,6 @@ const { addMovingAverage, scanZaireStocks, countMATrendRising,
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
 
-const MA_TREND_WINDOW = 10
-
 async function getDailyStats(startTime, endTime) {
     try {
 
@@ -180,7 +178,7 @@ async function getDailyStats(startTime, endTime) {
         }
 
         // Update Google Sheet
-        await appendRowsToSheet('26Nov1!A1:G', rows, sheetID);
+        await appendRowsToSheet('29Nov!A1:G', rows, sheetID);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
@@ -201,9 +199,9 @@ const run = async () => {
 
     const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
 
-    await appendRowsToSheet('26Nov1!A1:G', headers, sheetID);
+    await appendRowsToSheet('29Nov!A1:G', headers, sheetID);
 
-    for (let i = 27; i <= 27; i++) {    
+    for (let i = 25; i <= 29; i++) {    
         let startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
         let endTime = new Date(`2024-11-${i}`).setUTCHours(4, 1, 10, 0);
 
@@ -213,7 +211,6 @@ const run = async () => {
         endTime = new Date(`2024-11-${i}`).setUTCHours(4, 16, 10, 0);
 
         await getDailyStats(startTime, endTime)
-
 
         startTime = new Date(`2024-11-${i-5}`).setUTCHours(4, 0, 10, 0);
         endTime = new Date(`2024-11-${i}`).setUTCHours(4, 31, 10, 0);
