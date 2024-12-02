@@ -393,7 +393,7 @@ async function updateStopLossOrders() {
     }
 }
 
-async function generateDailyReport() {
+async function generateDailyReportF() {
     try {
         await generateDailyReport('29Nov')
     } catch (error) {
@@ -460,7 +460,7 @@ const scheduleMISJobs = () => {
     sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
 
     const dailyReportJob = schedule.scheduleJob('45 16 * * 1-5', () => {
-        generateDailyReport('29Nov')
+        generateDailyReportF('29Nov')
         sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
