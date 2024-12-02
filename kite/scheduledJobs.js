@@ -435,12 +435,6 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()))
 
-    // const specialJob = schedule.scheduleJob('1 16 * * 1-5', () => {
-    //     setupSpecialOrdersFromSheet();
-    //     sendMessageToChannel('⏰ Special Manual MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
-    // });
-    // sendMessageToChannel('⏰ Special Manual MIS Scheduled - ', getDateStringIND(specialJob.nextInvocation()));
-
     const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
