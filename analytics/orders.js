@@ -50,6 +50,7 @@ async function getRetrospective(startDate, endDate) {
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
             source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : 'sheet',
+            exitReason: a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
         })))
         results = await Promise.all(results.map(async a => {
@@ -117,6 +118,7 @@ async function analyzeTradeResults(trades) {
                 ...result,
                 exit: lastTrade.price,
                 exitTime: lastTrade.timestamp,
+                exitReason: lastTrade.exitReason || '-',
                 status: 'CLOSED',
                 pnl: parseFloat(pnl.toFixed(2)),
                 pnlPercentage: parseFloat(((pnl / (firstTrade.price * firstTrade.quantity)) * 100).toFixed(2))
@@ -130,6 +132,7 @@ async function analyzeTradeResults(trades) {
                 ...result,
                 exit: ltp[sym].last_price,
                 exitTime: lastTrade.timestamp,
+                exitReason: '-',
                 status: 'OPEN',
                 pnl: parseFloat(((ltp[sym].last_price - firstTrade.price) * firstTrade.quantity).toFixed(2)),
                 pnlPercentage: parseFloat((((ltp[sym].last_price - firstTrade.price) * firstTrade.quantity) / (firstTrade.price * firstTrade.quantity) * 100).toFixed(2))
@@ -165,7 +168,10 @@ async function getTradeAnalysis(startDate, endDate) {
             realisedPnL: parseFloat(realisedPnL.toFixed(2)),
             zaireTrades: zaireTrades.length,
             zaireWinRate: zaireTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'zaire').length / zaireTrades.length) * 100).toFixed(2)) : 0,
-            zairePnL: parseFloat(zaireTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2))
+            zairePnL: parseFloat(zaireTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
+            zaireTargetExits: zaireTrades.filter(t => t.exitReason === 'target').length,
+            zaireStopLossExits: zaireTrades.filter(t => t.exitReason === 'stoploss').length,
+            zaireOtherExits: zaireTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length
         }
     };
 }

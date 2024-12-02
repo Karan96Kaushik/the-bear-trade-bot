@@ -6,6 +6,7 @@ const { kiteSession } = require('./setup');
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
 const { scanZaireStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
+const { generateDailyReport } = require('../analytics/reports');
 
 // const OrderLog = require('../models/OrderLog');
 
@@ -392,6 +393,15 @@ async function updateStopLossOrders() {
     }
 }
 
+async function generateDailyReport() {
+    try {
+        await generateDailyReport('29Nov')
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Generate Daily Report job', error?.message);
+        console.error("🚨 Error running Generate Daily Report job: ", error?.message);
+    }
+}
+
 const scheduleMISJobs = () => {
 
     const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
@@ -448,6 +458,12 @@ const scheduleMISJobs = () => {
         closeZaireOppositePositions();
     });
     sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
+
+    const dailyReportJob = schedule.scheduleJob('10 16 * * 1-5', () => {
+        generateDailyReport('29Nov')
+        sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
+    });
+    sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
 }
 
 module.exports = {
