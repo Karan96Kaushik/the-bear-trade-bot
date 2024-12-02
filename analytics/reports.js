@@ -1,8 +1,9 @@
 const { readSheetData, appendRowsToSheet } = require('../gsheets');
 
+const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE';
+
 async function generateDailyReport(sheetName) {
     const stockList = await readSheetData('HIGHBETA!B2:B200');
-    const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE';
     
     // Initialize headers
     const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']];
