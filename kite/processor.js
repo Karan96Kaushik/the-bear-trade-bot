@@ -188,7 +188,7 @@ const processSuccessfulOrder = async (order) => {
 
             console.log('📬 Order update', order)
 
-            let stockData = await readSheetData('MIS-ALPHA!A2:W100')
+            let stockData = await readSheetData('MIS-ALPHA!A2:W1000')
             stockData = processMISSheetData(stockData)
 
             let stock = stockData.find(s => s.stockSymbol == order.tradingsymbol)

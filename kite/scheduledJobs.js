@@ -23,7 +23,7 @@ async function setupZaireOrders() {
         let niftyList = await readSheetData('HIGHBETA!B2:B150')
         niftyList = niftyList.map(stock => stock[0]).filter(a => a !== 'NOT FOUND')
 
-        let sheetData = await readSheetData('MIS-ALPHA!A2:W100')
+        let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
         sheetData = processMISSheetData(sheetData)
 
         await kiteSession.authenticate();
@@ -135,7 +135,7 @@ async function validateOrdersFromSheet() {
     try {
         await sendMessageToChannel('⌛️ Executing Validation Job')
     
-        let stockData = await readSheetData('MIS-ALPHA!A2:W100')
+        let stockData = await readSheetData('MIS-ALPHA!A2:W1000')
         stockData = processMISSheetData(stockData)
     
         await kiteSession.authenticate()
@@ -181,7 +181,7 @@ async function setupOrdersFromSheet() {
     try {
         await sendMessageToChannel('⌛️ Executing MIS Jobs')
     
-        let stockData = await readSheetData('MIS-ALPHA!A2:W100')
+        let stockData = await readSheetData('MIS-ALPHA!A2:W1000')
         stockData = processMISSheetData(stockData)
 
         const orders = await kiteSession.kc.getOrders();
@@ -319,7 +319,7 @@ async function updateStopLossOrders() {
 
         await kiteSession.authenticate();
 
-        let stockData = await readSheetData('MIS-ALPHA!A2:W100');
+        let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
         stockData = processMISSheetData(stockData);
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
@@ -402,6 +402,74 @@ async function generateDailyReportF() {
     }
 }
 
+async function setupMissingOrders() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Setup Missing Orders Job');
+
+        await kiteSession.authenticate();
+
+        // Get current positions and orders
+        const positions = await kiteSession.kc.getPositions();
+        const orders = await kiteSession.kc.getOrders();
+        const openPositions = positions.net.filter(position => (position.quantity || 0) != 0);
+
+        // Get sheet data for reference
+        let stockData = await readSheetData('MIS-ALPHA!A2:W10000');
+        stockData = processMISSheetData(stockData);
+
+        console.log(stockData)
+
+        for (const position of openPositions) {
+            try {
+                // Find corresponding stock data from sheet
+                const stock = stockData.find(s => s.stockSymbol === position.tradingsymbol);
+                if (!stock) {
+                    await sendMessageToChannel('⚠️ No sheet data found for position:', position.tradingsymbol);
+                    continue;
+                }
+
+                // Check existing orders for this position
+                const existingOrders = orders.filter(o => 
+                    o.tradingsymbol === position.tradingsymbol && 
+                    (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+                );
+
+                const hasStoploss = existingOrders.some(o => o.tag?.includes('stoploss'));
+                const hasTarget = existingOrders.some(o => o.tag?.includes('target'));
+
+                // Position is bullish (long)
+                if (position.quantity > 0) {
+                    if (!hasStoploss) {
+                        await placeOrder('SELL', 'SL', stock.stopLossPrice, position.quantity, stock, 'stoploss-missing');
+                    }
+                    if (!hasTarget) {
+                        await placeOrder('SELL', 'LIMIT', stock.targetPrice, position.quantity, stock, 'target-missing');
+                    }
+                }
+                // Position is bearish (short)
+                else {
+                    if (!hasStoploss) {
+                        await placeOrder('BUY', 'SL', stock.stopLossPrice, Math.abs(position.quantity), stock, 'stoploss-missing');
+                    }
+                    if (!hasTarget) {
+                        await placeOrder('BUY', 'LIMIT', stock.targetPrice, Math.abs(position.quantity), stock, 'target-missing');
+                    }
+                }
+
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel('🚨 Error setting up missing orders for:', position.tradingsymbol, error?.message);
+            }
+        }
+
+        await sendMessageToChannel('✅ Completed Setup Missing Orders Job');
+
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Setup Missing Orders job', error?.message);
+        console.error("🚨 Error running Setup Missing Orders job: ", error?.message);
+    }
+}
+
 const scheduleMISJobs = () => {
 
     const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
@@ -469,5 +537,6 @@ module.exports = {
     calculateExtremePrice,
     setupSpecialOrdersFromSheet,
     setupZaireOrders,
-    closeZaireOppositePositions
+    closeZaireOppositePositions,
+    setupMissingOrders
 };
