@@ -6,6 +6,7 @@ const { getDateStringIND } = require('../kite/utils');
 const { getDataFromYahoo, processYahooData } = require('../kite/utils')
 
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE';
+const DEBUG = false;
 
 async function generateDailyReport(sheetName) {
     const stockList = await readSheetData('HIGHBETA!B2:B200');
