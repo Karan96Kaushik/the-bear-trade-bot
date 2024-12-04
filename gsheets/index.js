@@ -105,7 +105,7 @@ function numberToExcelColumn(n) {
 async function appendRowsToMISD(stocks) {
     try {
         // Read existing data to determine the last row and ID
-        let existingData = await readSheetData('MIS-ALPHA!A2:W100');
+        let existingData = await readSheetData('MIS-ALPHA!A2:W1000');
         let lastRow = existingData.length + 2; // +2 because we start from A2
         let lastId = parseInt(existingData[existingData.length - 1]?.[0]?.split('TMD')?.[1]);
         if (isNaN(lastId))
