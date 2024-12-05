@@ -9,29 +9,25 @@ const { addMovingAverage, scanZaireStocks, countMATrendRising,
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
 
-const interval = '5m'
+const interval = '15m'
 let sheetName = '29Nov'
 
 if (interval == '5m') {
     sheetName = '5Dec-5m'
 }
 
+sheetName = '5Dec-15m-Notif'
+
 async function getDailyStats(startTime, endTime) {
     try {
 
-        let niftyList = await readSheetData('HIGHBETA!B2:B200')  // await getDhanNIFTY50Data();
+        let niftyList = await readSheetData('HIGHBETA!B2:B200')  
         niftyList = niftyList.map(stock => stock[0])
 
-        // niftyList = ['APARINDS']
+        niftyList = await readSheetData('4Dec-notif-list!A1:A200')
+        niftyList = niftyList.map(stock => stock[0])
 
-        // let data = await scanZaireStocks(niftyList, '2024-11-22T04:01:10Z')
-        // console.log(data)
         console.log('---')
-        // return
-
-
-        // console.log(endTime)
-
 
         const rows = [
         ];
@@ -240,11 +236,12 @@ const run = async () => {
 
     await appendRowsToSheet(sheetName + '!A1:G', headers, sheetID);
 
-    for (let i = 2; i <= 5; i++) {    
+    for (let i = 5; i <= 5; i++) {    
         let startTime = new Date(`2024-12-${i}`)
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
-        let endTime = new Date(`2024-12-${i}`).setUTCHours(4, 1, 10, 0);
+        let endTime = new Date(`2024-12-${i}`);
+        endTime.setUTCHours(4, 1, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(3, 51, 10, 0);
         }
@@ -254,7 +251,8 @@ const run = async () => {
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
 
-        endTime = new Date(`2024-12-${i}`).setUTCHours(4, 16, 10, 0);
+        endTime = new Date(`2024-12-${i}`);
+        endTime.setUTCHours(4, 16, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(3, 56, 10, 0);
         }
@@ -265,7 +263,8 @@ const run = async () => {
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
 
-        endTime = new Date(`2024-12-${i}`).setUTCHours(4, 31, 10, 0);
+        endTime = new Date(`2024-12-${i}`);
+        endTime.setUTCHours(4, 31, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(4, 1, 10, 0);
         }
