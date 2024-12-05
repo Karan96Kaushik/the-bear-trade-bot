@@ -43,7 +43,7 @@ function calculateMovingAverage(data, window) {
   );
 }
 
-function checkUpwardTrend(df, i, tolerance = 0.002) {
+function checkUpwardTrend(df, i, tolerance = 0.015) {
 
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], 'BULLISH', tolerance))
@@ -84,7 +84,7 @@ F: SMA44
 
 */
 
-function checkDownwardTrend(df, i, tolerance = 0.002) {
+function checkDownwardTrend(df, i, tolerance = 0.015) {
 
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], 'BEARISH', tolerance))
@@ -393,7 +393,7 @@ function isDojiCandle(candle) {
   return (open > lower && open < upper) && (close > lower && close < upper);
 }
 
-function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { // Changed default tolerance to 1%
+function checkCandlePlacement(candle, maValue, direction, tolerance = 0.015) { // Changed default tolerance to 1%
   const { high, low } = candle;
 
   const range = ((high + low) / 2) * 0.05;
