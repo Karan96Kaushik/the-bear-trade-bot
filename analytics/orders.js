@@ -155,7 +155,7 @@ async function getTradeAnalysis(startDate, endDate) {
     const closedTrades = analysis.filter(t => t.status === 'CLOSED');
     const realisedPnL = closedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
     const totalPnL = analysis.reduce((sum, trade) => sum + trade.pnl, 0);
-    const winningTrades = closedTrades.filter(t => t.pnl > 0);
+    const winningTrades = closedTrades.filter(t => t.exitReason === 'target');
     
     return {
         trades: analysis,
