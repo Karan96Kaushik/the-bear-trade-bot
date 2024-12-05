@@ -319,25 +319,33 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
 function isNarrowRange(candle) {
   const { high, low } = candle;
   const range = (high - low) / ((high + low) / 2);
-  return range < 0.02;
+  return range < 0.015;
 }
 
 function isBullishCandle(candle) {
   const { high, low, open, close } = candle;
-  const candleLength = high - ((high - low) * 0.3);
-  return (open > candleLength && close > candleLength) || close > open;
+  // const candleLength = high - ((high - low) * 0.3);
+  const isBL1 = open > (high - ((high - low) * 0.35)) && close > (high - ((high - low) * 0.35));
+  const isBL2 = close > open && open > ((high + low) / 2)
+  const isBL3 = (Math.abs(close - open) > ((high - low) * 0.5)) && close > open
+
+  return isBL1 ? 'BL1' : isBL2 ? 'BL2' : isBL3 ? 'BL3' : null;
 }
 
 function isBearishCandle(candle) {
   const { high, low, close, open } = candle;
-  const candleLength = low + ((high - low) * 0.3);
-  return (open < candleLength && close < candleLength) || close < open;
+  
+  const isBR1 = open < (low + ((high - low) * 0.35)) && close < (low + ((high - low) * 0.35));
+  const isBR2 = close < open && open < ((high + low) / 2)
+  const isBR3 = (Math.abs(close - open) > ((high - low) * 0.5)) && close < open
+
+  return isBR1 ? 'BR1' : isBR2 ? 'BR2' : isBR3 ? 'BR3' : null;
 }
 
 function isDojiCandle(candle) {
   const { high, low, open, close } = candle;
   const mid = (high + low) / 2;
-  const range = ((high - low) / 2) * 0.05;
+  const range = (high - low) * 0.20;
   const lower = mid - range;
   const upper = mid + range;
   return (open > lower && open < upper) && (close > lower && close < upper);
@@ -345,18 +353,16 @@ function isDojiCandle(candle) {
 
 function checkCandlePlacement(candle, maValue, direction, tolerance = 0.01) { // Changed default tolerance to 1%
   const { high, low } = candle;
-  if (DEBUG) {
-    console.log(direction, maValue, high, low, maValue >= (high * 1.01), maValue >= low)
-  }
-  
-  if (direction === 'BULLISH') {
-    return maValue <= high && maValue >= (low * 0.995);
-  } else if (direction === 'BEARISH') {
-    return maValue <= (high * 1.005) && maValue >= low;
-  }
-  
-  return false;
+
+  const range = ((high + low) / 2) * 0.05;
+
+  return maValue >= low - range && maValue <= high + range;
 }
+
+// function checkVolumeTrend(candle, maValue, direction, tolerance = 0.01) {
+//   const { volume } = candle;
+//   return volume >= maValue - (maValue * tolerance) && volume <= maValue + (maValue * tolerance);
+// }
 
 function printTrendEmojis(values) {
   const trends = [];
