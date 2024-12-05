@@ -146,6 +146,48 @@ function addMovingAverage(data, key, window, newKey) {
     });
 }
 
+function calculateRSI(df, window = 14) {
+  // Skip first row since we can't calculate change
+  const changes = df.slice(1).map((item, index) => {
+    const prevClose = df[index].close;
+    const change = item.close - prevClose;
+    return {
+      gain: change > 0 ? change : 0,
+      loss: change < 0 ? -change : 0
+    };
+  });
+
+  // Calculate initial averages
+  const initialGains = changes.slice(0, window);
+  const initialLosses = changes.slice(0, window);
+  let avgGain = initialGains.reduce((sum, curr) => sum + curr.gain, 0) / window;
+  let avgLoss = initialLosses.reduce((sum, curr) => sum + curr.loss, 0) / window;
+
+  const rsi = [null]; // First period will be null
+  
+  for (let i = 1; i <= window; i++) {
+    rsi.push(null);
+  }
+
+  // Calculate subsequent RSIs using smoothing
+  for (let i = window + 1; i < df.length; i++) {
+    avgGain = ((avgGain * (window - 1)) + changes[i - 1].gain) / window;
+    avgLoss = ((avgLoss * (window - 1)) + changes[i - 1].loss) / window;
+    rsi.push(100 - (100 / (1 + avgGain / (avgLoss || 1))));
+  }
+
+  return rsi;
+}
+
+function addRSI(df, window = 14) {
+  const rsi = calculateRSI(df, window);
+  // console.log(rsi.length, df.length)
+  return df.map((item, index) => ({
+    ...item,
+    rsi: rsi[index]
+  }));
+}
+
 function countMATrendRising(maValues) {
   const _maValues = [...maValues]
   _maValues.reverse()
@@ -398,7 +440,8 @@ module.exports = {
     countMATrendFalling,
     isNarrowRange,
     printTrendEmojis,
-    getLastCandle
+    getLastCandle,
+    addRSI
 };
 
 
