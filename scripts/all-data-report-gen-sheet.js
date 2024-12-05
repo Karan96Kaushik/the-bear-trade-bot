@@ -18,13 +18,13 @@ if (interval == '5m') {
 
 sheetName = '5Dec-15m-Notif'
 
+let sheetRange = 'HIGHBETA!B2:B200'
+sheetRange = '4Dec-notif-list!A1:A200'
+
 async function getDailyStats(startTime, endTime) {
     try {
 
-        let niftyList = await readSheetData('HIGHBETA!B2:B200')  
-        niftyList = niftyList.map(stock => stock[0])
-
-        niftyList = await readSheetData('4Dec-notif-list!A1:A200')
+        let niftyList = await readSheetData(sheetRange)  
         niftyList = niftyList.map(stock => stock[0])
 
         console.log('---')
