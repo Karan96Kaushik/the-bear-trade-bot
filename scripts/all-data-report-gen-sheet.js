@@ -2,11 +2,19 @@ const { getDataFromYahoo, processYahooData, getDateStringIND } = require("../kit
 const { appendRowsToSheet, readSheetData } = require("../gsheets");
 const { addMovingAverage, scanZaireStocks, countMATrendRising, 
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
-    checkDownwardTrend, printTrendEmojis, isBullishCandle} = require("../analytics");
+    checkDownwardTrend, printTrendEmojis, isBullishCandle,
+    addRSI} = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
+
+const interval = '5m'
+let sheetName = '29Nov'
+
+if (interval == '5m') {
+    sheetName = '5Dec-5m'
+}
 
 async function getDailyStats(startTime, endTime) {
     try {
@@ -24,7 +32,6 @@ async function getDailyStats(startTime, endTime) {
 
         // console.log(endTime)
 
-        const interval = '15m'
 
         const rows = [
         ];
@@ -55,9 +62,36 @@ async function getDailyStats(startTime, endTime) {
                 // Calculate SMA44
 
                 candles = addMovingAverage(candles, 'close', 44, 'sma44');
+                candles = addRSI(candles, 14);
 
-                const { high, low, open, close, sma44, time } = candles[candles.length - 2]
-                const { high: highDay, low: lowDay } = candlesDay[candlesDay.length - 1]
+                // console.log(candles)
+                // return
+
+                const getPreviousTradingDay = (currentDate, daysToLookBack = 1) => {
+                    const date = new Date(currentDate);
+                    date.setDate(date.getDate() - daysToLookBack);
+                    return date.getDate();
+                };
+
+                const currentCandleDate = new Date(candles[candles.length - 2].time);
+                let prevDayCandles = [];
+                
+                // Look back up to 5 trading days to find previous day data
+                for (let daysBack = 1; daysBack <= 5; daysBack++) {
+                    prevDayCandles = candles.filter(candle => 
+                        new Date(candle.time).getDate() === getPreviousTradingDay(currentCandleDate, daysBack)
+                    );
+                    
+                    if (prevDayCandles.length > 0) break;
+                }
+
+                if (prevDayCandles.length === 0) {
+                    console.warn(`No previous day data found for ${stock}`);
+                    continue; // Skip this stock if no previous day data found
+                }
+
+                const { high, low, open, close, sma44, time, rsi } = candles[candles.length - 2]
+                const { high: highDay, low: lowDay, volume: volumeDay } = candlesDay[candlesDay.length - 1]
 
                 // if (rows.length == 0) {
                 //     rows.push(['' + interval + ' - ' + getDateStringIND(new Date(time))]);
@@ -157,6 +191,11 @@ async function getDailyStats(startTime, endTime) {
                     open,           // O
                     close,          // C
                     sma44,          // SMA44
+                    rsi,          // RSI14
+                    volumeDay / (6*4),      // Volume Day
+                    prevDayCandles[prevDayCandles.length - 1].volume,         // Volume
+                    prevDayCandles[prevDayCandles.length - 2].volume,         // Volume
+                    prevDayCandles[prevDayCandles.length - 3].volume,         // Volume
 
                     lowDay,         // L
                     highDay,        // H
@@ -178,7 +217,7 @@ async function getDailyStats(startTime, endTime) {
         }
 
         // Update Google Sheet
-        await appendRowsToSheet('29Nov!A1:G', rows, sheetID);
+        await appendRowsToSheet(sheetName + '!A1:G', rows, sheetID);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
@@ -197,16 +236,18 @@ const run = async () => {
 
     // return
 
-    const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
+    const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'RSI14', 'Volume Prev Day Avg', 'Volume P Last', 'Volume P 2nd Last', 'Volume P 3rd Last', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
 
-    await appendRowsToSheet('29Nov!A1:G', headers, sheetID);
+    await appendRowsToSheet(sheetName + '!A1:G', headers, sheetID);
 
-    for (let i = 2; i <= 2; i++) {    
+    for (let i = 2; i <= 5; i++) {    
         let startTime = new Date(`2024-12-${i}`)
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
         let endTime = new Date(`2024-12-${i}`).setUTCHours(4, 1, 10, 0);
-
+        if (interval == '5m') {
+            endTime.setUTCHours(3, 51, 10, 0);
+        }
         await getDailyStats(startTime, endTime)
 
         startTime = new Date(`2024-12-${i}`)
@@ -214,6 +255,9 @@ const run = async () => {
         startTime.setDate(startTime.getDate() - 5)
 
         endTime = new Date(`2024-12-${i}`).setUTCHours(4, 16, 10, 0);
+        if (interval == '5m') {
+            endTime.setUTCHours(3, 56, 10, 0);
+        }
 
         await getDailyStats(startTime, endTime)
 
@@ -222,6 +266,9 @@ const run = async () => {
         startTime.setDate(startTime.getDate() - 5)
 
         endTime = new Date(`2024-12-${i}`).setUTCHours(4, 31, 10, 0);
+        if (interval == '5m') {
+            endTime.setUTCHours(4, 1, 10, 0);
+        }
 
         await getDailyStats(startTime, endTime)
     }
