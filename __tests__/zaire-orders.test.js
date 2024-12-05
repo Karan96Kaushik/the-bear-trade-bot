@@ -47,7 +47,7 @@ describe('setupZaireOrders', () => {
 
         // Verify initial setup
         expect(readSheetData).toHaveBeenCalledWith('HIGHBETA!B2:B150');
-        expect(readSheetData).toHaveBeenCalledWith('MIS-ALPHA!A2:W100');
+        expect(readSheetData).toHaveBeenCalledWith('MIS-ALPHA!A2:W1000');
         expect(kiteSession.authenticate).toHaveBeenCalled();
         
         // Verify stock scanning

@@ -41,7 +41,7 @@ const run = async () => {
 
         console.log(orders)
 
-        stockData = await readSheetData('MIS-ALPHA!A2:W100')
+        stockData = await readSheetData('MIS-ALPHA!A2:W1000')
         stockData = processMISSheetData(stockData)
         console.log(stockData)
 
