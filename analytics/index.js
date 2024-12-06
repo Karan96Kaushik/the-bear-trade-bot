@@ -46,14 +46,14 @@ function calculateMovingAverage(data, window) {
 function checkUpwardTrend(df, i, tolerance = 0.015) {
 
   if (DEBUG) {
-    console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], 'BULLISH', tolerance))
+    console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBullishCandle', isBullishCandle(df[i]))
     console.log('isDojiCandle', isDojiCandle(df[i]))
   }
 
   const currentCandle = df[i];
   return (
-    checkCandlePlacement(currentCandle, currentCandle['sma44'], 'BULLISH', tolerance) &&
+    checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
     (isBullishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
     isNarrowRange(currentCandle)
   );
@@ -87,14 +87,14 @@ F: SMA44
 function checkDownwardTrend(df, i, tolerance = 0.015) {
 
   if (DEBUG) {
-    console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44'], 'BEARISH', tolerance))
+    console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBearishCandle', isBearishCandle(df[i]))
     console.log('isDojiCandle', isDojiCandle(df[i]))
   }
 
   const currentCandle = df[i];
   return (
-    checkCandlePlacement(currentCandle, currentCandle['sma44'], 'BEARISH', tolerance) &&
+    checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
     (isBearishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
     isNarrowRange(currentCandle)
   );
@@ -393,10 +393,10 @@ function isDojiCandle(candle) {
   return (open > lower && open < upper) && (close > lower && close < upper);
 }
 
-function checkCandlePlacement(candle, maValue, direction, tolerance = 0.015) { // Changed default tolerance to 1%
+function checkCandlePlacement(candle, maValue) { // Changed default tolerance to 1%
   const { high, low } = candle;
 
-  const range = ((high + low) / 2) * 0.05;
+  const range = ((high + low) / 2) * 0.005;
 
   return maValue >= low - range && maValue <= high + range;
 }
