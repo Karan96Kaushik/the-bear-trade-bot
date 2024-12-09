@@ -3,8 +3,24 @@ const { appendRowsToSheet, readSheetData } = require("../gsheets");
 const { addMovingAverage, scanZaireStocks, countMATrendRising, 
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
     checkDownwardTrend, printTrendEmojis, isBullishCandle,
-    addRSI} = require("../analytics");
+    addRSI, calculateBollingerBands} = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
+const fs = require('fs');
+const path = require('path');
+
+let defaultFilePath = 'training.csv'
+
+function appendArrayToCSV(data, filePath=defaultFilePath) {
+    const csvContent = data.map(row => row.join(',')).join('\n') + '\n';
+
+    fs.appendFile(filePath, csvContent, 'utf8', (err) => {
+        if (err) {
+            console.error('Error appending to CSV file:', err);
+        } else {
+            console.log('Data successfully appended to CSV file.');
+        }
+    });
+}
 
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
@@ -16,17 +32,17 @@ if (interval == '5m') {
     sheetName = '5Dec-5m'
 }
 
-// sheetName = '5Dec-15m-Notif'
+sheetName = '5Dec-15m-Notif'
 
-// let sheetRange = 'HIGHBETA!B2:B200'
-// sheetRange = '4Dec-notif-list!A1:A200'
-sheetRange = 'HIGHBETA!B1:B200'
+let sheetRange = 'HIGHBETA!B2:B200'
+sheetRange = '4Dec-notif-list!A1:A200'
 
-async function getDailyStats(startTime, endTime) {
+let niftyList = []
+
+async function getDailyStats(startTime, endTime, candleType) {
     try {
 
-        let niftyList = await readSheetData(sheetRange)  
-        niftyList = niftyList.map(stock => stock[0])
+        console.log(startTime, endTime)
 
         console.log('---')
 
@@ -45,8 +61,11 @@ async function getDailyStats(startTime, endTime) {
                 const data = await getDataFromYahoo(stock, 1, interval, startTime, endTime);
                 let candles = processYahooData(data);
 
-                let startTimeDay = new Date('2024-10-22').setUTCHours(0, 0, 10, 0);
-                let endTimeDay = new Date(endTime).setUTCHours(23, 0, 10, 0);
+                let startTimeDay = new Date(endTime)
+                startTimeDay.setUTCHours(0, 0, 10, 0)
+                startTimeDay.setDate(startTimeDay.getDate() - 5)
+                let endTimeDay = new Date(endTime)
+                endTimeDay.setUTCHours(23, 0, 10, 0)
 
                 const dataDay = await getDataFromYahoo(stock, 1, '1d', startTimeDay, endTimeDay);
                 let candlesDay = processYahooData(dataDay);
@@ -60,6 +79,7 @@ async function getDailyStats(startTime, endTime) {
 
                 candles = addMovingAverage(candles, 'close', 44, 'sma44');
                 candles = addRSI(candles, 14);
+                candles = calculateBollingerBands(candles, 20, 2)
 
                 // console.log(candles)
                 // return
@@ -87,7 +107,19 @@ async function getDailyStats(startTime, endTime) {
                     continue; // Skip this stock if no previous day data found
                 }
 
-                const { high, low, open, close, sma44, time, rsi } = candles[candles.length - 2]
+                const { high,
+                    low,
+                    open,
+                    close,
+                    sma44,
+                    time,
+                    rsi,
+                    bb_middle,
+                    bb_upper,
+                    bb_lower } = candles[candles.length - 2]
+
+                console.log(new Date(time))
+
                 const { high: highDay, low: lowDay, volume: volumeDay } = candlesDay[candlesDay.length - 1]
 
                 // if (rows.length == 0) {
@@ -181,7 +213,7 @@ async function getDailyStats(startTime, endTime) {
 
                 rows.push([
                     getDateStringIND(new Date(time)),
-
+                    candleType,
                     stock,          // Stock
                     high,           // H
                     low,            // L
@@ -189,6 +221,10 @@ async function getDailyStats(startTime, endTime) {
                     close,          // C
                     sma44,          // SMA44
                     rsi,          // RSI14
+                    bb_middle,
+                    bb_upper,
+                    bb_lower,
+
                     volumeDay / (6*4),      // Volume Day
                     prevDayCandles[prevDayCandles.length - 1].volume,         // Volume
                     prevDayCandles[prevDayCandles.length - 2].volume,         // Volume
@@ -200,9 +236,9 @@ async function getDailyStats(startTime, endTime) {
                     trend,      // Continuous Up/Down MA
                     count,         // Count
 
-                    candleCleared,
-                    targetPrice,
-                    stopLossPrice,
+                    // candleCleared,
+                    // targetPrice,
+                    // stopLossPrice,
 
                     acheieved
                 ]);
@@ -214,7 +250,7 @@ async function getDailyStats(startTime, endTime) {
         }
 
         // Update Google Sheet
-        await appendRowsToSheet(sheetName + '!A1:G', rows, sheetID);
+        await appendArrayToCSV(rows);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
@@ -233,81 +269,87 @@ const run = async () => {
 
     // return
 
-    const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'RSI14', 'Volume Prev Day Avg', 'Volume P Last', 'Volume P 2nd Last', 'Volume P 3rd Last', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
+    const headers = [
+        'Timestamp',
+        'Candle Type',
+        'Sym',
+        'High',
+        'Low',
+        'Open',
+        'Close',
+        'SMA44',
+        'RSI14',
+        'BB Middle',
+        'BB Upper',
+        'BB Lower',
+        'Volume Prev Day Avg',
+        'Volume P Last',
+        'Volume P 2nd Last',
+        'Volume P 3rd Last',
+        'Low Day',
+        'High Day',
+        'MA Direction',
+        'MA Trend Count',
+        //  'Candle Selected',
+        //  'Target',
+        //  'SL',
+        'Acheieved'
+    ]
 
-    await appendRowsToSheet(sheetName + '!A1:G', headers, sheetID);
+    appendArrayToCSV([headers]);
 
-    for (let i = 6; i <= 6; i++) {    
 
-        let startTime = new Date(`2024-12-${i}`)
+    niftyList = await readSheetData(sheetRange)  
+    niftyList = niftyList.map(stock => stock[0])
+
+    niftyList = fs.readFileSync('nifty-list.csv', 'utf8').split('\n').map(row => row.split(',')[0])
+
+    console.log(niftyList)
+
+    const baseDate = new Date(`2024-12-05`)
+
+    const days = 50
+    baseDate.setDate(baseDate.getDate() - days)
+
+    for (let i = days; i >= 0; i--) {
+
+        baseDate.setDate(baseDate.getDate() + 1)
+
+        let startTime = new Date(baseDate)
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
-        let endTime = new Date(`2024-12-${i}`);
-        endTime.setDate(endTime.getDate() - 1)
-        endTime.setUTCHours(9, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
-
-
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        endTime = new Date(`2024-12-${i}`);
-        endTime.setDate(endTime.getDate() - 1)
-        endTime.setUTCHours(9, 46, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
-
-
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        endTime = new Date(`2024-12-${i}`);
-        // endTime.setDate(endTime.getDate() - 1)
-        // endTime.setUTCHours(10, 1, 10, 0);
-        endTime.setUTCHours(3, 46, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
-
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        endTime = new Date(`2024-12-${i}`);
+        let endTime = new Date(baseDate);
         endTime.setUTCHours(4, 1, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(3, 51, 10, 0);
         }
-        await getDailyStats(startTime, endTime)
 
-        startTime = new Date(`2024-12-${i}`)
+        console.log(startTime, endTime)
+        await getDailyStats(startTime, endTime, 'F')
+
+        startTime = new Date(baseDate)
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
 
-        endTime = new Date(`2024-12-${i}`);
+        endTime = new Date(baseDate);
         endTime.setUTCHours(4, 16, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(3, 56, 10, 0);
         }
 
-        await getDailyStats(startTime, endTime)
+        await getDailyStats(startTime, endTime, 'S')
 
-        startTime = new Date(`2024-12-${i}`)
+        startTime = new Date(baseDate)
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
 
-        endTime = new Date(`2024-12-${i}`);
+        endTime = new Date(baseDate);
         endTime.setUTCHours(4, 31, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(4, 1, 10, 0);
         }
 
-        await getDailyStats(startTime, endTime)
+        await getDailyStats(startTime, endTime, 'T')
     }
 }
 
