@@ -384,6 +384,8 @@ function isBearishCandle(candle) {
   return isBR1 ? 'BR1' : isBR2 ? 'BR2' : isBR3 ? 'BR3' : null;
 }
 
+
+
 function isDojiCandle(candle) {
   const { high, low, open, close } = candle;
   const mid = (high + low) / 2;
@@ -420,6 +422,34 @@ function printTrendEmojis(values) {
   return trends.join(' ');
 }
 
+function calculateBollingerBands(df, period = 20, stdDev = 2) {
+  // Calculate SMA
+  const sma = calculateMovingAverage(df.map(d => d.close), period);
+  
+  // Calculate Standard Deviation
+  const bands = sma.map((ma, i) => {
+    if (i < period - 1) return { upper: null, middle: null, lower: null };
+    
+    const slice = df.slice(i - period + 1, i + 1).map(d => d.close);
+    const mean = ma;
+    const squaredDiffs = slice.map(x => Math.pow(x - mean, 2));
+    const variance = squaredDiffs.reduce((a, b) => a + b) / period;
+    const standardDeviation = Math.sqrt(variance);
+    
+    return {
+      upper: ma + (standardDeviation * stdDev),
+      middle: ma,
+      lower: ma - (standardDeviation * stdDev)
+    };
+  });
+
+  return df.map((candle, i) => ({
+    ...candle,
+    bb_upper: bands[i].upper,
+    bb_middle: bands[i].middle,
+    bb_lower: bands[i].lower
+  }));
+}
 
 module.exports = { 
     analyzeDataForTrends,
@@ -441,7 +471,8 @@ module.exports = {
     isNarrowRange,
     printTrendEmojis,
     getLastCandle,
-    addRSI
+    addRSI,
+    calculateBollingerBands
 };
 
 
