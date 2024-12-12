@@ -29,7 +29,11 @@ async function setupZaireOrders() {
 
         await kiteSession.authenticate();
         
-        let selectedStocks = await scanZaireStocks(niftyList, new Date('2024-12-12 04:16'))
+        let selectedStocks = await scanZaireStocks(
+            niftyList
+            // , 
+            // new Date('2024-12-12 04:16')
+        )
         selectedStocks = selectedStocks.filter(s => 
                                             (s.direction == 'BULLISH' && highBetaData.find(h => s.sym == h.sym)?.dir == 'b') ||
                                             (s.direction == 'BEARISH' && highBetaData.find(h => s.sym == h.sym)?.dir == 's')
@@ -72,6 +76,10 @@ async function setupZaireOrders() {
         await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', error?.message);
     }
 }
+
+// setTimeout(() => {
+//     setupZaireOrders()
+// }, 2000);
 
 async function cancelZaireOrders() {
     try {
