@@ -237,13 +237,16 @@ const run = async () => {
 
     await appendRowsToSheet(sheetName + '!A1:G', headers, sheetID);
 
-    for (let i = 6; i <= 6; i++) {    
+    for (let i = 9; i <= 9; i++) {    
 
         let startTime = new Date(`2024-12-${i}`)
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
         let endTime = new Date(`2024-12-${i}`);
         endTime.setDate(endTime.getDate() - 1)
+        if (endTime.getDay() == 0 || endTime.getDay() == 6) {
+            endTime.setDate(endTime.getDate() - 2)
+        }
         endTime.setUTCHours(9, 31, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(3, 51, 10, 0);
@@ -255,7 +258,9 @@ const run = async () => {
         startTime.setUTCHours(4, 0, 10, 0);
         startTime.setDate(startTime.getDate() - 5)
         endTime = new Date(`2024-12-${i}`);
-        endTime.setDate(endTime.getDate() - 1)
+        if (endTime.getDay() == 0 || endTime.getDay() == 6) {
+            endTime.setDate(endTime.getDate() - 2)
+        }
         endTime.setUTCHours(9, 46, 10, 0);
         if (interval == '5m') {
             endTime.setUTCHours(3, 51, 10, 0);
