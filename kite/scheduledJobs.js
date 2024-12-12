@@ -356,7 +356,7 @@ async function updateStopLossOrders() {
             let ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
             ltp = ltp[`NSE:${sym}`]?.last_price;
 
-            let type = 'SL'
+            let type = 'SL-M'
 
             const shouldUpdate = isBearish 
                 ? newPrice < existingOrder.trigger_price
@@ -440,7 +440,7 @@ async function setupMissingOrders() {
                 // Position is bullish (long)
                 if (position.quantity > 0) {
                     if (!hasStoploss) {
-                        await placeOrder('SELL', 'SL', stock.stopLossPrice, position.quantity, stock, 'stoploss-missing');
+                        await placeOrder('SELL', 'SL-M', stock.stopLossPrice, position.quantity, stock, 'stoploss-missing');
                     }
                     if (!hasTarget) {
                         await placeOrder('SELL', 'LIMIT', stock.targetPrice, position.quantity, stock, 'target-missing');
@@ -449,7 +449,7 @@ async function setupMissingOrders() {
                 // Position is bearish (short)
                 else {
                     if (!hasStoploss) {
-                        await placeOrder('BUY', 'SL', stock.stopLossPrice, Math.abs(position.quantity), stock, 'stoploss-missing');
+                        await placeOrder('BUY', 'SL-M', stock.stopLossPrice, Math.abs(position.quantity), stock, 'stoploss-missing');
                     }
                     if (!hasTarget) {
                         await placeOrder('BUY', 'LIMIT', stock.targetPrice, Math.abs(position.quantity), stock, 'target-missing');
