@@ -43,8 +43,30 @@ function calculateMovingAverage(data, window) {
   );
 }
 
-function checkUpwardTrend(df, i, tolerance = 0.015) {
+function checkHighsAscending(df, i) {
+  // Check if we have enough candles
+  if (i < 3) return false;
+  
+  // Check High of Candle t-2 < High of Candle t-0
+  const highT2vsT0 = df[i-2].high < df[i].high;
+  // Check High of Candle t-3 < High of Candle t-0
+  const highT3vsT0 = df[i-3].high < df[i].high;
+  
+  return highT2vsT0 && highT3vsT0;
+}
 
+function checkHighsBelowMA(df, i) {
+  // Check if we have enough candles
+  if (i < 3) return false;
+  
+  const maT2 = df[i-2]['sma44'];
+  const maT3 = df[i-3]['sma44'];
+  
+  // Check High of Candle t-2 < MA & High of Candle t-3 < MA
+  return df[i-2].high < maT2 && df[i-3].high < maT3;
+}
+
+function checkUpwardTrend(df, i, tolerance = 0.015) {
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBullishCandle', isBullishCandle(df[i]))
@@ -55,7 +77,9 @@ function checkUpwardTrend(df, i, tolerance = 0.015) {
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
     (isBullishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
-    isNarrowRange(currentCandle)
+    isNarrowRange(currentCandle) &&
+    checkHighsAscending(df, i) &&
+    checkHighsBelowMA(df, i)
   );
 }
 
@@ -84,8 +108,30 @@ F: SMA44
 
 */
 
-function checkDownwardTrend(df, i, tolerance = 0.015) {
+function checkLowsDescending(df, i) {
+  // Check if we have enough candles
+  if (i < 3) return false;
+  
+  // Check Low of Candle t-2 > Low of Candle t-0
+  const lowT2vsT0 = df[i-2].low > df[i].low;
+  // Check Low of Candle t-3 > Low of Candle t-0
+  const lowT3vsT0 = df[i-3].low > df[i].low;
+  
+  return lowT2vsT0 && lowT3vsT0;
+}
 
+function checkLowsAboveMA(df, i) {
+  // Check if we have enough candles
+  if (i < 3) return false;
+  
+  const maT2 = df[i-2]['sma44'];
+  const maT3 = df[i-3]['sma44'];
+  
+  // Check Low of Candle t-2 > MA & Low of Candle t-3 > MA
+  return df[i-2].low > maT2 && df[i-3].low > maT3;
+}
+
+function checkDownwardTrend(df, i, tolerance = 0.015) {
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBearishCandle', isBearishCandle(df[i]))
@@ -96,7 +142,9 @@ function checkDownwardTrend(df, i, tolerance = 0.015) {
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
     (isBearishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
-    isNarrowRange(currentCandle)
+    isNarrowRange(currentCandle) &&
+    checkLowsDescending(df, i) &&
+    checkLowsAboveMA(df, i)
   );
 }
 
