@@ -22,7 +22,7 @@ async function setupZaireOrders() {
 
         let highBetaData = await readSheetData('HIGHBETA!B1:D150')
         let niftyList = highBetaData.map(stock => stock[0]).filter(d => d !== 'NOT FOUND' && d)
-        highBetaData = highBetaData.map(d => ({sym: d[0], dir: d[2].trim().toLowerCase()}))
+        highBetaData = highBetaData.filter(d => d[2]).map(d => ({sym: d[0], dir: d[2]?.trim()?.toLowerCase()}))
 
         let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
         sheetData = processMISSheetData(sheetData)
@@ -32,7 +32,7 @@ async function setupZaireOrders() {
         let selectedStocks = await scanZaireStocks(
             niftyList
             // , 
-            // new Date('2024-12-12 04:16')
+            // new Date('2024-12-13 04:01')
         )
         selectedStocks = selectedStocks.filter(s => 
                                             (s.direction == 'BULLISH' && highBetaData.find(h => s.sym == h.sym)?.dir == 'b') ||
