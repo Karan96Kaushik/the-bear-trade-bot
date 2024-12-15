@@ -21,8 +21,12 @@ async function setupZaireOrders() {
         // niftyList = niftyList.map(stock => stock[0])
 
         let highBetaData = await readSheetData('HIGHBETA!B1:D150')
-        let niftyList = highBetaData.map(stock => stock[0]).filter(d => d !== 'NOT FOUND' && d)
-        highBetaData = highBetaData.filter(d => d[2]).map(d => ({sym: d[0], dir: d[2]?.trim()?.toLowerCase()}))
+        let niftyList = highBetaData
+                            .map(stock => stock[0])
+                            .filter(d => d !== 'NOT FOUND' && d)
+        highBetaData = highBetaData
+                            .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
+                            .filter(d => d.sym)
 
         let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
         sheetData = processMISSheetData(sheetData)
@@ -31,12 +35,12 @@ async function setupZaireOrders() {
         
         let selectedStocks = await scanZaireStocks(
             niftyList
-            // , 
-            // new Date('2024-12-13 04:01')
+            // ,
+            // process.env.NODE_ENV !== 'production' ? new Date('2024-12-11 04:01') : null
         )
         selectedStocks = selectedStocks.filter(s => 
-                                            (s.direction == 'BULLISH' && highBetaData.find(h => s.sym == h.sym)?.dir == 'b') ||
-                                            (s.direction == 'BEARISH' && highBetaData.find(h => s.sym == h.sym)?.dir == 's')
+                                            (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
+                                            (s.direction == 'BEARISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 's') == 's')
                                         );
         
         const orders = await kiteSession.kc.getOrders();
