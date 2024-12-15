@@ -397,7 +397,9 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
                 low: firstCandle.low,
                 'sma44': maValue,
                 volume: firstCandle.volume,
-                direction: conditionsMet
+                direction: conditionsMet,
+                t2Candle: df[df.length - 3],
+                t3Candle: df[df.length - 4],
             });
         }
       } catch (e) {
