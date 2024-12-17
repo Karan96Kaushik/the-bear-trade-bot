@@ -359,7 +359,7 @@ async function updateStopLossOrders() {
             const existingOrder = orders.find(order => 
                 order.tradingsymbol === stock.stockSymbol && 
                 order.transaction_type === (isBearish ? 'BUY' : 'SELL') && 
-                order.order_type.includes('SL') &&
+                order.tag?.includes('stoploss') &&
                 (order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
             );
 
