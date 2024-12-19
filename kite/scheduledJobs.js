@@ -375,7 +375,7 @@ async function updateStopLossOrders() {
 
             let type = 'SL-M'
 
-            newPrice = isBearish ? newPrice + 1 : newPrice - 1
+            // newPrice = isBearish ? newPrice + 1 : newPrice - 1
 
             const shouldUpdate = isBearish 
                 ? newPrice < existingOrder.trigger_price
