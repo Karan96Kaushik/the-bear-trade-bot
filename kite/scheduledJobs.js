@@ -375,6 +375,8 @@ async function updateStopLossOrders() {
 
             let type = 'SL-M'
 
+            newPrice = isBearish ? newPrice + 1 : newPrice - 1
+
             const shouldUpdate = isBearish 
                 ? newPrice < existingOrder.trigger_price
                 : newPrice > existingOrder.trigger_price;
@@ -392,7 +394,6 @@ async function updateStopLossOrders() {
             }
 
             if (shouldUpdate) {
-                newPrice = isBearish ? newPrice + 1 : newPrice - 1
                 let orderResponse = await placeOrder(isBearish ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
                 await logOrder('PLACED', 'UPDATE SL', orderResponse)
 
