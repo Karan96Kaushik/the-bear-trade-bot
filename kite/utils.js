@@ -331,6 +331,72 @@ const processNSEChartData = (data) => {
     }))
 }
 
+const getMCPivotLevels = async (sym) => {
+    
+    let config = {
+        method: 'get',
+        maxBodyLength: Infinity,
+        url: `https://www.moneycontrol.com/mccode/common/autosuggestion_solr.php?classic=true&query=${sym}&type=1&format=json`, //&callback=suggest1`,
+        headers: { 
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0', 
+            'Accept': 'text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01', 
+            'Accept-Language': 'en-US,en;q=0.5', 
+            'Accept-Encoding': 'gzip, deflate, br, zstd', 
+            'X-Requested-With': 'XMLHttpRequest', 
+            'DNT': '1', 
+            'Sec-GPC': '1', 
+            'Connection': 'keep-alive', 
+            'Referer': 'https://www.moneycontrol.com/', 
+            'Cookie': '_w18g_consent=Y;', 
+            'Sec-Fetch-Dest': 'empty', 
+            'Sec-Fetch-Mode': 'cors', 
+            'Sec-Fetch-Site': 'same-origin', 
+            'Priority': 'u=0', 
+            'TE': 'trailers'
+        }
+    };
+    
+    let result = await axios.request(config)
+    
+    result = result.data.find(s => {
+        const s1 = s.pdt_dis_nm.match(/\,(.*)\,/)?.[1]?.trim();
+        return s1 === sym.toUpperCase()
+    })
+    
+    if (!result)
+        throw new Error('MC Symbol not found!')
+    
+    let mcId = result.sc_id
+    
+    config = {
+        method: 'get',
+        maxBodyLength: Infinity,
+        url: `https://priceapi.moneycontrol.com/pricefeed/techindicator/D/${mcId}?fields=pivotLevels,sma,ema`,
+        headers: { 
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0', 
+            'Accept': '*/*', 
+            'Accept-Language': 'en-US,en;q=0.5', 
+            'Accept-Encoding': 'gzip, deflate, br, zstd', 
+            'Referer': 'https://www.moneycontrol.com/', 
+            'Device-Type': 'web', 
+            'Content-Type': 'application/json', 
+            'Origin': 'https://www.moneycontrol.com', 
+            'Connection': 'keep-alive', 
+            'Sec-Fetch-Dest': 'empty', 
+            'Sec-Fetch-Mode': 'cors', 
+            'Sec-Fetch-Site': 'same-site', 
+            'Priority': 'u=0', 
+            'TE': 'trailers', 
+            // 'Cookie': '_abck=8AB26665AA49AC3A38857313D3450C15~-1~YAAQlAUXApS0HPOTAQAAWTPA9A2S6tGBUAUZ1Zu8QQCVnDF9WFDiPWz3kbPcSaJGc7fbgrX/2rP4iLA4Uf0/PIRq7NG87S6pf+OqwD4Zvfo/pM40Ny346bmlTJDYdTgyefGTgeI3gqUvcdMTnTTd0DItTtOZyr0mYometox94SP5rtO8CCddlbl66p3xYRbLUz/IhwcyUOeQuqN+IuwRqFzNxv2DT+T1x7wnVHXhPC8F6n8X+ul31O28MbyNGa7M8yrU7+FhJuSX9SUUM29B8qsV5YAbe8UdilDSjOk2B+trQMAtHLCkXe98GUy6sf4bTHLaDF7Svfe+Z5QGLqLwNdqnqjEf0B1bO0LdzeLRSR5uou/tDsztU7C8RkR4P8Wy6k2IynWyoVoWyXorvY1tKlaBotfMzCrXIzmZh8wmAXGmSeYrh6TXkW0cH0Rf6oaYyUWYeX8ugN0uzyPSFREHGHn4lMm+GldOsHRm8Ata/9Hwh2/GJDUgWxOu/gn0GG8AZvYChwZG5Xjg1/ZaGFO/mBm5JZd6Upni4JuOksrci2iJdXCU7cvd/z+DcdKPXoZPC1fJ4fMQrWKmYVDYB3AhbWQY/11xhOhCFipTWk11W99cBUsczXxmXb4oVXc/tByBn55t0OkrMf2azg8C8xd6QH3wkARXMz2BPPLMQZwrPuOAyl/IVuyDqlQ1BqdkAeEwAWCWh+YbQkhXeawooaYGwOqiLgGEjQ==~-1~-1~-1; bm_sz=DEF3C5F454A3F1B31690CD060C1EDE89~YAAQlAUXApW0HPOTAQAAWTPA9BoPbHQ4lqtNW+CjNGbdSjDmrxUEyp7an4n6GeuM8wTjPA4D+HdmpnJF9xzxN7bk2866cfWcZOnjFdJD6JijWqgyKGtX4yQSPy5gmlqJJLFfUukPx6JwNwRZbow0j3oBL0wzXWm37ZBM23wsv9oWN/p9hTsWhC6kgvuohXkLQ/eiPhYKyBx4ayhU1/7gfETpjth7BfbLZxyK/hf2RvPUDgZq7TWbuUUN41bWwqhcFq5VkrlMvKmqVazBm/Wg2LxBptfO4OFIouGtSq1LGbE+9X6MD4MvCZtHXsaMSxSZVMtEK0NvOg8dfy3Fvg0ish3jb/HK7Cmsiu985dAJhR0iSNyAhCAIgqVXDqAjrGs/AQoATjMVZyxUlyqWshotR37ey26mimDUjdbpuxrX3XU=~3229233~4405559; gdpr_region=eu; gdpr_userpolicy_eu=1'
+        }
+    };
+    
+    result = await axios.request(config)
+    return result.data.data.pivotLevels
+}
+
+// getMCPivotLevels('LT').then(console.log)
+
 // const dates = [
 //     ['2024-11-29', '2024-12-02'],
 //     ['2024-11-28', '2024-12-01'], 
