@@ -46,7 +46,17 @@ async function setupZaireOrders() {
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
 
+        const completed_zaire_orders = orders.filter(order => 
+            order.tag?.includes('zaire') &&
+            !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
+        );
+
         sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
+        
+        if (completed_zaire_orders.length > 10) {
+            sendMessageToChannel('🔔 Total completed order count exceeded 10, no longer placing orders');
+            return
+        }
 
         const sheetEntries = []
 
@@ -521,7 +531,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()))
 
-    const zaireJob = schedule.scheduleJob('1,16 4 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('1,16,31,46 4,5,6 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
