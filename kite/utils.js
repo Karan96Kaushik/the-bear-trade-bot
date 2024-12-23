@@ -331,7 +331,7 @@ const processNSEChartData = (data) => {
     }))
 }
 
-const getMCPivotLevels = async (sym) => {
+const getMcIndicators = async (sym) => {
     
     let config = {
         method: 'get',
@@ -392,10 +392,10 @@ const getMCPivotLevels = async (sym) => {
     };
     
     result = await axios.request(config)
-    return result.data.data.pivotLevels
+    return result.data.data //.pivotLevels
 }
 
-// getMCPivotLevels('LT').then(console.log)
+// getMcIndicators('LT').then(console.log)
 
 // const dates = [
 //     ['2024-11-29', '2024-12-02'],
@@ -429,5 +429,6 @@ module.exports = {
     getDhanNIFTY50Data,
     getUpstoxHistoricalData,
     getNSEChartData,
-    processNSEChartData
+    processNSEChartData,
+    getMcIndicators
 };
