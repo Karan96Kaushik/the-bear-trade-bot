@@ -165,7 +165,7 @@ function processYahooData(yahooData) {
     const timestamps = result.timestamp;
     const quote = result.indicators.quote[0];
     
-    return timestamps.map((timestamp, index) => ({
+    return timestamps?.map((timestamp, index) => ({
         time: timestamp * 1000,
         // time: new Date(timestamp * 1000).toISOString(),
         open: quote.open[index],
