@@ -169,6 +169,25 @@ const setupReversalOrders = async (order) => {
     }
 }
 
+const updateNameInSheetForClosedOrder = async (order) => {
+    try {
+        let sheetData = await readSheetData('MIS-ALPHA!A1:W150')
+        const rowHeaders = sheetData.map(a => a[1])
+        const colHeaders = sheetData[0]
+
+        const [row, col] = getStockLoc(order.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
+
+        updates.push({
+            range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+            values: [['*' + order.tradingsymbol]], 
+        })
+
+    } catch (error) {
+        await sendMessageToChannel('📛 Error updating sheet name! Might create issue for reentry!', order.tradingsymbol, order.quantity, order.tag, error?.message)
+        console.error(error)
+    }
+}
+
 const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
@@ -246,6 +265,8 @@ const processSuccessfulOrder = async (order) => {
                 await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                 await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
 
+                await updateNameInSheetForClosedOrder(order)
+
                 // TRUNED OFF REVERSAL LOGIC
                 if (false) {
                     if (orders.length < 1 && order.tag?.includes('stoploss')) {
@@ -267,6 +288,8 @@ const processSuccessfulOrder = async (order) => {
 
                 await kiteSession.kc.cancelOrder("regular", orders[0].order_id)
                 await logOrder('CANCELLED', 'PROCESS SUCCESS', orders[0])
+
+                await updateNameInSheetForClosedOrder(order)
 
                 // TRUNED OFF REVERSAL LOGIC
                 if (false) {

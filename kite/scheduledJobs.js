@@ -53,10 +53,10 @@ async function setupZaireOrders() {
 
         sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
         
-        if (completed_zaire_orders.length > 10) {
-            sendMessageToChannel('🔔 Total completed order count exceeded 10, no longer placing orders');
-            return
-        }
+        // if (completed_zaire_orders.length > 10) {
+        //     sendMessageToChannel('🔔 Total completed order count exceeded 10, no longer placing orders');
+        //     return
+        // }
 
         const sheetEntries = []
 
@@ -64,7 +64,7 @@ async function setupZaireOrders() {
             try {
                 // Skip if stock is already in position or open orders
                 if (
-                    positions.net.find(p => p.tradingsymbol === stock.sym) 
+                    (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
                     // || 
                     // orders.find(o => o.tradingsymbol === stock.sym)
                 ) {
