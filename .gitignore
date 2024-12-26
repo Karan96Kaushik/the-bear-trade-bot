@@ -7,3 +7,5 @@ training.csv
 nifty-list.csv
 training*
 trial*
+*.joblib
+test*csv

@@ -7,40 +7,12 @@ const { addMovingAverage, scanZaireStocks, countMATrendRising,
 // const { sendMessageToChannel } = require("./slack-actions");
 const fs = require('fs');
 const path = require('path');
+const { predictMarketDirection } = require("./predict");
 
-function appendArrayToCSV(data, filePath=defaultFilePath) {
-    const csvContent = data.map(row => row.join(',')).join('\n') + '\n';
+const interval = '15m'
 
-    fs.appendFile(filePath, csvContent, 'utf8', (err) => {
-        if (err) {
-            console.error('Error appending to CSV file:', err);
-        } else {
-            console.log('Data successfully appended to CSV file.');
-        }
-    });
-}
-
-const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
-const DEBUG = false
-
-const interval = '5m'
-// let sheetName = '29Nov'
-
-// if (interval == '5m') {
-//     sheetName = '5Dec-5m'
-// }
-
-
-let defaultFilePath = `training_1_${interval}.csv`
-
-let sheetRange = 'HIGHBETA!B2:B200'
-sheetRange = '4Dec-notif-list!A1:A200'
 
 let niftyList = []
-
-async function processBatch(stocks, startTime, endTime, candleType) {
-    return Promise.all(stocks.map(stock => processStock(stock, startTime, endTime, candleType)));
-}
 
 async function processStock(stock, startTime, endTime, candleType) {
     try {
@@ -53,14 +25,14 @@ async function processStock(stock, startTime, endTime, candleType) {
         let endTimeDay = new Date(endTime)
         endTimeDay.setUTCHours(23, 0, 10, 0)
 
-        const dataDay = await getDataFromYahoo(stock, 1, '15m', startTimeDay, endTimeDay);
-        // console.log(startTimeDay, endTimeDay, dataDay.chart.result)
-        let candlesDay = processYahooData(dataDay);
+        // const dataDay = await getDataFromYahoo(stock, 1, '15m', startTimeDay, endTimeDay);
+        // // console.log(startTimeDay, endTimeDay, dataDay.chart.result)
+        // let candlesDay = processYahooData(dataDay);
 
         // console.log(startTimeDay, endTimeDay, candlesDay)
 
-        const dayHigh = Math.max(...candlesDay.map(candle => candle.high));
-        const dayLow = Math.min(...candlesDay.map(candle => candle.low));
+        // const dayHigh = Math.max(...candlesDay.map(candle => candle.high));
+        // const dayLow = Math.min(...candlesDay.map(candle => candle.low));
 
         // console.log(candlesDay, new Date(candlesDay[candlesDay.length - 1].time))
 
@@ -115,7 +87,7 @@ async function processStock(stock, startTime, endTime, candleType) {
 
         console.log(getDateStringIND(new Date(time)))
 
-        const { high: highDay, low: lowDay, volume: volumeDay } = candlesDay[candlesDay.length - 1]
+        // const { high: highDay, low: lowDay, volume: volumeDay } = candlesDay[candlesDay.length - 1]
 
         // if (rows.length == 0) {
         //     rows.push(['' + interval + ' - ' + getDateStringIND(new Date(time))]);
@@ -152,9 +124,9 @@ async function processStock(stock, startTime, endTime, candleType) {
             isRising = countRising > countFalling ? 'BULLISH' : 'BEARISH'
         }
 
-        if (DEBUG) {
-            console.log(stock, isRising)
-        }
+        // if (DEBUG) {
+        //     console.log(stock, isRising)
+        // }
         // if (!isRising) continue;
 
         const firstCandle = candles[candles.length - 1];
@@ -186,7 +158,7 @@ async function processStock(stock, startTime, endTime, candleType) {
             triggerPrice = high + 1;
             stopLossPrice = low - 1;
             targetPrice = ((high - low) * 2) + triggerPrice;
-            acheieved = dayHigh > targetPrice ? true : false
+            // acheieved = dayHigh > targetPrice ? true : false
             count = countRising
             console.log(stock, 'bullish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
         }
@@ -195,7 +167,7 @@ async function processStock(stock, startTime, endTime, candleType) {
             triggerPrice = low - 1;
             stopLossPrice = high + 1;
             targetPrice = (triggerPrice - (high - low)* 2);
-            acheieved = dayLow < targetPrice ? true : false
+            // acheieved = dayLow < targetPrice ? true : false
             count = countFalling
             console.log(stock, 'bearish', triggerPrice, stopLossPrice, targetPrice, acheieved, count)
         }
@@ -206,50 +178,87 @@ async function processStock(stock, startTime, endTime, candleType) {
         // return
         // if (false)
 
-        return [
-            getDateStringIND(new Date(time)),
-            candleType,
-            stock,
-            high,
-            low,
-            open,
-            close,
-            volume,
-            sma44,
-            rsi,
-            bb_middle,
-            bb_upper,
-            bb_lower,
-            candles[candles.length - 3].high,
-            candles[candles.length - 3].low,
-            candles[candles.length - 3].open,
-            candles[candles.length - 3].close,
-            candles[candles.length - 4].high,
-            candles[candles.length - 4].low,
-            candles[candles.length - 4].open,
-            candles[candles.length - 4].close,
-            candles[candles.length - 5].high,
-            candles[candles.length - 5].low,
-            candles[candles.length - 5].open,
-            candles[candles.length - 5].close,
-            volumeDay / (6*4),
-            prevDayCandles[prevDayCandles.length - 1].volume,
-            prevDayCandles[prevDayCandles.length - 2].volume,
-            prevDayCandles[prevDayCandles.length - 3].volume,
-            dayLow,
-            dayHigh,
-            trend,
-            count,
-            acheieved
-        ];
+        return {
+            Timestamp: getDateStringIND(new Date(time)),
+            'Candle Type': candleType,
+            Sym: stock,
+            High: high,
+            Low: low,
+            Open: open,
+            Close: close,
+            Volume: volume,
+            SMA44: sma44,
+            RSI14: rsi,
+            'BB Middle': bb_middle,
+            'BB Upper': bb_upper,
+            'BB Lower': bb_lower,
+            T1H: candles[candles.length - 3].high,
+            T1L: candles[candles.length - 3].low,
+            T1O: candles[candles.length - 3].open,
+            T1C: candles[candles.length - 3].close,
+            T2H: candles[candles.length - 4].high,
+            T2L: candles[candles.length - 4].low,
+            T2O: candles[candles.length - 4].open,
+            T2C: candles[candles.length - 4].close,
+            T3H: candles[candles.length - 5].high,
+            T3L: candles[candles.length - 5].low,
+            T3O: candles[candles.length - 5].open,
+            T3C: candles[candles.length - 5].close,
+            // 'Volume Prev Day Avg': volumeDay / (6*4),
+            'Volume P Last': prevDayCandles[prevDayCandles.length - 1].volume,
+            'Volume P 2nd Last': prevDayCandles[prevDayCandles.length - 2].volume,
+            'Volume P 3rd Last': prevDayCandles[prevDayCandles.length - 3].volume,
+            // 'Low Day': dayLow,
+            // 'High Day': dayHigh,
+            'MA Direction': trend,
+            'MA Trend Count': count,
+            // Acheieved: acheieved
+        };
     } catch (error) {
         console.trace(`Error processing ${stock}:`, error?.response?.data || error?.message);
         return null;
     }
 }
 
-async function getDailyStats(startTime, endTime, candleType) {
+function getCandleType(endTime) {
+    // Convert endTime to hours and minutes
+    const hours = endTime.getUTCHours();
+    const minutes = endTime.getUTCMinutes();
+    const totalMinutes = hours * 60 + minutes;
+
+    // Mapping based on the code:
+    // F  -> 4:01  (241 minutes)
+    // S  -> 4:16  (256 minutes)
+    // T  -> 4:31  (271 minutes)
+    // FT -> 4:31  (271 minutes)
+    // FH -> 4:46  (286 minutes)
+    // SI -> 5:01  (301 minutes)
+
+    if (totalMinutes <= 241) return 'F';
+    if (totalMinutes <= 256) return 'S';
+    if (totalMinutes <= 271) return 'T';
+    if (totalMinutes <= 271) return 'FT';
+    if (totalMinutes <= 286) return 'FH';
+    if (totalMinutes <= 301) return 'SI';
+    
+    return 'UNKNOWN';
+}
+
+async function getDailyStats(startTime, endTime) {
     try {
+
+        if (!startTime) {
+            startTime = new Date()
+            // startTime.setUTCHours(4, 0, 10, 0);
+            startTime.setDate(startTime.getDate() - 6)
+        }
+
+        if (!endTime) {
+            endTime = new Date()
+            // endTime.setUTCHours(4, 1, 10, 0)
+        }
+
+        const candleType = getCandleType(endTime)
         console.log(startTime, endTime);
         console.log('---');
 
@@ -281,8 +290,10 @@ async function getDailyStats(startTime, endTime, candleType) {
             }
         }
 
+        return rows
+
         // Update CSV file
-        await appendArrayToCSV(rows);
+        // await appendArrayToCSV(rows);
 
     } catch (error) {
         console.trace('Error in getDailyStats:', error?.response?.data || error?.message);
@@ -293,165 +304,28 @@ defaultFilePath = `training_1_${interval}.csv`
 
 const run = async () => {
 
-
-    // let startTime = new Date(`2024-11-15`).setUTCHours(4, 0, 10, 0);
-    // let endTime = new Date(`2024-11-26`).setUTCHours(4, 15, 10, 0);
-
-    // await getDailyStats(startTime, endTime)
-
-    // return
-
-    const headers = [
-        'Timestamp',
-        'Candle Type',
-        'Sym',
-
-        'High',
-        'Low',
-        'Open',
-        'Close',
-        'Volume',
-
-        'SMA44',
-        'RSI14',
-        'BB Middle',
-        'BB Upper',
-        'BB Lower',
-
-        'T1H',
-        'T1L',
-        'T1O',
-        'T1C',
-
-        'T2H',
-        'T2L',
-        'T2O',
-        'T2C',
-
-        'T3H',
-        'T3L',
-        'T3O',
-        'T3C',
-
-        'Volume Prev Day Avg',
-        'Volume P Last',
-        'Volume P 2nd Last',
-        'Volume P 3rd Last',
-
-        'Low Day',
-        'High Day',
-
-        'MA Direction',
-        'MA Trend Count',
-
-        //  'Candle Selected',
-        //  'Target',
-        //  'SL',
-
-        'Acheieved'
-    ]
-
-    appendArrayToCSV([headers]);
-
-    // niftyList = await readSheetData(sheetRange)  
-    // niftyList = niftyList.map(stock => stock[0])
-
-    niftyList = fs.readFileSync('nifty-list.csv', 'utf8')
+    niftyList = fs.readFileSync('mega-stock-list.csv', 'utf8')
                     .split('\n')
                     .map(row => row.split(',')[0])
+                    .slice(0, 100)
 
     console.log(niftyList)
 
-    const baseDate = new Date(`2024-11-04`)
-    // const baseDate = new Date(`2024-11-01`)
+    const baseDate = new Date(`2024-12-23`)
 
-    // const days = 50
-    // baseDate.setDate(baseDate.getDate() - days)
+    let startTime = new Date(baseDate)
+    startTime.setUTCHours(4, 0, 10, 0);
+    startTime.setDate(startTime.getDate() - 6)
 
-    while (baseDate < new Date()) {
+    let endTime = new Date(baseDate);
+    endTime.setUTCHours(4, 31, 10, 0);
 
-        baseDate.setDate(baseDate.getDate() + 1)
+    const data = await getDailyStats(startTime, endTime)
 
-        if ([0,6].includes(baseDate.getDay())) {
-            console.log('Skipping weekend', baseDate)
-            continue
-        }
+    const results = await predictMarketDirection(data)
 
-        console.log(baseDate)
-
-        let startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 6)
-
-        let endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 1, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-
-        console.log(startTime, endTime)
-        await getDailyStats(startTime, endTime, 'F')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 16, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 56, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'S')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 1, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'T')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 6, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'FT')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 46, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 11, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'FH')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(5, 1, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 16, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'SI')
-    }
+    console.log(results.filter(d => d.prediction !== 'none'))
+        
 }
 
 run()
