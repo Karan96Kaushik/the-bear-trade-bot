@@ -69,7 +69,7 @@ function checkLowsAboveMA(df, i) {
 // BULLISH
 function checkUpwardTrend(df, i, tolerance = 0.015) {
   const currentCandle = df[i];
-
+  const candleType = categorizeStock(currentCandle)
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBullishCandle', isBullishCandle(df[i]))
@@ -77,11 +77,13 @@ function checkUpwardTrend(df, i, tolerance = 0.015) {
     console.log('isNarrowRange', isNarrowRange(currentCandle))
     // console.log('checkLowsAboveMA', checkLowsAboveMA(df, i))
     console.log('checkLowsDescending', checkLowsDescending(df, i))
+    console.log('candleType', candleType)
   }
 
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
-    (isBullishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
+    (candleType == 'BL' || candleType == 'DOJI') &&
+    // (isBullishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
     isNarrowRange(currentCandle) &&
     // checkLowsAboveMA(df, i) &&
     checkLowsDescending(df, i) 
@@ -136,9 +138,53 @@ function checkHighsBelowMA(df, i) {
   return df[i-2].high < maT2 && df[i-3].high < maT3;
 }
 
+function categorizeStock(candle) {
+  const { high, low, open, close } = candle;
+  const average = (a, b) => (a + b) / 2;
+  const range = high - low;
+
+  if (
+      open >= average(low, high) - (0.2 * range) &&
+      open <= average(low, high) + (0.2 * range) &&
+      close >= average(low, high) - (0.2 * range) &&
+      close <= average(low, high) + (0.2 * range)
+  ) {
+      return "DOJI";
+  } else if (
+      open >= high - (0.35 * range) &&
+      close >= high - (0.35 * range)
+  ) {
+      return "BL";
+  } else if (
+      open <= low + (0.35 * range) &&
+      close <= low + (0.35 * range)
+  ) {
+      return "BR";
+  } else if (
+      open >= close &&
+      open <= average(high, low) &&
+      close <= average(high, low)
+  ) {
+      return "BR";
+  } else if (
+      close >= open &&
+      open >= average(high, low) &&
+      close >= average(high, low)
+  ) {
+      return "BL";
+  } else if (
+      Math.abs(open - close) >= 0.5 * range
+  ) {
+      return close >= open ? "BL" : "BR";
+  } else {
+      return "";
+  }
+}
+
 // BEARISH
 function checkDownwardTrend(df, i, tolerance = 0.015) {
   const currentCandle = df[i];
+  const candleType = categorizeStock(currentCandle)
 
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
@@ -146,12 +192,14 @@ function checkDownwardTrend(df, i, tolerance = 0.015) {
     console.log('isDojiCandle', isDojiCandle(df[i]))
     console.log('isNarrowRange', isNarrowRange(currentCandle))
     console.log('checkHighsAscending', checkHighsAscending(df, i))
+    console.log('candleType', candleType)
     // console.log('checkHighsBelowMA', checkHighsBelowMA(df[i]))
   }
 
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
-    (isBearishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
+    (candleType == 'BR' || candleType == 'DOJI') &&
+    // (isBearishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
     isNarrowRange(currentCandle) &&
     // checkHighsBelowMA(df, i) &&
     checkHighsAscending(df, i)
@@ -411,7 +459,8 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
             });
         }
       } catch (e) {
-        console.trace(e?.response?.data || e.message || e, sym);
+        console.log(e?.response?.data || e.message || e, sym);
+        console.trace(e);
       }
     }
 
