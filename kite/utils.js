@@ -357,14 +357,19 @@ const getMcIndicators = async (sym) => {
     };
     
     let result = await axios.request(config)
+
+    if (result.data?.[0].pdt_dis_nm == 'No Result Available') {
+        throw new Error(`MC Symbol not found for ${sym}`)
+    }
     
     result = result.data.find(s => {
         const s1 = s.pdt_dis_nm.match(/\,(.*)\,/)?.[1]?.trim();
-        return s1 === sym.toUpperCase()
+        return s1 === sym?.toUpperCase()
     })
     
-    if (!result)
-        throw new Error('MC Symbol not found!')
+    if (!result) {
+        throw new Error(`MC Symbol not found for ${sym}`)
+    }
     
     let mcId = result.sc_id
     
