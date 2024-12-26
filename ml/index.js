@@ -311,14 +311,14 @@ const run = async () => {
 
     console.log(niftyList)
 
-    const baseDate = new Date(`2024-12-23`)
+    const baseDate = new Date(`2024-12-26`)
 
     let startTime = new Date(baseDate)
     startTime.setUTCHours(4, 0, 10, 0);
     startTime.setDate(startTime.getDate() - 6)
 
     let endTime = new Date(baseDate);
-    endTime.setUTCHours(4, 31, 10, 0);
+    endTime.setUTCHours(4, 1, 10, 0);
 
     const data = await getDailyStats(startTime, endTime)
 
