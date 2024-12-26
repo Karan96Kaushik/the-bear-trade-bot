@@ -68,19 +68,23 @@ function checkLowsAboveMA(df, i) {
 
 // BULLISH
 function checkUpwardTrend(df, i, tolerance = 0.015) {
+  const currentCandle = df[i];
+
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBullishCandle', isBullishCandle(df[i]))
     console.log('isDojiCandle', isDojiCandle(df[i]))
+    console.log('isNarrowRange', isNarrowRange(currentCandle))
+    // console.log('checkLowsAboveMA', checkLowsAboveMA(df, i))
+    console.log('checkLowsDescending', checkLowsDescending(df, i))
   }
 
-  const currentCandle = df[i];
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
     (isBullishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
     isNarrowRange(currentCandle) &&
-    checkLowsDescending(df, i) &&
-    checkLowsAboveMA(df, i)
+    // checkLowsAboveMA(df, i) &&
+    checkLowsDescending(df, i) 
   );
 }
 
@@ -134,19 +138,23 @@ function checkHighsBelowMA(df, i) {
 
 // BEARISH
 function checkDownwardTrend(df, i, tolerance = 0.015) {
+  const currentCandle = df[i];
+
   if (DEBUG) {
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBearishCandle', isBearishCandle(df[i]))
     console.log('isDojiCandle', isDojiCandle(df[i]))
+    console.log('isNarrowRange', isNarrowRange(currentCandle))
+    console.log('checkHighsAscending', checkHighsAscending(df, i))
+    // console.log('checkHighsBelowMA', checkHighsBelowMA(df[i]))
   }
 
-  const currentCandle = df[i];
   return (
     checkCandlePlacement(currentCandle, currentCandle['sma44']) &&
     (isBearishCandle(currentCandle) || isDojiCandle(currentCandle)) &&
     isNarrowRange(currentCandle) &&
-    checkHighsAscending(df, i) &&
-    checkHighsBelowMA(df, i)
+    // checkHighsBelowMA(df, i) &&
+    checkHighsAscending(df, i)
   );
 }
 
@@ -403,7 +411,7 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
             });
         }
       } catch (e) {
-        console.error(e?.response?.data || e.message || e, sym);
+        console.trace(e?.response?.data || e.message || e, sym);
       }
     }
 
