@@ -183,9 +183,11 @@ const updateNameInSheetForClosedOrder = async (order) => {
             values: [['*' + order.tradingsymbol]], 
         })
 
+        await bulkUpdateCells(updates)
+
     } catch (error) {
         await sendMessageToChannel('📛 Error updating sheet name! Might create issue for reentry!', order.tradingsymbol, order.quantity, order.tag, error?.message)
-        console.error(error)
+        console.trace(error)
     }
 }
 
@@ -565,5 +567,6 @@ module.exports = {
     createOrders,
     createZaireOrders,
     placeOrder,
-    logOrder
+    logOrder,
+    updateNameInSheetForClosedOrder
 }
