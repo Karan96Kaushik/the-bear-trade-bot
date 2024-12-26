@@ -171,6 +171,7 @@ const setupReversalOrders = async (order) => {
 
 const updateNameInSheetForClosedOrder = async (order) => {
     try {
+        let updates = []
         let sheetData = await readSheetData('MIS-ALPHA!A1:W150')
         const rowHeaders = sheetData.map(a => a[1])
         const colHeaders = sheetData[0]
