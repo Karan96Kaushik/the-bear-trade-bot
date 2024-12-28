@@ -556,7 +556,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
 
-    const dailyReportJob = schedule.scheduleJob('40,29 10,15 * * 1-5', () => {
+    const dailyReportJob = schedule.scheduleJob('40 10 * * 1-5', () => {
         generateDailyReportF('29Nov')
         sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
     });
