@@ -92,6 +92,15 @@ const createSellLimSLOrders = async (stock, order) => {
         else
             slPrice = Number(stock.triggerPrice) * 0.98
 
+    if (slPrice < lower_circuit_limit) {
+        slPrice = lower_circuit_limit + 0.1
+        sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.stockSymbol, stock.quantity, slPrice)
+    }
+    if (slPrice > upper_circuit_limit) {
+        slPrice = upper_circuit_limit - 0.1
+        sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.stockSymbol, stock.quantity, slPrice)
+    }
+
     let orderResponse = await placeOrder('SELL', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CSLS')
 
     // let orderResponse = await kiteSession.kc.placeOrder("regular", {
