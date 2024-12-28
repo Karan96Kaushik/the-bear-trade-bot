@@ -13,7 +13,7 @@ const { generateDailyReport } = require('../analytics/reports');
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 
-async function setupZaireOrders() {
+async function setupZaireOrders(checkV2 = false) {
     try {
         await sendMessageToChannel('⌛️ Executing Zaire MIS Jobs');
 
@@ -34,9 +34,10 @@ async function setupZaireOrders() {
         await kiteSession.authenticate();
         
         let selectedStocks = await scanZaireStocks(
-            niftyList
-            // ,
-            // process.env.NODE_ENV !== 'production' ? new Date('2024-12-11 04:01') : null
+            niftyList,
+            null,
+            checkV2 ? '5m' : '15m',
+            checkV2
         )
         selectedStocks = selectedStocks.filter(s => 
                                             (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
@@ -531,11 +532,17 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()))
 
-    const zaireJob = schedule.scheduleJob('1,16,31,46 4,5,6,7,8 * * 1-5', () => {
+    const zaireJob = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', () => {
         sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
         setupZaireOrders();
     });
     sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+
+    const zaireJobV2 = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', () => {
+        sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+        setupZaireOrders(true);
+    });
+    sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
 
     const zaireCancelJob = schedule.scheduleJob('0,15,30,45 4,5,6,7,8 * * 1-5', () => {
         sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));

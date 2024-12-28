@@ -1,4 +1,5 @@
 const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data } = require("../kite/utils");
+const { getDateStringIND } = require("../kite/utils");
 
 const MA_TREND_WINDOW = 10;
 const DEBUG = process.env.DEBUG || false;
@@ -457,6 +458,7 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
                 close: firstCandle.close,
                 high: firstCandle.high,
                 low: firstCandle.low,
+                time: getDateStringIND(firstCandle.time),
                 'sma44': maValue,
                 volume: firstCandle.volume,
                 direction: conditionsMet,
