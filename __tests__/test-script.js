@@ -36,17 +36,17 @@ const run = async () => {
 
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['EICHERMOT']
+        niftyList = ['TATACONSUM']
 
         // await kiteSession.authenticate();
         // const positions = await kiteSession.kc.getPositions();
         // const orders = await kiteSession.kc.getOrders();
 
-        let date = new Date('2024-12-27T05:11:10Z')
+        let date = new Date('2024-12-27T04:11:10Z')
 
         for (let i = 0; i < 100; i++) {
             console.log(getDateStringIND(date), '---------')
-            let selectedStocks = await scanZaireStocks(niftyList, date, '15m', false);
+            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', true);
             if (selectedStocks.length > 0) {
                 console.log('selected stocks found-------------------->>>>>>>')
                 console.log(selectedStocks)
