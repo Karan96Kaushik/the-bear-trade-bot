@@ -452,6 +452,10 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
         }
 
         if (conditionsMet) {
+          const t2Candle = df[df.length - 3]
+          t2Candle.time = getDateStringIND(t2Candle.time)
+          const t3Candle = df[df.length - 4]
+          t3Candle.time = getDateStringIND(t3Candle.time)
             selectedStocks.push({
                 sym,
                 open: firstCandle.open,
@@ -462,8 +466,8 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
                 'sma44': maValue,
                 volume: firstCandle.volume,
                 direction: conditionsMet,
-                t2Candle: df[df.length - 3],
-                t3Candle: df[df.length - 4],
+                t2Candle,
+                t3Candle,
             });
         }
       } catch (e) {
