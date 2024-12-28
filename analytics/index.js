@@ -71,6 +71,7 @@ function checkUpwardTrend(df, i, tolerance = 0.015) {
   const currentCandle = df[i];
   const candleType = categorizeStock(currentCandle)
   if (DEBUG) {
+    console.log(currentCandle)
     console.log('candlePlacement', checkCandlePlacement(df[i], df[i]['sma44']))
     console.log('isBullishCandle', isBullishCandle(df[i]))
     console.log('isDojiCandle', isDojiCandle(df[i]))
@@ -394,7 +395,7 @@ async function getLastCandle(sym, endDateNew, interval = '15m') {
     return null;
 }
 
-async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
+async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 = false) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
@@ -442,7 +443,12 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
         const firstCandle = df[df.length - 1];
         const maValue = firstCandle['sma44'];
 
-        const conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
+        let conditionsMet = null
+        if (checkV2) {
+          conditionsMet = checkV2Conditions(df)
+        } else {
+          conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
+        }
 
         if (conditionsMet) {
             selectedStocks.push({
@@ -465,6 +471,34 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m') {
     }
 
     return selectedStocks;
+}
+
+function checkV2Conditions(df) {
+  const currentCandle = df[df.length - 1]
+  const t2Candle = df[df.length - 3]
+  const t3Candle = df[df.length - 4]
+
+  const candleMid = (currentCandle.high + currentCandle.low) / 2
+
+  const touchingSma = currentCandle.high > currentCandle.sma44 && currentCandle.low < currentCandle.sma44
+
+  if (!touchingSma) return
+
+  const t2Lower = currentCandle.high > t2Candle.high
+  const t3Lower = currentCandle.high > t3Candle.high
+
+  const closeLower = currentCandle.close < candleMid
+
+  if (t2Lower && t3Lower && closeLower) 
+    return 'BEARISH'
+
+  const t2Higher = currentCandle.low < t2Candle.low
+  const t3Higher = currentCandle.low < t3Candle.low
+
+  const closeHigher = currentCandle.close > candleMid
+
+  if (t2Higher && t3Higher && closeHigher) 
+    return 'BULLISH'
 }
 
 function isNarrowRange(candle) {

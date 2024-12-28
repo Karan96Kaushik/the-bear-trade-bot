@@ -1,5 +1,6 @@
 const { scanZaireStocks } = require("../analytics")
 const { readSheetData, processMISSheetData, getStockLoc } = require("../gsheets")
+const { updateNameInSheetForClosedOrder } = require("../kite/processor")
 const { kiteSession } = require("../kite/setup")
 // const { placeOrder } = require("../kite/processor")
 const { getDateStringIND } = require("../kite/utils")
@@ -24,21 +25,43 @@ const run = async () => {
         // quote = quote['NSE:TRIDENT']?.last_price
         // console.log(quote)
 
+        // await updateNameInSheetForClosedOrder({
+        //     order_id: 'DEVMD1000',
+        //     tradingsymbol: 'TRIDENT',
+        //     quantity: 1,
+        //     triggerPrice: 34.2,
+        // })
+
         // return
 
         let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['ABSLAMC']
+        niftyList = ['EICHERMOT']
 
         // await kiteSession.authenticate();
         // const positions = await kiteSession.kc.getPositions();
         // const orders = await kiteSession.kc.getOrders();
 
-        const date = new Date('2024-12-24T06:01:10Z')
-        console.log(getDateStringIND(date), '---------')
-        const selectedStocks = await scanZaireStocks(niftyList, date);
+        let date = new Date('2024-12-27T05:11:10Z')
 
-        console.log(selectedStocks)
+        for (let i = 0; i < 100; i++) {
+            console.log(getDateStringIND(date), '---------')
+            let selectedStocks = await scanZaireStocks(niftyList, date, '15m', false);
+            if (selectedStocks.length > 0) {
+                console.log('selected stocks found-------------------->>>>>>>')
+                console.log(selectedStocks)
+                break
+            }
+            date = new Date(date.getTime() + 5 * 60 * 1000)
+        }
+
+        // console.log(selectedStocks)
+
+        // date = new Date('2024-12-26T08:11:10Z')
+        // console.log(getDateStringIND(date), '---------')
+        // selectedStocks = await scanZaireStocks(niftyList, date, '5m');
+
+        // console.log(selectedStocks)
         // console.table(selectedStocks.map(a => ({...a, qty: Math.ceil(200/(a.high - a.low))})))
 
         
