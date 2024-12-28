@@ -52,7 +52,7 @@ async function setupZaireOrders(checkV2 = false) {
             !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
         );
 
-        sendMessageToChannel('🔔 Zaire MIS Stocks: ', selectedStocks);
+        sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, selectedStocks);
         
         // if (completed_zaire_orders.length > 10) {
         //     sendMessageToChannel('🔔 Total completed order count exceeded 10, no longer placing orders');
