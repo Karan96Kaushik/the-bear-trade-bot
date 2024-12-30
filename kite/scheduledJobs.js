@@ -532,11 +532,11 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()))
 
-    const zaireJob = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', () => {
-        sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
-        setupZaireOrders();
-    });
-    sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+    // const zaireJob = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', () => {
+    //     sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+    //     setupZaireOrders();
+    // });
+    // sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 
     const zaireJobV2CB = () => {
         sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_2.nextInvocation()));
