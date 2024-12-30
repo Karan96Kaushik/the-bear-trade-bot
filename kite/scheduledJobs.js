@@ -15,7 +15,7 @@ const MIN_ORDER_VALUE = 0
 
 async function setupZaireOrders(checkV2 = false) {
     try {
-        await sendMessageToChannel('⌛️ Executing Zaire MIS Jobs');
+        await sendMessageToChannel(`⌛️ Executing Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`);
 
         // let niftyList = await readSheetData('Nifty!A1:A200') 
         // niftyList = niftyList.map(stock => stock[0])
@@ -83,12 +83,12 @@ async function setupZaireOrders(checkV2 = false) {
                 // await appendRowsToMISD([sheetEntry])
             } catch (error) {
                 console.error(error);
-                await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', stock, error?.message);
+                await sendMessageToChannel(`🚨 Error running Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`, stock, error?.message);
             }
         }
 
     } catch (error) {
-        await sendMessageToChannel('🚨 Error running Zaire MIS Jobs', error?.message);
+        await sendMessageToChannel(`🚨 Error running Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`, error?.message);
     }
 }
 
@@ -519,12 +519,13 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
-    // Schedule the new job to run every 15 minutes
-    const updateStopLossJob = schedule.scheduleJob('*/15 5-9 * * 1-5', () => {
+    const updateStopLossJobCB = () => {
         updateStopLossOrders();
-        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
-    });
-    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()))
+        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+    }
+    const updateStopLossJob = schedule.scheduleJob('*/15 5-9 * * 1-5', updateStopLossJobCB);
+    const updateStopLossJob_2 = schedule.scheduleJob('45 4 * * 1-5', updateStopLossJobCB);
+    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()))
 
     const updateStopLossJob2 = schedule.scheduleJob('15,30,45 4 * * 1-5', () => {
         updateStopLossOrders();
@@ -552,11 +553,11 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
 
-    const zaireCloseJob = schedule.scheduleJob('10 15,30 4 * * 1-5', () => {
-        sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
-        closeZaireOppositePositions();
-    });
-    sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
+    // const zaireCloseJob = schedule.scheduleJob('10 15,30 4 * * 1-5', () => {
+    //     sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
+    //     closeZaireOppositePositions();
+    // });
+    // sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
 
     const dailyReportJob = schedule.scheduleJob('40 10 * * 1-5', () => {
         generateDailyReportF('29Nov')
