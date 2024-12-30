@@ -39,10 +39,10 @@ async function setupZaireOrders(checkV2 = false) {
             checkV2 ? '5m' : '15m',
             checkV2
         )
-        selectedStocks = selectedStocks.filter(s => 
-                                            (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
-                                            (s.direction == 'BEARISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 's') == 's')
-                                        );
+        // selectedStocks = selectedStocks.filter(s => 
+        //                                     (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
+        //                                     (s.direction == 'BEARISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 's') == 's')
+        //                                 );
         
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
