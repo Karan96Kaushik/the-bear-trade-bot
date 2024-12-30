@@ -1,4 +1,4 @@
-const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data } = require("../kite/utils");
+const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data, getMcIndicators } = require("../kite/utils");
 const { getDateStringIND } = require("../kite/utils");
 
 const MA_TREND_WINDOW = 10;
@@ -456,19 +456,21 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           t2Candle.time = getDateStringIND(t2Candle.time)
           const t3Candle = df[df.length - 4]
           t3Candle.time = getDateStringIND(t3Candle.time)
-            selectedStocks.push({
-                sym,
-                open: firstCandle.open,
-                close: firstCandle.close,
-                high: firstCandle.high,
-                low: firstCandle.low,
-                time: getDateStringIND(firstCandle.time),
-                'sma44': maValue,
-                volume: firstCandle.volume,
-                direction: conditionsMet,
-                t2Candle,
-                t3Candle,
-            });
+
+          selectedStocks.push({
+              sym,
+              open: firstCandle.open,
+              close: firstCandle.close,
+              high: firstCandle.high,
+              low: firstCandle.low,
+              time: getDateStringIND(firstCandle.time),
+              'sma44': maValue,
+              volume: firstCandle.volume,
+              direction: conditionsMet,
+              t2Candle,
+              t3Candle,
+          });
+
         }
       } catch (e) {
         console.log(e?.response?.data || e.message || e, sym);
@@ -486,9 +488,11 @@ function checkV2Conditions(df) {
 
   const candleMid = (currentCandle.high + currentCandle.low) / 2
 
-  const touchingSma = currentCandle.high > currentCandle.sma44 && currentCandle.low < currentCandle.sma44
+  const touchingSma = (currentCandle.high * 1.001) > currentCandle.sma44 && (currentCandle.low * 0.999) < currentCandle.sma44
 
   if (!touchingSma) return
+
+  if (!isNarrowRange(currentCandle, 0.01)) return
 
   const t2Lower = currentCandle.high > t2Candle.high
   const t3Lower = currentCandle.high > t3Candle.high
@@ -507,10 +511,10 @@ function checkV2Conditions(df) {
     return 'BULLISH'
 }
 
-function isNarrowRange(candle) {
+function isNarrowRange(candle, tolerance = 0.015) {
   const { high, low } = candle;
   const range = (high - low) / ((high + low) / 2);
-  return range < 0.015;
+  return range < tolerance;
 }
 
 function isBullishCandle(candle) {
@@ -600,6 +604,69 @@ function calculateBollingerBands(df, period = 20, stdDev = 2) {
   }));
 }
 
+async function scanBailyStocks(stockList, endDateNew, interval = '5m') {
+  let endDate = new Date();
+  endDate.setUTCSeconds(10);
+
+  if (endDateNew) {
+    endDate = new Date(endDateNew);
+  }
+
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 6);
+
+  const promises = stockList.map(async (sym) => {
+    try {
+      let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate);
+      df = processYahooData(df);
+
+      if (!df || df.length === 0) {
+        console.log('No data for', sym);
+        return null;
+      }
+
+      df.pop();
+      if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
+        df.pop();
+      }
+
+      if (!df || df.length === 0 || df[df.length - 1].high > MAX_STOCK_PRICE) {
+        return null;
+      }
+
+      const indicators = await getMcIndicators(sym);
+      const classic = indicators.pivotLevels.find(p => p.key == 'Classic').pivotLevel;
+      const currentCandle = df[df.length - 1];
+      const { s3, r3 } = classic;
+      const candleMid = (currentCandle.high + currentCandle.low) / 2;
+
+      let direction = null;
+      if (currentCandle.high > r3 && currentCandle.low < r3 && currentCandle.close < candleMid) {
+        direction = 'BEARISH';
+      }
+      if (currentCandle.high > s3 && currentCandle.low < s3 && currentCandle.close > candleMid) {
+        direction = 'BULLISH';
+      }
+
+      return direction ? {
+        sym,
+        open: currentCandle.open,
+        close: currentCandle.close,
+        high: currentCandle.high,
+        low: currentCandle.low,
+        time: getDateStringIND(currentCandle.time),
+        direction,
+      } : null;
+    } catch (error) {
+      console.error(`Error processing ${sym}:`, error);
+      return null;
+    }
+  });
+
+  const results = await Promise.all(promises);
+  return results.filter(result => result !== null);
+}
+
 module.exports = { 
     analyzeDataForTrends,
     calculateMovingAverage,
@@ -621,7 +688,8 @@ module.exports = {
     printTrendEmojis,
     getLastCandle,
     addRSI,
-    calculateBollingerBands
+    calculateBollingerBands,
+    scanBailyStocks
 };
 
 
