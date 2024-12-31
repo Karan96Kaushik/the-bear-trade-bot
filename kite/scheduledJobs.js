@@ -5,7 +5,7 @@ const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
-const { scanZaireStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
+const { scanZaireStocks, scanBailyStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
 const { generateDailyReport } = require('../analytics/reports');
 
 // const OrderLog = require('../models/OrderLog');
@@ -89,6 +89,24 @@ async function setupZaireOrders(checkV2 = false) {
 
     } catch (error) {
         await sendMessageToChannel(`🚨 Error running Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`, error?.message);
+    }
+}
+
+async function setupBailyOrders() {
+    try {
+        let highBetaData = await readSheetData('HIGHBETA!B1:D150')
+        let niftyList = highBetaData
+                            .map(stock => stock[0])
+                            .filter(d => d !== 'NOT FOUND' && d)
+        // highBetaData = highBetaData
+        //                     .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
+        //                     .filter(d => d.sym)
+
+        let selectedStocks = await scanBailyStocks(niftyList, null, '5m')
+
+        await sendMessageToChannel('⌛️ Executing Baily MIS Jobs');
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Baily MIS Jobs', error?.message);
     }
 }
 
@@ -540,12 +558,13 @@ const scheduleMISJobs = () => {
     // sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 
     const zaireJobV2CB = () => {
-        sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_2.nextInvocation()));
+        sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() < zaireJobV2_3.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_3.nextInvocation() : zaireJobV2_2.nextInvocation()));
         setupZaireOrders(true);
     };
     const zaireJobV2 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV2CB);
     const zaireJobV2_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV2CB);
-    sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_2.nextInvocation()));
+    const zaireJobV2_3 = schedule.scheduleJob('30 0,5,10,15,20,25,30 9 * * 1-5', zaireJobV2CB);
+    sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() < zaireJobV2_3.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_3.nextInvocation() : zaireJobV2_2.nextInvocation()));
 
     const zaireCancelJob = schedule.scheduleJob('0,15,30,45 4,5,6,7,8 * * 1-5', () => {
         sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
