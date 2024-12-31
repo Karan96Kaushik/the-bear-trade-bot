@@ -36,7 +36,7 @@ async function setupZaireOrders(checkV2 = false) {
         let selectedStocks = await scanZaireStocks(
             niftyList,
             null,
-            checkV2 ? '5m' : '15m',
+            checkV2 ? '15m' : '15m',
             checkV2
         )
         // selectedStocks = selectedStocks.filter(s => 
