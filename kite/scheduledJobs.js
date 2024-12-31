@@ -94,6 +94,7 @@ async function setupZaireOrders(checkV2 = false) {
 
 async function setupBailyOrders() {
     try {
+        await sendMessageToChannel('⌛️ Executing Baily MIS Jobs');
         let highBetaData = await readSheetData('HIGHBETA!B1:D150')
         let niftyList = highBetaData
                             .map(stock => stock[0])
@@ -104,7 +105,8 @@ async function setupBailyOrders() {
 
         let selectedStocks = await scanBailyStocks(niftyList, null, '5m')
 
-        await sendMessageToChannel('⌛️ Executing Baily MIS Jobs');
+        await sendMessageToChannel('🫷 Baily MIS Stocks: ', selectedStocks);
+
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Baily MIS Jobs', error?.message);
     }
@@ -565,6 +567,15 @@ const scheduleMISJobs = () => {
     const zaireJobV2_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV2CB);
     const zaireJobV2_3 = schedule.scheduleJob('30 0,5,10,15,20,25,30 9 * * 1-5', zaireJobV2CB);
     sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() < zaireJobV2_3.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_3.nextInvocation() : zaireJobV2_2.nextInvocation()));
+
+    const bailyJobCB = () => {
+        sendMessageToChannel('⏰ Baily Scheduled - ', getDateStringIND(bailyJob.nextInvocation() < bailyJob_2.nextInvocation() ? bailyJob.nextInvocation() < bailyJob_3.nextInvocation() ? bailyJob.nextInvocation() : bailyJob_3.nextInvocation() : bailyJob_2.nextInvocation()));
+        setupBailyOrders();
+    };
+    const bailyJob = schedule.scheduleJob('15 */5 4,5,6,7,8 * * 1-5', bailyJobCB);
+    const bailyJob_2 = schedule.scheduleJob('15 50,55 3 * * 1-5', bailyJobCB);
+    const bailyJob_3 = schedule.scheduleJob('15 0,5,10,15,20,25,30 9 * * 1-5', bailyJobCB);
+    sendMessageToChannel('⏰ Baily Scheduled - ', getDateStringIND(bailyJob.nextInvocation() < bailyJob_2.nextInvocation() ? bailyJob.nextInvocation() < bailyJob_3.nextInvocation() ? bailyJob.nextInvocation() : bailyJob_3.nextInvocation() : bailyJob_2.nextInvocation()));
 
     const zaireCancelJob = schedule.scheduleJob('0,15,30,45 4,5,6,7,8 * * 1-5', () => {
         sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
