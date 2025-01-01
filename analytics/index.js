@@ -488,11 +488,11 @@ function checkV2Conditions(df) {
 
   const candleMid = (currentCandle.high + currentCandle.low) / 2
 
-  const touchingSma = (currentCandle.high * 1.001) > currentCandle.sma44 && (currentCandle.low * 0.999) < currentCandle.sma44
+  const touchingSma = (currentCandle.high * 1.005) > currentCandle.sma44 && (currentCandle.low * 0.995) < currentCandle.sma44
 
   if (!touchingSma) return
 
-  if (!isNarrowRange(currentCandle, 0.005)) return
+  if (!isNarrowRange(currentCandle, 0.01)) return
 
   const t2Lower = currentCandle.high > t2Candle.high
   const t3Lower = currentCandle.high > t3Candle.high
