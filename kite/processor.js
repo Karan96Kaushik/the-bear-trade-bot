@@ -351,13 +351,13 @@ async function createZaireOrders(stock) {
         // <20.  0.1.  :    20-50.  0.2  :  50-100     0.3. :    100- 300.   0.5.     >300    Re 1
         
         let triggerPadding = 1
-        if (stock.quantity < 20)
+        if (stock.high < 20)
             triggerPadding = 0.1
-        else if (stock.quantity < 50)
+        else if (stock.high < 50)
             triggerPadding = 0.2
-        else if (stock.quantity < 100)
+        else if (stock.high < 100)
             triggerPadding = 0.3
-        else if (stock.quantity < 300)
+        else if (stock.high < 300)
             triggerPadding = 0.5
         
         if (stock.direction === 'BULLISH') {
