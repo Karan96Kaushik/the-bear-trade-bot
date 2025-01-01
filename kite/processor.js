@@ -348,9 +348,21 @@ async function createZaireOrders(stock) {
             return
         }
 
+        // <20.  0.1.  :    20-50.  0.2  :  50-100     0.3. :    100- 300.   0.5.     >300    Re 1
+        
+        let triggerPadding = 1
+        if (stock.quantity < 20)
+            triggerPadding = 0.1
+        else if (stock.quantity < 50)
+            triggerPadding = 0.2
+        else if (stock.quantity < 100)
+            triggerPadding = 0.3
+        else if (stock.quantity < 300)
+            triggerPadding = 0.5
+        
         if (stock.direction === 'BULLISH') {
             // Trigger price is 0.05% above high
-            triggerPrice = stock.high + 1;
+            triggerPrice = stock.high + triggerPadding;
             // Stop loss is low
             stopLossPrice = stock.low - 1;
             // Target price is double the difference between high and low plus trigger price
@@ -393,7 +405,7 @@ async function createZaireOrders(stock) {
             // await placeOrder("SELL", "LIMIT", limitPrice, quantity, stock);
         } else if (stock.direction === 'BEARISH') {
             // Trigger price is 0.05% below low 
-            triggerPrice = stock.low - 1;
+            triggerPrice = stock.low - triggerPadding;
             // Stop loss is high
             stopLossPrice = stock.high + 1;
             // Target price is double the difference between trigger price and low
