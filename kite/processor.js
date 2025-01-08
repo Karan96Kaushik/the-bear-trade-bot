@@ -328,7 +328,7 @@ const processSuccessfulOrder = async (order) => {
     }
 }
 
-async function createZaireOrders(stock) {
+async function createZaireOrders(stock, tag='zaire') {
     try {
         await kiteSession.authenticate();
 
@@ -390,14 +390,14 @@ async function createZaireOrders(stock) {
             // Place SL-M BUY order at price higher than trigger price
             if (ltp > triggerPrice) {
                 if ((targetPrice - ltp) / targetGain > 0.8)
-                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, 'trigger-m-zaire')
+                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, `trigger-m-${tag}`)
                 else
                     return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else
-                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, 'trigger-zaire');
+                orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, `trigger-${tag}`);
 
-
+            
             // Place SL-M SELL order
             // await placeOrder("SELL", "SL", sellTriggerPrice, quantity, stock);
 
@@ -433,12 +433,12 @@ async function createZaireOrders(stock) {
             // Place SELL order at price lower than trigger price
             if (ltp < triggerPrice) {
                 if ((ltp - targetPrice) / targetGain > 0.8)
-                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, 'trigger-m-zaire')
+                    orderResponse = await placeOrder('SELL', 'MARKET', null, quantity, stock, `trigger-m-${tag}`)
                 else
                     return sendMessageToChannel('🔔 Zaire: SELL order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
             }
             else {
-                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, 'trigger-zaire');
+                orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, quantity, stock, `trigger-${tag}`);
             }
 
 
@@ -451,7 +451,7 @@ async function createZaireOrders(stock) {
             throw new Error(`Invalid direction: ${stock.direction}`);
         }
         
-        await logOrder('PLACED', 'ZAIRE', orderResponse)
+        await logOrder('PLACED', tag.toUpperCase(), orderResponse)
 
         return sheetEntry
 

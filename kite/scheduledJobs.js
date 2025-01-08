@@ -5,7 +5,7 @@ const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
-const { scanZaireStocks, scanBailyStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
+const { scanZaireStocks, scanBaileyStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
 const { generateDailyReport } = require('../analytics/reports');
 
 // const OrderLog = require('../models/OrderLog');
@@ -78,7 +78,7 @@ async function setupZaireOrders(checkV2 = false) {
                     continue
                 }
 
-                let sheetEntry = await createZaireOrders(stock);
+                let sheetEntry = await createZaireOrders(stock, 'zaire');
                 // sheetEntries.push(sheetEntry)
                 // await appendRowsToMISD([sheetEntry])
             } catch (error) {
@@ -92,9 +92,10 @@ async function setupZaireOrders(checkV2 = false) {
     }
 }
 
-async function setupBailyOrders() {
+async function setupBaileyOrders() {
     try {
-        await sendMessageToChannel('⌛️ Executing Baily MIS Jobs');
+        await sendMessageToChannel('⌛️ Executing Bailey MIS Jobs');
+        
         let highBetaData = await readSheetData('HIGHBETA!B1:D150')
         let niftyList = highBetaData
                             .map(stock => stock[0])
@@ -103,12 +104,43 @@ async function setupBailyOrders() {
         //                     .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
         //                     .filter(d => d.sym)
 
-        let selectedStocks = await scanBailyStocks(niftyList, null, '5m')
+        let selectedStocks = await scanBaileyStocks(niftyList, null, '5m')
 
-        await sendMessageToChannel('🫷 Baily MIS Stocks: ', selectedStocks);
+        await sendMessageToChannel('🫷 Bailey MIS Stocks: ', selectedStocks);
+
+        // const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
+
+        const sheetEntries = []
+
+        for (const stock of selectedStocks) {
+            try {
+                // Skip if stock is already in position or open orders
+                if (
+                    (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
+                    // || 
+                    // orders.find(o => o.tradingsymbol === stock.sym)
+                ) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
+                    continue
+                }
+
+                if (sheetData.find(s => s.stockSymbol === stock.sym)) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in sheet', stock.sym)
+                    continue
+                }
+
+                let sheetEntry = await createZaireOrders(stock, 'bailey');
+                // sheetEntries.push(sheetEntry)
+                // await appendRowsToMISD([sheetEntry])
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel(`🚨 Error creating Bailey order`, stock, error?.message);
+            }
+        }
 
     } catch (error) {
-        await sendMessageToChannel('🚨 Error running Baily MIS Jobs', error?.message);
+        await sendMessageToChannel('🚨 Error running Bailey MIS Jobs', error?.message);
     }
 }
 
@@ -571,14 +603,14 @@ const scheduleMISJobs = () => {
     // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() < zaireJobV2_3.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_3.nextInvocation() : zaireJobV2_2.nextInvocation()));
     sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
 
-    const bailyJobCB = () => {
-        sendMessageToChannel('⏰ Baily Scheduled - ', getDateStringIND(bailyJob.nextInvocation() < bailyJob_2.nextInvocation() ? bailyJob.nextInvocation() < bailyJob_3.nextInvocation() ? bailyJob.nextInvocation() : bailyJob_3.nextInvocation() : bailyJob_2.nextInvocation()));
-        setupBailyOrders();
+    const baileyJobCB = () => {
+        sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(baileyJob.nextInvocation() < baileyJob_2.nextInvocation() ? baileyJob.nextInvocation() < baileyJob_3.nextInvocation() ? baileyJob.nextInvocation() : baileyJob_3.nextInvocation() : baileyJob_2.nextInvocation()));
+        setupBaileyOrders();
     };
-    const bailyJob = schedule.scheduleJob('15 */5 4,5,6,7,8 * * 1-5', bailyJobCB);
-    const bailyJob_2 = schedule.scheduleJob('15 50,55 3 * * 1-5', bailyJobCB);
-    const bailyJob_3 = schedule.scheduleJob('15 0,5,10,15,20,25,30 9 * * 1-5', bailyJobCB);
-    sendMessageToChannel('⏰ Baily Scheduled - ', getDateStringIND(bailyJob.nextInvocation() < bailyJob_2.nextInvocation() ? bailyJob.nextInvocation() < bailyJob_3.nextInvocation() ? bailyJob.nextInvocation() : bailyJob_3.nextInvocation() : bailyJob_2.nextInvocation()));
+    const baileyJob = schedule.scheduleJob('15 */5 4,5,6,7,8 * * 1-5', baileyJobCB);
+    const baileyJob_2 = schedule.scheduleJob('15 50,55 3 * * 1-5', baileyJobCB);
+    const baileyJob_3 = schedule.scheduleJob('15 0,5,10,15,20,25,30 9 * * 1-5', baileyJobCB);
+    sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(baileyJob.nextInvocation() < baileyJob_2.nextInvocation() ? baileyJob.nextInvocation() < baileyJob_3.nextInvocation() ? baileyJob.nextInvocation() : baileyJob_3.nextInvocation() : baileyJob_2.nextInvocation()));
 
     const zaireCancelJob = schedule.scheduleJob('0,15,30,45 4,5,6,7,8 * * 1-5', () => {
         sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));

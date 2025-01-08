@@ -604,7 +604,7 @@ function calculateBollingerBands(df, period = 20, stdDev = 2) {
   }));
 }
 
-async function scanBailyStocks(stockList, endDateNew, interval = '5m') {
+async function scanBaileyStocks(stockList, endDateNew, interval = '5m') {
   let endDate = new Date();
   endDate.setUTCSeconds(10);
 
@@ -689,7 +689,7 @@ module.exports = {
     getLastCandle,
     addRSI,
     calculateBollingerBands,
-    scanBailyStocks
+    scanBaileyStocks
 };
 
 
