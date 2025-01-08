@@ -274,6 +274,10 @@ async function setupOrdersFromSheet() {
     
         for (const stock of stockData) {
             try {
+                if (stock.lastAction?.length > 1) {
+                    console.log('ACTION ALREADY PLACED', stock.stockSymbol, stock.lastAction)
+                    continue
+                }
                 if ( openOrders.find(o => o.tradingsymbol === stock.stockSymbol) ) {
                     sendMessageToChannel('🔔 Ignoring coz already open order', stock.stockSymbol)
                     continue
