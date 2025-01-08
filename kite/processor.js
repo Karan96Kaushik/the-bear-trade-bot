@@ -392,12 +392,12 @@ async function createZaireOrders(stock, tag='zaire') {
                 if ((targetPrice - ltp) / targetGain > 0.8)
                     orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, `trigger-m-${tag}`)
                 else
-                    return sendMessageToChannel('🔔 Zaire: BUY order not placed: LTP too close to target price', stock.sym, quantity, targetPrice, ltp)
+                    return sendMessageToChannel(`🔔 ${tag.toUpperCase()}: BUY order not placed: LTP too close to target price`, stock.sym, quantity, targetPrice, ltp)
             }
             else
                 orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, `trigger-${tag}`);
 
-            
+
             // Place SL-M SELL order
             // await placeOrder("SELL", "SL", sellTriggerPrice, quantity, stock);
 
