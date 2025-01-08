@@ -95,7 +95,7 @@ async function setupZaireOrders(checkV2 = false) {
 async function setupBaileyOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Bailey MIS Jobs');
-        
+
         let highBetaData = await readSheetData('HIGHBETA!B1:D150')
         let niftyList = highBetaData
                             .map(stock => stock[0])
@@ -265,14 +265,23 @@ async function setupOrdersFromSheet() {
         stockData = processMISSheetData(stockData)
 
         const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
+
+        const openOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN'));
 
         await kiteSession.authenticate()
         console.log(orders)
     
         for (const stock of stockData) {
             try {
-                if ( orders.find(o => o.tradingsymbol === stock.stockSymbol) )
+                if ( openOrders.find(o => o.tradingsymbol === stock.stockSymbol) ) {
+                    sendMessageToChannel('🔔 Ignoring coz already open order', stock.stockSymbol)
                     continue
+                }
+                if ( positions.net.find(p => p.tradingsymbol === stock.stockSymbol && p.quantity != 0) ) {
+                    sendMessageToChannel('🔔 Ignoring coz already in open positions', stock.stockSymbol)
+                    continue
+                }
 
                 const orderResponse = await createOrders(stock)
 
@@ -553,7 +562,7 @@ async function setupMissingOrders() {
 
 const scheduleMISJobs = () => {
 
-    const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', () => {
+    const sheetSetupJob = schedule.scheduleJob('46,16 3,4,5,6 * * 1-5', () => {
         setupOrdersFromSheet()
         sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
     });
