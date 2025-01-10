@@ -483,8 +483,10 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
 
 function checkV2Conditions(df) {
   const currentCandle = df[df.length - 1]
+  const t1Candle = df[df.length - 2]
   const t2Candle = df[df.length - 3]
   const t3Candle = df[df.length - 4]
+  const t4Candle = df[df.length - 5]
 
   const candleMid = (currentCandle.high + currentCandle.low) / 2
 
@@ -492,22 +494,46 @@ function checkV2Conditions(df) {
 
   if (!touchingSma) return
 
-  if (!isNarrowRange(currentCandle, 0.01)) return
+  if (!isNarrowRange(currentCandle, 0.0075)) return
 
   const t2Lower = currentCandle.high > t2Candle.high
   const t3Lower = currentCandle.high > t3Candle.high
+  // const t4Lower = currentCandle.high > t4Candle.high
+  const smaHigherT2 = t2Candle.sma44 > currentCandle.sma44
+  const smaHigherT3 = t3Candle.sma44 > t2Candle.sma44
+  const smaHigherT4 = t4Candle.sma44 > t3Candle.sma44
+
+  const t2SmaHigherHigh = t2Candle.sma44 > t2Candle.high
+  const t3SmaHigherHigh = t3Candle.sma44 > t3Candle.high
+  const t4SmaHigherHigh = t4Candle.sma44 > t4Candle.high
 
   const closeLower = currentCandle.close < candleMid
 
-  if (t2Lower && t3Lower && closeLower) 
+  if (t2Lower && t3Lower && 
+      closeLower &&
+      smaHigherT2 && smaHigherT3 && smaHigherT4 &&
+      t2SmaHigherHigh && t3SmaHigherHigh && t4SmaHigherHigh
+    ) 
     return 'BEARISH'
 
   const t2Higher = currentCandle.low < t2Candle.low
   const t3Higher = currentCandle.low < t3Candle.low
+  // const t4Higher = currentCandle.low < t4Candle.low
+  const smaLowerT2 = t2Candle.sma44 < currentCandle.sma44
+  const smaLowerT3 = t3Candle.sma44 < t2Candle.sma44
+  const smaLowerT4 = t4Candle.sma44 < t3Candle.sma44
+
+  const t2SmaHigherLow = t2Candle.sma44 < t2Candle.low
+  const t3SmaHigherLow = t3Candle.sma44 < t3Candle.low
+  const t4SmaHigherLow = t4Candle.sma44 < t4Candle.low
 
   const closeHigher = currentCandle.close > candleMid
 
-  if (t2Higher && t3Higher && closeHigher) 
+  if (t2Higher && t3Higher && 
+      closeHigher &&
+      smaLowerT2 && smaLowerT3 && smaLowerT4 &&
+      t2SmaHigherLow && t3SmaHigherLow && t4SmaHigherLow
+    ) 
     return 'BULLISH'
 }
 
