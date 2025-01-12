@@ -103,6 +103,9 @@ async function setupBaileyOrders() {
         // highBetaData = highBetaData
         //                     .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
         //                     .filter(d => d.sym)
+        let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
+        sheetData = processMISSheetData(sheetData)
+
 
         let selectedStocks = await scanBaileyStocks(niftyList, null, '5m')
 
