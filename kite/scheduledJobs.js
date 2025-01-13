@@ -20,7 +20,7 @@ async function setupZaireOrders(checkV2 = false) {
         // let niftyList = await readSheetData('Nifty!A1:A200') 
         // niftyList = niftyList.map(stock => stock[0])
 
-        let highBetaData = await readSheetData('HIGHBETA!B1:D150')
+        let highBetaData = await readSheetData('HIGHBETA!B2:B150')
         let niftyList = highBetaData
                             .map(stock => stock[0])
                             .filter(d => d !== 'NOT FOUND' && d)
@@ -96,7 +96,7 @@ async function setupBaileyOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Bailey MIS Jobs');
 
-        let highBetaData = await readSheetData('HIGHBETA!B1:D150')
+        let highBetaData = await readSheetData('HIGHBETA!C2:C150')
         let niftyList = highBetaData
                             .map(stock => stock[0])
                             .filter(d => d !== 'NOT FOUND' && d)
