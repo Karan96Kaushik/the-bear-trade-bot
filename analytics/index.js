@@ -627,7 +627,7 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   const candleMid = (current.high + current.low) / 2;
 
-  const touchingSma = (currentCandle.high * 1.001) >= currentCandle.sma44 && (currentCandle.low * 0.999) <= currentCandle.sma44
+  const touchingSma = (current.high * 1.001) >= current.sma44 && (current.low * 0.999) <= current.sma44
 
   if (
     current.close < candleMid &&

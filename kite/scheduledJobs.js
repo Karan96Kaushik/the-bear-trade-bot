@@ -13,7 +13,7 @@ const { generateDailyReport } = require('../analytics/reports');
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 
-async function setupZaireOrders(checkV2 = false) {
+async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
         await sendMessageToChannel(`⌛️ Executing Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`);
 
@@ -28,6 +28,17 @@ async function setupZaireOrders(checkV2 = false) {
                             .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
                             .filter(d => d.sym)
 
+        if (checkV3) {
+            highBetaData = await readSheetData('HIGHBETA!D2:D550')
+            niftyList = highBetaData
+                            .map(stock => stock[0])
+                            .filter(d => d !== 'NOT FOUND' && d)
+            highBetaData = highBetaData
+                            .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
+                            .filter(d => d.sym)
+
+        }
+
         let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
         sheetData = processMISSheetData(sheetData)
 
@@ -36,8 +47,9 @@ async function setupZaireOrders(checkV2 = false) {
         let selectedStocks = await scanZaireStocks(
             niftyList,
             null,
-            checkV2 ? '5m' : '15m',
-            checkV2
+            (checkV2 || checkV3) ? '5m' : '15m',
+            checkV2,
+            checkV3
         )
         // selectedStocks = selectedStocks.filter(s => 
         //                                     (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
@@ -607,16 +619,16 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
 
-    const zaireJobV2CB = () => {
-        // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() < zaireJobV2_3.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_3.nextInvocation() : zaireJobV2_2.nextInvocation()));
-        sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
-        setupZaireOrders(true);
+    const zaireJobV3CB = () => {
+        sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation() < zaireJobV3_2.nextInvocation() ? zaireJobV3.nextInvocation() < zaireJobV3_3.nextInvocation() ? zaireJobV3.nextInvocation() : zaireJobV3_3.nextInvocation() : zaireJobV3_2.nextInvocation()));
+        // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
+        setupZaireOrders(false, true);
     };
-    const zaireJobV2 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV2CB);
-    const zaireJobV2_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV2CB);
-    const zaireJobV2_3 = schedule.scheduleJob('30 0,5,10,15,20,25,30 9 * * 1-5', zaireJobV2CB);
-    // const zaireJobV2 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV2CB);
-    sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation() < zaireJobV2_2.nextInvocation() ? zaireJobV2.nextInvocation() < zaireJobV2_3.nextInvocation() ? zaireJobV2.nextInvocation() : zaireJobV2_3.nextInvocation() : zaireJobV2_2.nextInvocation()));
+    const zaireJobV3 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
+    const zaireJobV3_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV3CB);
+    const zaireJobV3_3 = schedule.scheduleJob('30 0,5,10,15,20,25,30 9 * * 1-5', zaireJobV3CB);
+    // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
+    sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation() < zaireJobV3_2.nextInvocation() ? zaireJobV3.nextInvocation() < zaireJobV3_3.nextInvocation() ? zaireJobV3.nextInvocation() : zaireJobV3_3.nextInvocation() : zaireJobV3_2.nextInvocation()));
     // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
 
     const baileyJobCB = () => {
