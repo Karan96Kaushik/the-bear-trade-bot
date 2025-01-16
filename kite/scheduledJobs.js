@@ -15,7 +15,7 @@ const MIN_ORDER_VALUE = 0
 
 async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
-        await sendMessageToChannel(`⌛️ Executing Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`);
+        await sendMessageToChannel(`⌛️ Executing Zaire ${checkV3 ? 'V3' : checkV2 ? 'V2' : ''} MIS Jobs`);
 
         // let niftyList = await readSheetData('Nifty!A1:A200') 
         // niftyList = niftyList.map(stock => stock[0])
