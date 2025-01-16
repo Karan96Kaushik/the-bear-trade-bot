@@ -351,6 +351,33 @@ function checkReverseCandleConditions(row, maValue, tolerance = 0.01) {
     return (condition1 || condition2) && condition3;
 }
 
+function getDateRange(endDateNew) {
+    let endDate = new Date();
+    endDate.setUTCSeconds(10);
+
+    if (endDateNew) {
+        endDate = new Date(endDateNew);
+    }
+
+    const startDate = new Date(endDate);
+    startDate.setDate(startDate.getDate() - 6);
+
+    return { startDate, endDate };
+}
+
+function removeIncompleteCandles(df) {
+    if (!df || df.length === 0) return df;
+    
+    // Remove last candle as it's likely incomplete
+    df.pop();
+    
+    // Remove additional candle if it's from today
+    if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
+        df.pop();
+    }
+    
+    return df;
+}
 
 async function getLastCandle(sym, endDateNew, interval = '15m') {
     try {
@@ -396,33 +423,16 @@ async function getLastCandle(sym, endDateNew, interval = '15m') {
     return null;
 }
 
-async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 = false) {
+async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 = false, checkV3 = false) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
       try {
-
-        let endDate = new Date();
-        endDate.setUTCSeconds(10);
-
-        if (endDateNew) {
-            endDate = new Date(endDateNew);
-        }
-
-        const startDate = new Date(endDate);
-        startDate.setDate(startDate.getDate() - 6);
-
+        const { startDate, endDate } = getDateRange(endDateNew);
+        
         let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate);
         df = processYahooData(df);
-
-        /*
-          Remove incomplete candles
-        */
-        df.pop()
-        // Confirm that the final candle will be for today only and then remve the additional incomplete one
-        if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
-            df.pop()
-        }
+        df = removeIncompleteCandles(df);
 
         if (DEBUG) {
           console.log('----')
@@ -445,7 +455,43 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
         const maValue = firstCandle['sma44'];
 
         let conditionsMet = null
-        if (checkV2) {
+        if (checkV3) {
+
+          let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate);
+          df5min = processYahooData(df5min);
+          df5min = removeIncompleteCandles(df5min);
+          if (!df5min || df5min.length === 0) continue;
+          df5min = addMovingAverage(df5min, 'close', 44, 'sma44');
+          df5min = df5min.filter(r => r.close);
+
+          let df15min = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
+          df15min = processYahooData(df15min);
+          df15min = removeIncompleteCandles(df15min);
+          if (!df15min || df15min.length === 0) continue;
+          df15min = addMovingAverage(df15min, 'close', 44, 'sma44');
+          df15min = df15min.filter(r => r.close);
+
+          let df75min = [];
+          for (let i = 0; i < df15min.length; i += 5) {
+            if (i + 4 >= df15min.length) break;  // Skip if we don't have 5 complete candles
+            
+            const fiveCandles = df15min.slice(i, i + 5);
+            const combined = {
+              time: fiveCandles[0].time,
+              open: fiveCandles[0].open,
+              high: Math.max(...fiveCandles.map(c => c.high)),
+              low: Math.min(...fiveCandles.map(c => c.low)),
+              close: fiveCandles[4].close,
+              volume: fiveCandles.reduce((sum, c) => sum + c.volume, 0)
+            };
+            df75min.push(combined);
+          }
+          df75min = addMovingAverage(df75min, 'close', 44, 'sma44');
+          df75min = df75min.filter(r => r.close);
+
+          conditionsMet = checkV3Conditions(df5min, df15min, df75min)
+        }
+        else if (checkV2) {
           conditionsMet = checkV2Conditions(df)
         } else {
           conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
@@ -536,6 +582,72 @@ function checkV2Conditions(df) {
     ) 
     return 'BULLISH'
 }
+
+function checkV3Conditions(df5min, df15min, df75min) {
+
+  const processConditions = (df) => {
+    const current = df[df.length - 1];
+    const t1 = df[df.length - 2];
+    const t2 = df[df.length - 3];
+    const t3 = df[df.length - 4];
+
+    if (
+      current.sma44 < t1.sma44 &&
+      t1.sma44 < t2.sma44 &&
+      t2.sma44 < t3.sma44
+    )
+      return 'BEARISH'
+
+    
+    if (
+      current.sma44 > t1.sma44 &&
+      t1.sma44 > t2.sma44 &&
+      t2.sma44 > t3.sma44
+    )
+      return 'BULLISH'
+
+    // No conditions met
+    return null;
+  };
+  
+  // Evaluate conditions for each timeframe
+  const result5min = processConditions(df5min);
+  const result15min = processConditions(df15min);
+  const result75min = processConditions(df75min);
+
+  if (result5min != result15min || result15min != result75min || !result5min || !result15min || !result75min) {
+    return null
+  }
+
+
+  const current = df5min[df5min.length - 1];
+  // const t1 = df5min[df5min.length - 2];
+  // const t2 = df5min[df5min.length - 3];
+  // const t3 = df5min[df5min.length - 4];
+  
+  const candleMid = (current.high + current.low) / 2;
+
+  const touchingSma = (currentCandle.high * 1.001) >= currentCandle.sma44 && (currentCandle.low * 0.999) <= currentCandle.sma44
+
+  if (
+    current.close < candleMid &&
+    isNarrowRange(current, 0.005) &&
+    touchingSma &&
+    result75min === 'BEARISH'
+  )
+    return 'BEARISH'
+
+  
+  if (
+    current.close > candleMid &&
+    isNarrowRange(current, 0.005) &&
+    touchingSma &&
+    result75min === 'BULLISH'
+  )
+    return 'BULLISH'
+
+}
+
 
 function isNarrowRange(candle, tolerance = 0.015) {
   const { high, low } = candle;
