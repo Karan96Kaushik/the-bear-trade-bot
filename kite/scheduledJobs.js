@@ -65,7 +65,13 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         );
 
         sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, selectedStocks);
+
+        if (checkV3) {
+            selectedStocks = selectedStocks.filter(s => s.direction !== 'BULLISH')
+            sendMessageToChannel(`🔔 Only placing Zaire v3 orders on BEARISH`);
+        }
         
+
         // if (completed_zaire_orders.length > 10) {
         //     sendMessageToChannel('🔔 Total completed order count exceeded 10, no longer placing orders');
         //     return
