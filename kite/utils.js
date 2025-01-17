@@ -99,8 +99,8 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
         const response = await axios.get(url, { params, headers });
         return response.data;
     } catch (error) {
-        console.error(`Error fetching data from Yahoo Finance for ${sym}:`, error?.response?.data);
-        throw error;
+        console.error(`Error fetching data from Yahoo Finance for ${sym}:`, error?.response?.data?.chart?.error?.description);
+        throw new Error(error?.response?.data?.chart?.error?.description);
     }
 }
 
