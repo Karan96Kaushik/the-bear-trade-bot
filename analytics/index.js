@@ -438,9 +438,15 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           console.log('----')
         }
 
-        if (!df || df.length === 0) continue;
+        if (!df || df.length === 0) {
+          // console.debug('No data')
+          continue 
+        };
 
-        if (df[df.length - 1].high > MAX_STOCK_PRICE) continue;
+        if (df[df.length - 1].high > MAX_STOCK_PRICE)  {
+          // console.debug('Too high')
+          continue 
+        };
         
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
@@ -471,11 +477,26 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           df15min = addMovingAverage(df15min, 'close', 44, 'sma44');
           df15min = df15min.filter(r => r.close);
 
+          let startIndex = 0;
+          for (let i = 0; i < df15min.length; i++) {
+            const ts = new Date(df15min[i].time);
+            if (['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes())) {
+              startIndex = i;
+              break;
+            }
+          }
+
           let df75min = [];
-          for (let i = 0; i < df15min.length; i += 5) {
-            if (i + 4 >= df15min.length) break;  // Skip if we don't have 5 complete candles
-            
+
+          for (let i = startIndex; i < df15min.length; i += 5) {
+            if (i + 4 >= df15min.length) break;
+
             const fiveCandles = df15min.slice(i, i + 5);
+            
+            // const ts = new Date(fiveCandles[0].time)
+            // console.debug(ts.getHours() + ':' + ts.getMinutes(), ['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes()) ? '✅' : '❌')
+            // if (!['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes())) continue
+
             const combined = {
               time: fiveCandles[0].time,
               open: fiveCandles[0].open,
@@ -489,6 +510,8 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           df75min = addMovingAverage(df75min, 'close', 44, 'sma44');
           df75min = df75min.filter(r => r.close);
 
+          // console.debug(df75min)
+          
           conditionsMet = checkV3Conditions(df5min, df15min, df75min)
         }
         else if (checkV2) {
