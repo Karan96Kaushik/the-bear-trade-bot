@@ -23,7 +23,7 @@ function appendArrayToCSV(data, filePath=defaultFilePath) {
 const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
 
-const interval = '5m'
+const interval = '15m'
 // let sheetName = '29Nov'
 
 // if (interval == '5m') {
@@ -253,7 +253,7 @@ async function getDailyStats(startTime, endTime, candleType) {
         console.log(startTime, endTime);
         console.log('---');
 
-        const maxConcurrent = 50;
+        const maxConcurrent = 3;
         const rows = [];
         let activePromises = new Set();
         let stockIndex = 0;
@@ -289,7 +289,7 @@ async function getDailyStats(startTime, endTime, candleType) {
     }
 }
 
-defaultFilePath = `training_1_${interval}.csv`
+defaultFilePath = `training_2_${interval}.csv`
 
 const run = async () => {
 
@@ -362,7 +362,7 @@ const run = async () => {
 
     console.log(niftyList)
 
-    const baseDate = new Date(`2024-11-04`)
+    const baseDate = new Date(`2024-12-29`)
     // const baseDate = new Date(`2024-11-01`)
 
     // const days = 50

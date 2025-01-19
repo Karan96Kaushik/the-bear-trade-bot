@@ -26,7 +26,8 @@ async function getDailyStats(startTime, endTime) {
     try {
 
         let niftyList = await readSheetData(sheetRange)  
-        niftyList = niftyList.map(stock => stock[0])
+        niftyList = niftyList.map(stock => stock[0]).filter(Boolean)
+        // niftyList = niftyList
 
         console.log('---')
 
@@ -224,95 +225,71 @@ async function getDailyStats(startTime, endTime) {
 }
 
 const run = async () => {
-
-
-    // let startTime = new Date(`2024-11-15`).setUTCHours(4, 0, 10, 0);
-    // let endTime = new Date(`2024-11-26`).setUTCHours(4, 15, 10, 0);
-
-    // await getDailyStats(startTime, endTime)
-
-    // return
-
     const headers = [['Timestamp', 'Sym', 'High', 'Low', 'Open', 'Close', 'SMA44', 'RSI14', 'Volume Prev Day Avg', 'Volume P Last', 'Volume P 2nd Last', 'Volume P 3rd Last', 'Low Day', 'High Day', 'MA Direction', 'MA Trend Count', 'Candle Selected', 'Target', 'SL', 'Acheieved']]
-
     await appendRowsToSheet(sheetName + '!A1:G', headers, sheetID);
 
-    for (let i = 9; i <= 9; i++) {    
+    // Define time intervals to check (in hours and minutes)
+    const timeChecks = [
+        { hours: 9, minutes: 31 },
+        { hours: 9, minutes: 46 },
+        { hours: 3, minutes: 46 },
+        { hours: 4, minutes: 1 },
+        { hours: 4, minutes: 16 },
+        { hours: 4, minutes: 31 }
+    ];
 
-        let startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        let endTime = new Date(`2024-12-${i}`);
-        endTime.setDate(endTime.getDate() - 1)
-        if (endTime.getDay() == 0 || endTime.getDay() == 6) {
-            endTime.setDate(endTime.getDate() - 2)
-        }
-        endTime.setUTCHours(9, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
+    const baseDate = new Date(`2024-12-09`)
 
+    while (baseDate < new Date()) {
 
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        endTime = new Date(`2024-12-${i}`);
-        if (endTime.getDay() == 0 || endTime.getDay() == 6) {
-            endTime.setDate(endTime.getDate() - 2)
-        }
-        endTime.setUTCHours(9, 46, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
+        baseDate.setDate(baseDate.getDate() + 1)
 
-
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        endTime = new Date(`2024-12-${i}`);
-        // endTime.setDate(endTime.getDate() - 1)
-        // endTime.setUTCHours(10, 1, 10, 0);
-        endTime.setUTCHours(3, 46, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
-
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-        endTime = new Date(`2024-12-${i}`);
-        endTime.setUTCHours(4, 1, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 51, 10, 0);
-        }
-        await getDailyStats(startTime, endTime)
-
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(`2024-12-${i}`);
-        endTime.setUTCHours(4, 16, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 56, 10, 0);
+        if ([0,6].includes(baseDate.getDay())) {
+            console.log('Skipping weekend', baseDate)
+            continue
         }
 
-        await getDailyStats(startTime, endTime)
+        console.log(baseDate)
 
-        startTime = new Date(`2024-12-${i}`)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
+        for (const timeCheck of timeChecks) {
 
-        endTime = new Date(`2024-12-${i}`);
-        endTime.setUTCHours(4, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 1, 10, 0);
+            let startTime = new Date(baseDate);
+            startTime.setUTCHours(4, 0, 10, 0);
+            startTime.setDate(startTime.getDate() - 5);
+
+            let endTime = new Date(baseDate);
+            
+            // Handle weekend adjustment for first time check only
+            if (timeCheck.hours === 9 && timeCheck.minutes === 31) {
+                endTime.setDate(endTime.getDate() - 1);
+            }
+            
+            // Weekend check
+            if (endTime.getDay() === 0 || endTime.getDay() === 6) {
+                endTime.setDate(endTime.getDate() - 2);
+            }
+
+            endTime.setUTCHours(timeCheck.hours, timeCheck.minutes, 10, 0);
+
+            // Adjust for 5m interval
+            if (interval === '5m') {
+                const fiveMinAdjustment = {
+                    '9:31': '3:51',
+                    '9:46': '3:51',
+                    '3:46': '3:51',
+                    '4:1': '3:51',
+                    '4:16': '3:56',
+                    '4:31': '4:1'
+                };
+                const timeKey = `${timeCheck.hours}:${timeCheck.minutes}`;
+                if (fiveMinAdjustment[timeKey]) {
+                    const [hours, minutes] = fiveMinAdjustment[timeKey].split(':');
+                    endTime.setUTCHours(parseInt(hours), parseInt(minutes), 10, 0);
+                }
+            }
+
+            await getDailyStats(startTime, endTime);
         }
-
-        await getDailyStats(startTime, endTime)
     }
 }
 
