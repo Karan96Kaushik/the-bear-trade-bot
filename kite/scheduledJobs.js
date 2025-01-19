@@ -66,10 +66,10 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
 
         sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, selectedStocks);
 
-        if (checkV3) {
-            selectedStocks = selectedStocks.filter(s => s.direction !== 'BULLISH')
-            sendMessageToChannel(`🔔 Only placing Zaire v3 orders on BEARISH`);
-        }
+        // if (checkV3) {
+        //     selectedStocks = selectedStocks.filter(s => s.direction !== 'BULLISH')
+        //     sendMessageToChannel(`🔔 Only placing Zaire v3 orders on BEARISH`);
+        // }
         
 
         // if (completed_zaire_orders.length > 10) {
@@ -77,20 +77,28 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         //     return
         // }
 
+        if (
+            positions.net.filter(p => p.quantity !== 0).length > 5
+            // || 
+            // orders.find(o => o.tradingsymbol === stock.sym)
+        ) {
+            await sendMessageToChannel('🔔 Active positions are more than 5')
+            return
+        }
+
         const sheetEntries = []
 
         for (const stock of selectedStocks) {
             try {
                 // Skip if stock is already in position or open orders
                 if (
-                    (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
-                    // || 
-                    // orders.find(o => o.tradingsymbol === stock.sym)
+                    positions.net.find(p => p.tradingsymbol === stock.sym)
+                    // (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
                 ) {
                     await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
                     continue
                 }
-
+                
                 if (sheetData.find(s => s.stockSymbol === stock.sym)) {
                     await sendMessageToChannel('🔔 Ignoring coz already in sheet', stock.sym)
                     continue
