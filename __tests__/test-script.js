@@ -1,6 +1,7 @@
-const { scanZaireStocks } = require("../analytics")
+const { scanZaireStocks, scanBailyStocks } = require("../analytics")
 const { readSheetData, processMISSheetData, getStockLoc } = require("../gsheets")
 const { updateNameInSheetForClosedOrder } = require("../kite/processor")
+const { setupZaireOrders } = require("../kite/scheduledJobs")
 const { kiteSession } = require("../kite/setup")
 // const { placeOrder } = require("../kite/processor")
 const { getDateStringIND } = require("../kite/utils")
@@ -34,19 +35,28 @@ const run = async () => {
 
         // return
 
-        let niftyList = await readSheetData('Nifty!A1:A200')  // await getDhanNIFTY50Data();
+        let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['TATACONSUM']
+        niftyList = ['ICICIGI', 'MAZDOCK']
+
+        // const selectedStocks = await scanBailyStocks(niftyList, '2024-12-27T04:11:10Z', '5m')
+        // console.log(selectedStocks)
 
         // await kiteSession.authenticate();
         // const positions = await kiteSession.kc.getPositions();
         // const orders = await kiteSession.kc.getOrders();
 
-        let date = new Date('2024-12-27T04:11:10Z')
+        // await setupZaireOrders(0,1)
+
+        let date = new Date('2025-01-17T07:31:10Z')
 
         for (let i = 0; i < 100; i++) {
             console.log(getDateStringIND(date), '---------')
-            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', true);
+
+            // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
+            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true);
+
+
             if (selectedStocks.length > 0) {
                 console.log('selected stocks found-------------------->>>>>>>')
                 console.log(selectedStocks)
