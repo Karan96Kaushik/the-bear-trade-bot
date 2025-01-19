@@ -1,5 +1,6 @@
 const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data, getMcIndicators } = require("../kite/utils");
 const { getDateStringIND } = require("../kite/utils");
+const _ = require('lodash')
 
 const MA_TREND_WINDOW = 10;
 const DEBUG = process.env.DEBUG || false;
@@ -429,6 +430,7 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
     for (const sym of stockList) {
       try {
         const { startDate, endDate } = getDateRange(endDateNew);
+        let df75min = [];
         
         let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate);
         df = processYahooData(df);
@@ -470,28 +472,33 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           df5min = addMovingAverage(df5min, 'close', 44, 'sma44');
           df5min = df5min.filter(r => r.close);
 
-          let df15min = await getDataFromYahoo(sym, 5, '15m', startDate, endDate);
+          // 75 Mins candles needs more data
+          let earlierStart = new Date(startDate)
+          earlierStart.setDate(earlierStart.getDate() - 10)
+
+          let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate);
           df15min = processYahooData(df15min);
           df15min = removeIncompleteCandles(df15min);
+
+          let df15min_copy = [...df15min]
+
           if (!df15min || df15min.length === 0) continue;
           df15min = addMovingAverage(df15min, 'close', 44, 'sma44');
           df15min = df15min.filter(r => r.close);
 
           let startIndex = 0;
-          for (let i = 0; i < df15min.length; i++) {
-            const ts = new Date(df15min[i].time);
+          for (let i = 0; i < df15min_copy.length; i++) {
+            const ts = new Date(df15min_copy[i].time);
             if (['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes())) {
               startIndex = i;
               break;
             }
           }
 
-          let df75min = [];
+          for (let i = startIndex; i < df15min_copy.length; i += 5) {
+            if (i + 4 >= df15min_copy.length) break;
 
-          for (let i = startIndex; i < df15min.length; i += 5) {
-            if (i + 4 >= df15min.length) break;
-
-            const fiveCandles = df15min.slice(i, i + 5);
+            const fiveCandles = df15min_copy.slice(i, i + 5);
             
             // const ts = new Date(fiveCandles[0].time)
             // console.debug(ts.getHours() + ':' + ts.getMinutes(), ['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes()) ? '✅' : '❌')
@@ -507,11 +514,19 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
             };
             df75min.push(combined);
           }
+          // console.log(df75min.length)
+
           df75min = addMovingAverage(df75min, 'close', 44, 'sma44');
           df75min = df75min.filter(r => r.close);
 
-          // console.debug(df75min)
-          
+          /**
+           * 
+           * Debugging 75 min candles
+           * 
+           */
+
+          // console.debug(df75min.map(d => ({...d, time: getDateStringIND(d.time)})))
+
           conditionsMet = checkV3Conditions(df5min, df15min, df75min)
         }
         else if (checkV2) {
@@ -521,9 +536,9 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
         }
 
         if (conditionsMet) {
-          const t2Candle = df[df.length - 3]
+          const t2Candle = df75min[df75min.length - 1]
           t2Candle.time = getDateStringIND(t2Candle.time)
-          const t3Candle = df[df.length - 4]
+          const t3Candle = df75min[df75min.length - 2]
           t3Candle.time = getDateStringIND(t3Candle.time)
 
           selectedStocks.push({
@@ -536,8 +551,10 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
               'sma44': maValue,
               volume: firstCandle.volume,
               direction: conditionsMet,
-              t2Candle,
-              t3Candle,
+              t75_0: t2Candle,
+              t75_1: t3Candle,
+              // t2Candle,
+              // t3Candle,
           });
 
         }
@@ -638,6 +655,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
   const result15min = processConditions(df15min);
   const result75min = processConditions(df75min);
 
+  // console.log(result5min, result15min, result75min)
+  
   if (result5min != result15min || result15min != result75min || !result5min || !result15min || !result75min) {
     return null
   }
@@ -660,6 +679,10 @@ function checkV3Conditions(df5min, df15min, df75min) {
   )
     return 'BEARISH'
 
+    // console.debug(    current.close > candleMid ,
+    //   isNarrowRange(current, 0.005) ,
+    //   touchingSma ,
+    //   result75min === 'BULLISH')
   
   if (
     current.close > candleMid &&
