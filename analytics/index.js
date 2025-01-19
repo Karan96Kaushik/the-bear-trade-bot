@@ -625,16 +625,18 @@ function checkV2Conditions(df) {
 
 function checkV3Conditions(df5min, df15min, df75min) {
 
-  const processConditions = (df) => {
+  const processConditions = (df, candleDur) => {
     const current = df[df.length - 1];
     const t1 = df[df.length - 2];
     const t2 = df[df.length - 3];
     const t3 = df[df.length - 4];
+    const t4 = df[df.length - 5];
 
     if (
       current.sma44 < t1.sma44 &&
       t1.sma44 < t2.sma44 &&
-      t2.sma44 < t3.sma44
+      t2.sma44 < t3.sma44 &&
+      (candleDur === 75 || t3.sma44 < t4.sma44)   // Only check for 15m and 5m
     )
       return 'BEARISH'
 
@@ -651,9 +653,9 @@ function checkV3Conditions(df5min, df15min, df75min) {
   };
   
   // Evaluate conditions for each timeframe
-  const result5min = processConditions(df5min);
-  const result15min = processConditions(df15min);
-  const result75min = processConditions(df75min);
+  const result5min = processConditions(df5min, 5);
+  const result15min = processConditions(df15min, 15);
+  const result75min = processConditions(df75min, 75);
 
   // console.log(result5min, result15min, result75min)
   
