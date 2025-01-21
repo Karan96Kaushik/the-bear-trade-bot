@@ -78,7 +78,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         // }
 
         if (
-            positions.net.filter(p => p.quantity !== 0).length > 5
+            positions.net.filter(p => p.quantity !== 0).length >= 5
             // || 
             // orders.find(o => o.tradingsymbol === stock.sym)
         ) {
