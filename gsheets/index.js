@@ -123,7 +123,11 @@ async function appendRowsToMISD(stocks) {
                 stock.quantity,
                 stock.lastAction,
                 stock.ignore,
-                stock.reviseSL
+                stock.reviseSL,
+                stock.sma44_0,
+                stock.sma44_1,
+                stock.sma44_2,
+                stock.sma44_3,
             ];
 
             const existingStock = existingData.find(d => d.quantity == stock.quantity && d.stockSymbol == stock.stockSymbol);

@@ -553,6 +553,10 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
               direction: conditionsMet,
               t75_0: t2Candle,
               t75_1: t3Candle,
+              sma44_0: df[df.length - 1]?.sma44,
+              sma44_1: df[df.length - 2]?.sma44,
+              sma44_2: df[df.length - 3]?.sma44,
+              sma44_3: df[df.length - 4]?.sma44,
               // t2Candle,
               // t3Candle,
           });
