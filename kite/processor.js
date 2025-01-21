@@ -370,7 +370,7 @@ async function createZaireOrders(stock, tag='zaire') {
             // Stop loss is low
             stopLossPrice = stock.low - triggerPadding;
             // Target price is double the difference between high and low plus trigger price
-            targetPrice = ((stock.high + triggerPrice) - stopLossPrice) * 2 // triggerPrice;
+            targetPrice = stock.high + ((triggerPrice - stopLossPrice) * 2) // triggerPrice;
 
             // Round all values to 1 decimal place
             triggerPrice = Math.round(triggerPrice * 10) / 10;
@@ -413,7 +413,7 @@ async function createZaireOrders(stock, tag='zaire') {
             // Stop loss is high
             stopLossPrice = stock.high + triggerPadding;
             // Target price is double the difference between trigger price and low
-            targetPrice = stock.low - (stopLossPrice - triggerPrice)* 2
+            targetPrice = stock.low - ((stopLossPrice - triggerPrice) * 2)
 
             // Round all values to 1 decimal place
             triggerPrice = Math.round(triggerPrice * 10) / 10;
