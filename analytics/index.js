@@ -648,7 +648,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
     if (
       current.sma44 > t1.sma44 &&
       t1.sma44 > t2.sma44 &&
-      t2.sma44 > t3.sma44
+      t2.sma44 > t3.sma44 &&
+      (candleDur === 75 || t3.sma44 > t4.sma44)   // Only check for 15m and 5m
     )
       return 'BULLISH'
 
