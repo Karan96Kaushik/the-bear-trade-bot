@@ -49,7 +49,7 @@ async function getRetrospective(startDate, endDate) {
             price: a.price || a.average_price, 
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
-            source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : 'sheet',
+            source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
             exitReason: a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
         })))
