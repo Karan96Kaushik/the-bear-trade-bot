@@ -671,8 +671,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
 
   const current = df5min[df5min.length - 1];
   // const t1 = df5min[df5min.length - 2];
-  // const t2 = df5min[df5min.length - 3];
-  // const t3 = df5min[df5min.length - 4];
+  const t2 = df5min[df5min.length - 3];
+  const t3 = df5min[df5min.length - 4];
   
   const candleMid = (current.high + current.low) / 2;
 
@@ -682,6 +682,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
     current.close < candleMid &&
     isNarrowRange(current, 0.005) &&
     touchingSma &&
+    t2.high < current.high &&
+    t3.high < current.high &&
     result75min === 'BEARISH'
   )
     return 'BEARISH'
@@ -695,6 +697,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
     current.close > candleMid &&
     isNarrowRange(current, 0.005) &&
     touchingSma &&
+    t2.low > current.low &&
+    t3.low > current.low &&
     result75min === 'BULLISH'
   )
     return 'BULLISH'
