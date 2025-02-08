@@ -450,6 +450,11 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           continue 
         };
         
+        if (df.slice(-44).filter(r => !r.close).length > 4) {
+          console.log('Too many incomplete candles', sym)
+          continue
+        }
+        
         df = addMovingAverage(df, 'close', 44, 'sma44');
         df = df.filter(r => r.close);
 
