@@ -441,17 +441,17 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
         }
 
         if (!df || df.length === 0) {
-          // console.debug('No data')
+          if (DEBUG) console.debug('No data')
           continue 
         };
 
         if (df[df.length - 1].high > MAX_STOCK_PRICE)  {
-          // console.debug('Too high')
+          if (DEBUG) console.debug('Too high')
           continue 
         };
         
         if (df.slice(-44).filter(r => !r.close).length > 4) {
-          console.log('Too many incomplete candles', sym)
+          if (DEBUG) console.debug('Too many incomplete candles', sym)
           continue
         }
         
@@ -667,7 +667,9 @@ function checkV3Conditions(df5min, df15min, df75min) {
   const result15min = processConditions(df15min, 15);
   const result75min = processConditions(df75min, 75);
 
-  // console.log(result5min, result15min, result75min)
+  if (DEBUG) {
+    console.log(result5min, result15min, result75min)
+  }
   
   if (result5min != result15min || result15min != result75min || !result5min || !result15min || !result75min) {
     return null
@@ -697,6 +699,10 @@ function checkV3Conditions(df5min, df15min, df75min) {
     //   isNarrowRange(current, 0.005) ,
     //   touchingSma ,
     //   result75min === 'BULLISH')
+
+  if (DEBUG) {
+    console.log(current.close > candleMid, isNarrowRange(current, 0.005), touchingSma, result75min, result5min, result15min, t2.low > current.low, t3.low > current.low)
+  }
   
   if (
     current.close > candleMid &&
