@@ -668,6 +668,7 @@ function checkV3Conditions(df5min, df15min, df75min) {
   const result75min = processConditions(df75min, 75);
 
   if (DEBUG) {
+    console.log('result5min', 'result15min', 'result75min')
     console.log(result5min, result15min, result75min)
   }
   
@@ -701,6 +702,7 @@ function checkV3Conditions(df5min, df15min, df75min) {
     //   result75min === 'BULLISH')
 
   if (DEBUG) {
+    console.log('current.close > candleMid', 'isNarrowRange(current, 0.005)', 'touchingSma', 'result75min', 'result5min', 'result15min', 't2.low > current.low', 't3.low > current.low')
     console.log(current.close > candleMid, isNarrowRange(current, 0.005), touchingSma, result75min, result5min, result15min, t2.low > current.low, t3.low > current.low)
   }
   
