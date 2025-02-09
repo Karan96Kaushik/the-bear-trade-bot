@@ -37,7 +37,7 @@ const run = async () => {
 
         let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['CIPLA']
+        niftyList = ['HCLTECH']
 
         // const selectedStocks = await scanBailyStocks(niftyList, '2024-12-27T04:11:10Z', '5m')
         // console.log(selectedStocks)
@@ -48,7 +48,7 @@ const run = async () => {
 
         // await setupZaireOrders(0,1)
 
-        let date = new Date('2025-02-06T08:00:10Z')
+        let date = new Date('2025-02-07T07:00:10Z')
 
         for (let i = 0; i < 100; i++) {
             console.log(getDateStringIND(date), '---------', process.env.DEBUG)
