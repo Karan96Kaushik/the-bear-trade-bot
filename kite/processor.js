@@ -181,7 +181,7 @@ const setupReversalOrders = async (order) => {
 const updateNameInSheetForClosedOrder = async (order) => {
     try {
         let updates = []
-        let sheetData = await readSheetData('MIS-ALPHA!A1:W150')
+        let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
         const rowHeaders = sheetData.map(a => a[1])
         const colHeaders = sheetData[0]
 
@@ -230,7 +230,7 @@ const processSuccessfulOrder = async (order) => {
             let lower_circuit_limit = quote[`NSE:${order.tradingsymbol}`]?.lower_circuit_limit
 
             try {
-                let sheetData = await readSheetData('MIS-ALPHA!A1:W100')
+                let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
                 const rowHeaders = sheetData.map(a => a[1])
                 const colHeaders = sheetData[0]
                 const [row, col] = getStockLoc(order.tradingsymbol, 'Last Action', rowHeaders, colHeaders)

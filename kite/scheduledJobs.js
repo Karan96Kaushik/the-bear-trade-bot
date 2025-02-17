@@ -39,7 +39,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
 
         }
 
-        let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
+        let sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
         sheetData = processMISSheetData(sheetData)
 
         await kiteSession.authenticate();
@@ -129,7 +129,7 @@ async function setupBaileyOrders() {
         // highBetaData = highBetaData
         //                     .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
         //                     .filter(d => d.sym)
-        let sheetData = await readSheetData('MIS-ALPHA!A2:W10000')
+        let sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
         sheetData = processMISSheetData(sheetData)
 
 
@@ -184,7 +184,7 @@ async function cancelZaireOrders() {
         const orders = await kiteSession.kc.getOrders();
         const zaireOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN') && o.tag?.includes('zaire') && o.tag?.includes('trigger'));
 
-        let sheetData = await readSheetData('MIS-ALPHA!A1:W150')
+        let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
         const rowHeaders = sheetData.map(a => a[1])
         const colHeaders = sheetData[0]
 
@@ -537,7 +537,7 @@ async function setupMissingOrders() {
         const openPositions = positions.net.filter(position => (position.quantity || 0) != 0);
 
         // Get sheet data for reference
-        let stockData = await readSheetData('MIS-ALPHA!A2:W10000');
+        let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
         stockData = processMISSheetData(stockData);
 
         console.log(stockData)
