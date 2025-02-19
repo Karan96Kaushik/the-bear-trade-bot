@@ -613,25 +613,14 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
-    const updateStopLossJobCB = () => {
+    const updateStopLossCB = () => {
+        sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
         updateStopLossOrders();
-        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
     }
-    const updateStopLossJob = schedule.scheduleJob('*/15 5-9 * * 1-5', updateStopLossJobCB);
-    const updateStopLossJob_2 = schedule.scheduleJob('45 4 * * 1-5', updateStopLossJobCB);
-    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()))
-
-    const updateStopLossJob2 = schedule.scheduleJob('15,30,45 4 * * 1-5', () => {
-        updateStopLossOrders();
-        sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()));
-    });
-    sendMessageToChannel('⏰ Update Stop Loss Orders Job Scheduled - ', getDateStringIND(updateStopLossJob2.nextInvocation()))
-
-    // const zaireJob = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', () => {
-    //     sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
-    //     setupZaireOrders();
-    // });
-    // sendMessageToChannel('⏰ Zaire Scheduled - ', getDateStringIND(zaireJob.nextInvocation()));
+    const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
+    const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
+    const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30 9 * * 1-5', updateStopLossCB);
+    sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() < updateStopLossJob_3.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_3.nextInvocation() : updateStopLossJob_2.nextInvocation()));
 
     const zaireJobV3CB = () => {
         sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation() < zaireJobV3_2.nextInvocation() ? zaireJobV3.nextInvocation() < zaireJobV3_3.nextInvocation() ? zaireJobV3.nextInvocation() : zaireJobV3_3.nextInvocation() : zaireJobV3_2.nextInvocation()));
