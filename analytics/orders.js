@@ -42,14 +42,14 @@ async function getRetrospective(startDate, endDate) {
         // return
 
         results.push(...completedOrders.map(a => ({
-            _timestamp: allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('PLACE'))?.timestamp || a.timestamp,
-            timestamp: (allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('PLACE'))?.timestamp && getDateStringIND(allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('PLACE'))?.timestamp)) || getDateStringIND(a.timestamp), 
+            _timestamp: allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp || a.timestamp,
+            timestamp: (allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp && getDateStringIND(allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp)) || getDateStringIND(a.timestamp), 
             tradingsymbol: a.tradingsymbol, 
             quantity: a.quantity, 
             price: a.price || a.average_price, 
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
-            source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : 'sheet',
+            source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
             exitReason: a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
         })))

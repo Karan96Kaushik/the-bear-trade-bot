@@ -2,6 +2,8 @@ const { kiteSession } = require('./setup');
 const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
+const _ = require('lodash');
+const Redis = require('ioredis');
 
 const CACHE_FILE_PATH = path.join(__dirname, 'instrumentTokenCache.json');
 
@@ -15,6 +17,42 @@ const getDateStringIND = (date) => {
     date = date.toISOString().split('T')
     return date[0] + ' ' + date[1].split('.')[0]
 }
+
+const redis = new Redis(); // Configure with your Redis connection details if needed
+
+const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
+    return async (...args) => {
+        const key = `cache:${JSON.stringify(args)}`;
+        
+        try {
+            // Try to get from Redis cache
+            const cached = await redis.get(key);
+            
+            if (cached) {
+                console.log('Cache hit');
+                return JSON.parse(cached);
+            }
+            
+            // If not in cache, execute function
+            let result = await fn(...args);
+            
+            // Store in Redis with TTL
+            if (result?.data) {
+                result = {data: result.data}
+            }
+            console.log(result);
+            await redis.setex(key, ttl, JSON.stringify(result));
+            console.log('Cache miss');
+            
+            return result;
+        } catch (error) {
+            console.error('Redis cache error:', error);
+            // console.error('Redis cache result:', result);
+            // Fallback to direct function call if Redis fails
+            return fn(...args);
+        }
+    };
+};
 
 /**
  * Get the instrument token for a given trading symbol
@@ -53,6 +91,8 @@ async function getInstrumentToken(tradingSymbol) {
     }
 }
 
+const axiosGetYahoo = memoizeRedis((...args) => axios.get(...args))
+
 /**
  * Fetch stock data from Yahoo Finance
  * @param {string} sym - The stock symbol (without .NS)
@@ -60,7 +100,7 @@ async function getInstrumentToken(tradingSymbol) {
  * @param {string} [interval='1d'] - Data interval ('1d', '1h', etc.)
  * @returns {Promise<Object>} The stock data
  */
-async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', startDate, endDate) {
+async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', startDate, endDate, useCached=false) {
     try {
         const _sym = sym.includes('^') ? sym : sym + '.NS'
         const url = `https://query1.finance.yahoo.com/v8/finance/chart/${_sym}`;
@@ -72,6 +112,17 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
             period1Date = new Date(startDate);
             today = new Date(endDate);
         }
+
+        let usingCache = false
+        let requestedDate = new Date(today)
+
+        if (useCached) {
+            usingCache = true
+            today.setHours(11,0,0,0)
+            period1Date.setHours(2,0,0,0)
+        }
+
+        // console.log(getDateStringIND(today), getDateStringIND(period1Date))
         
         const period1 = Math.floor(period1Date.getTime() / 1000);
         const period2 = Math.floor(today.getTime() / 1000);
@@ -95,12 +146,41 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
             'Origin': 'https://finance.yahoo.com',
             'Connection': 'keep-alive'
         };
-        
-        const response = await axios.get(url, { params, headers });
+
+        let response
+
+        if (usingCache) {
+            response = await axiosGetYahoo(url, { params, headers });
+        }
+        else {
+            response = await axios.get(url, { params, headers })
+        }
+
+        if (usingCache) {
+            const result = response.data.chart.result[0];
+            const quote = result.indicators.quote[0];
+
+            const filteredTimestamps = result.timestamp.filter(t => t*1000 < +requestedDate);
+            // console.log('old', result.timestamp.slice(-5).map(t => getDateStringIND(t*1000)))
+            // console.log('new', filteredTimestamps.slice(-5).map(t => getDateStringIND(t*1000)))
+            // console.log(getDateStringIND(requestedDate))
+            const newLength = filteredTimestamps.length;
+
+            result.timestamp = filteredTimestamps;
+            
+            result.indicators.quote[0] = {
+                open: quote.open.slice(0, newLength),
+                close: quote.close.slice(0, newLength),
+                high: quote.high.slice(0, newLength),
+                low: quote.low.slice(0, newLength),
+                volume: quote.volume.slice(0, newLength)
+            };
+        }
+
         return response.data;
     } catch (error) {
         console.error(`Error fetching data from Yahoo Finance for ${sym}:`, error?.response?.data?.chart?.error?.description);
-        throw new Error(error?.response?.data?.chart?.error?.description);
+        throw new Error(error?.response?.data?.chart?.error?.description || error.message);
     }
 }
 

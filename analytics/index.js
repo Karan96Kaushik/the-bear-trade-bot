@@ -424,15 +424,15 @@ async function getLastCandle(sym, endDateNew, interval = '15m') {
     return null;
 }
 
-async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 = false, checkV3 = false) {
+async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
       try {
         const { startDate, endDate } = getDateRange(endDateNew);
         let df75min = [];
-        
-        let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate);
+
+        let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
         df = processYahooData(df);
         df = removeIncompleteCandles(df);
 
@@ -470,7 +470,7 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
         let conditionsMet = null
         if (checkV3) {
 
-          let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate);
+          let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
           df5min = processYahooData(df5min);
           df5min = removeIncompleteCandles(df5min);
           if (!df5min || df5min.length === 0) continue;
@@ -481,7 +481,7 @@ async function scanZaireStocks(stockList, endDateNew, interval = '15m', checkV2 
           let earlierStart = new Date(startDate)
           earlierStart.setDate(earlierStart.getDate() - 10)
 
-          let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate);
+          let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
           df15min = processYahooData(df15min);
           df15min = removeIncompleteCandles(df15min);
 
@@ -649,7 +649,6 @@ function checkV3Conditions(df5min, df15min, df75min) {
     )
       return 'BEARISH'
 
-    
     if (
       current.sma44 > t1.sma44 &&
       t1.sma44 > t2.sma44 &&
@@ -897,7 +896,8 @@ module.exports = {
     getLastCandle,
     addRSI,
     calculateBollingerBands,
-    scanBaileyStocks
+    scanBaileyStocks,
+    getDateRange
 };
 
 
