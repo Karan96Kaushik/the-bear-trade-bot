@@ -25,7 +25,7 @@ if (process.env.NODE_ENV != 'production') {
     redis = new Redis()
 }
 
-const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
+const memoizeRedis = (fn, ttl = 6*60*60) => { // ttl in seconds for Redis
     return async (...args) => {
         const key = `cache:${JSON.stringify(args)}`;
         
@@ -34,7 +34,7 @@ const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
             const cached = await redis.get(key);
             
             if (cached) {
-                console.log('Cache hit');
+                // console.log('Cache hit');
                 return JSON.parse(cached);
             }
             
@@ -47,7 +47,7 @@ const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
             }
             console.log(result);
             await redis.setex(key, ttl, JSON.stringify(result));
-            console.log('Cache miss');
+            // console.log('Cache miss');
             
             return result;
         } catch (error) {
