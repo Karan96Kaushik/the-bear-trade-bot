@@ -116,7 +116,7 @@ async function getInstrumentToken(tradingSymbol) {
 
 const memoize = process.env.NODE_ENV != 'production' ? memoizeRedis : memoizeRAM
 
-const axiosGetYahoo = memoizeRedis((...args) => axios.get(...args))
+const axiosGetYahoo = memoize((...args) => axios.get(...args))
 
 /**
  * Fetch stock data from Yahoo Finance
