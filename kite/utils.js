@@ -3,7 +3,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const _ = require('lodash');
-const Redis = require('ioredis');
 
 const CACHE_FILE_PATH = path.join(__dirname, 'instrumentTokenCache.json');
 
@@ -18,7 +17,13 @@ const getDateStringIND = (date) => {
     return date[0] + ' ' + date[1].split('.')[0]
 }
 
-const redis = new Redis(); // Configure with your Redis connection details if needed
+let redis = null
+
+if (process.env.NODE_ENV != 'production') {
+    console.log('Using Redis in development')
+    const Redis = require('ioredis');
+    redis = new Redis()
+}
 
 const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
     return async (...args) => {
@@ -52,6 +57,24 @@ const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
             return fn(...args);
         }
     };
+};
+
+const memoizeRAM = (fn, ttl = 5*60*60*1000) => { // 5 hours in milliseconds
+    const cache = new Map();
+    return async (...args) => {
+      const key = JSON.stringify(args);
+      const cached = cache.get(key);
+      if (cached && cached.timestamp > Date.now() - ttl) {
+        console.log('Cache hit');
+        return  _.merge({}, cached.value) ;
+      }
+
+    const result = await fn(...args);
+
+    cache.set(key, { value: result, timestamp: Date.now() });
+    console.log('Cache miss');
+    return _.merge({}, result);
+  };
 };
 
 /**
@@ -90,6 +113,8 @@ async function getInstrumentToken(tradingSymbol) {
         throw error;
     }
 }
+
+const memoize = process.env.NODE_ENV != 'production' ? memoizeRedis : memoizeRAM
 
 const axiosGetYahoo = memoizeRedis((...args) => axios.get(...args))
 
