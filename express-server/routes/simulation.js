@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 // const { placeOrder } = require("../kite/processor")
 const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../../kite/utils")
-const { Simulator } = require("../../simulator/SimulatorV2")
+const { Simulator } = require("../../simulator/SimulatorV3")
 const { scanZaireStocks, scanBailyStocks, getDateRange, addMovingAverage } = require("../../analytics")
 const { readSheetData } = require("../../gsheets")
 
@@ -13,20 +13,20 @@ router.get('/simulate/v2', async (req, res) => {
         let niftyList = ['TCS']
         let traded = []
 
-        let { date, symbol } = req.query
+        let { date, symbol, simulation } = req.query
 
         if (!symbol) {
             niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
             niftyList = niftyList.map(stock => stock[0])
         }
         else {
-            niftyList = [symbol]
+            niftyList = symbol.split(',').map(s => s.trim())
         }
 
         date = new Date(date)
         let endday = new Date(date)
 
-        date.setHours(3,46,10,0)
+        date.setHours(3,51,10,0)
         endday.setHours(9,50,10,0)
         // let date = new Date('2025-01-27T03:46:10Z')
 
@@ -98,7 +98,10 @@ router.get('/simulate/v2', async (req, res) => {
                         quantity,
                         direction,
                         yahooData,
-                        orderTime: date
+                        orderTime: date,
+                        reEnterPosition: simulation.reEnterPosition == 'true',
+                        cancelInMins: simulation.cancelInMins,
+                        updateSL: simulation.updateSL == 'true'
                     })
 
                     sim.run()

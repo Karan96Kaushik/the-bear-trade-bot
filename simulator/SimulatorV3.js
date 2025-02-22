@@ -11,7 +11,9 @@ class Simulator {
             // endTime,
             yahooData,
             reEnterPosition,
-            orderTime
+            orderTime,
+            cancelInMins,
+            updateSL
         } = simulationParams;
 
         // console.log('simulationParams', simulationParams);
@@ -32,6 +34,8 @@ class Simulator {
         this.isPositionOpen = false;
         this.logAction = this.logAction.bind(this);
         this.reEnterPosition = reEnterPosition || false;
+        this.cancelInMins = cancelInMins || 5;
+        this.updateSL = updateSL || false;
     }
 
     logAction(time, action, price=0) {
@@ -43,6 +47,9 @@ class Simulator {
         const triggerPrice = this.triggerPrice
         const targetPrice = this.targetPrice
         const stopLossPrice = this.stopLossPrice
+        let openOrder = true
+
+        this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Placed', price: triggerPrice });
 
         for (let i = 1; i < data.length; i++) {
             const { time, open, high, low, close } = data[i];
@@ -52,16 +59,22 @@ class Simulator {
             }
 
             if (!this.isPositionOpen) {
+                if (this.cancelInMins && time > +this.orderTime + this.cancelInMins * 60 * 1000 && (i % 5 == 0) && openOrder) {
+                    this.tradeActions.push({ time, action: 'Cancelled', price: 0 });
+                    openOrder = false
+                }
+
                 if (!this.isPositionOpen && time > +this.orderTime && ((direction == 'BULLISH' && high >= triggerPrice) || (direction == 'BEARISH' && low <= triggerPrice))) {
                     this.position = this.triggerPrice;
 
                     this.startedAt = time
-
+                    openOrder = true
                     this.isPositionOpen = true;
                     this.tradeActions.push({ time, action: 'Trigger Hit', price: triggerPrice });
                 }
             }
             else {
+                
                 if ((direction == 'BEARISH' && stopLossPrice && high >= stopLossPrice) || (direction == 'BULLISH' && stopLossPrice && low <= stopLossPrice)) {
                     this.pnl -= direction == 'BEARISH' ? ((stopLossPrice - this.position) * this.quantity) : ((this.position - stopLossPrice) * this.quantity)
                     this.tradeActions.push({ time, action: 'Stop Loss Hit', price: stopLossPrice });
@@ -84,7 +97,8 @@ class Simulator {
         }
 
         if (this.isPositionOpen) {
-            const lastCandle = data[data.length - 1];
+            // 3:19 (assuming 5m data)
+            const lastCandle = data[data.length - 3];
             // if ()
             this.pnl += (this.position - lastCandle.close) * this.quantity;
             this.tradeActions.push({ time: lastCandle.time, action: 'Auto Square-off', price: lastCandle.close });

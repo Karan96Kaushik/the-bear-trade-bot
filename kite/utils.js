@@ -3,6 +3,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const _ = require('lodash');
+const Redis = require('ioredis');
 
 const CACHE_FILE_PATH = path.join(__dirname, 'instrumentTokenCache.json');
 
@@ -16,6 +17,42 @@ const getDateStringIND = (date) => {
     date = date.toISOString().split('T')
     return date[0] + ' ' + date[1].split('.')[0]
 }
+
+const redis = new Redis(); // Configure with your Redis connection details if needed
+
+const memoizeRedis = (fn, ttl = 60*60) => { // ttl in seconds for Redis
+    return async (...args) => {
+        const key = `cache:${JSON.stringify(args)}`;
+        
+        try {
+            // Try to get from Redis cache
+            const cached = await redis.get(key);
+            
+            if (cached) {
+                console.log('Cache hit');
+                return JSON.parse(cached);
+            }
+            
+            // If not in cache, execute function
+            let result = await fn(...args);
+            
+            // Store in Redis with TTL
+            if (result?.data) {
+                result = {data: result.data}
+            }
+            console.log(result);
+            await redis.setex(key, ttl, JSON.stringify(result));
+            console.log('Cache miss');
+            
+            return result;
+        } catch (error) {
+            console.error('Redis cache error:', error);
+            // console.error('Redis cache result:', result);
+            // Fallback to direct function call if Redis fails
+            return fn(...args);
+        }
+    };
+};
 
 /**
  * Get the instrument token for a given trading symbol
@@ -54,26 +91,7 @@ async function getInstrumentToken(tradingSymbol) {
     }
 }
 
-const memoize = (fn, ttl = 5*60*60*1000) => { // 5 hours in milliseconds
-    const cache = new Map();
-    
-    return async (...args) => {
-      const key = JSON.stringify(args);
-      const cached = cache.get(key);
-      
-      if (cached && cached.timestamp > Date.now() - ttl) {
-        console.log('Cache hit');
-        return  _.merge({}, cached.value) ;
-      }
-      
-    const result = await fn(...args);
-    cache.set(key, { value: result, timestamp: Date.now() });
-    console.log('Cache miss');
-    return _.merge({}, result);
-  };
-};
-
-const axiosGetYahoo = memoize((...args) => axios.get(...args))
+const axiosGetYahoo = memoizeRedis((...args) => axios.get(...args))
 
 /**
  * Fetch stock data from Yahoo Finance
