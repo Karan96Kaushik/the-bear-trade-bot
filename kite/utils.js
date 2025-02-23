@@ -25,7 +25,7 @@ if (process.env.NODE_ENV != 'production') {
     redis = new Redis()
 }
 
-const memoizeRedis = (fn, ttl = 6*60*60) => { // ttl in seconds for Redis
+const memoizeRedis = (fn, ttl = 12*60*60) => { // ttl in seconds for Redis
     return async (...args) => {
         const key = `cache:${JSON.stringify(args)}`;
         

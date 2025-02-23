@@ -20,15 +20,17 @@ router.post('/simulate/v2/start', async (req, res) => {
         // Start simulation in background
         simulationJobs.set(jobId, {
             status: 'running',
+            currentDate: startdate, // Add current date being processed
             result: null,
             error: null
         });
         
         // Run simulation asynchronously
-        simulate(startdate, enddate, symbol, simulation)
+        simulate(startdate, enddate, symbol, simulation, jobId) // Pass jobId to simulate function
             .then(result => {
                 simulationJobs.set(jobId, {
                     status: 'completed',
+                    currentDate: null,
                     result,
                     error: null
                 });
@@ -36,6 +38,7 @@ router.post('/simulate/v2/start', async (req, res) => {
             .catch(error => {
                 simulationJobs.set(jobId, {
                     status: 'error',
+                    currentDate: null,
                     result: null,
                     error: error.message
                 });
@@ -67,7 +70,7 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
     }
 });
 
-const simulate = async (startdate, enddate, symbol, simulation) => {
+const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // Add jobId parameter
     try {
         let niftyList = ['TCS']
         let traded = []
@@ -86,6 +89,8 @@ const simulate = async (startdate, enddate, symbol, simulation) => {
 
         // Iterate through each day
         while (currentDate <= finalEndDate) {
+            // Update current date in job status
+
             if (currentDate.getDay() == 0 || currentDate.getDay() == 6) {
                 currentDate.setDate(currentDate.getDate() + (currentDate.getDay() == 0 ? 1 : 2))
             }
@@ -99,6 +104,9 @@ const simulate = async (startdate, enddate, symbol, simulation) => {
             // Inner loop for each 5-minute interval within the day
             while (dayStartTime < dayEndTime) {
                 console.log(getDateStringIND(dayStartTime), '---------')
+
+                simulationJobs.get(jobId).currentDate = dayStartTime;
+
                 
                 // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
                 let selectedStocks = await scanZaireStocks(niftyList, dayStartTime, '5m', false, true, true);
@@ -118,7 +126,7 @@ const simulate = async (startdate, enddate, symbol, simulation) => {
                         const promise = (async () => {
                             const { startDate, endDate } = getDateRange(dayStartTime);
                             endDate.setHours(11);
-            
+                            // console.log(stock.sym, startDate, endDate)
                             let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
                             yahooData = processYahooData(yahooData);
                             yahooData = addMovingAverage(yahooData,'close',44, 'sma44');
@@ -157,6 +165,8 @@ const simulate = async (startdate, enddate, symbol, simulation) => {
                             let quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
                             quantity = Math.abs(quantity);
 
+                            // console.log(simulation)
+
                             const sim = new Simulator({
                                 stockSymbol: stock.sym,
                                 triggerPrice,
@@ -167,7 +177,7 @@ const simulate = async (startdate, enddate, symbol, simulation) => {
                                 yahooData,
                                 orderTime: dayStartTime,
                                 cancelInMins: simulation.cancelInMins,
-                                updateSL: simulation.updateSL == 'true',
+                                updateSL: simulation.updateSL,
                                 updateSLInterval: simulation.updateSLInterval
                             });
 
@@ -220,7 +230,7 @@ const simulate = async (startdate, enddate, symbol, simulation) => {
 
         let filTraded = []
 
-        console.log(traded.map(t => [t.placedAt, t.exitTime]))
+        // console.log(traded.map(t => [t.placedAt, t.exitTime]))
 
         if (simulation.reEnterPosition == 'true') {
             filTraded = traded.filter(t => !traded.find(t1 => (

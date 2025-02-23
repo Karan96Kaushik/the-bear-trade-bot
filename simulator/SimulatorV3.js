@@ -17,8 +17,6 @@ class Simulator {
             updateSLInterval
         } = simulationParams;
 
-        // console.log('simulationParams', simulationParams);
-
         this.stockSymbol = stockSymbol;
         this.triggerPrice = triggerPrice;
         this.stopLossPrice = stopLossPrice;
