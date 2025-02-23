@@ -642,18 +642,18 @@ function checkV3Conditions(df5min, df15min, df75min) {
     const t4 = df[df.length - 5];
 
     if (
-      current.sma44 < t1.sma44 &&
+      // current.sma44 < t1.sma44 &&
       t1.sma44 < t2.sma44 &&
-      t2.sma44 < t3.sma44 &&
-      (candleDur === 75 || t3.sma44 < t4.sma44)   // Only check for 15m and 5m
+      t2.sma44 < t3.sma44 //&&
+      // (candleDur === 75 || t3.sma44 < t4.sma44)   // Only check for 15m and 5m
     )
       return 'BEARISH'
 
     if (
-      current.sma44 > t1.sma44 &&
+      // current.sma44 > t1.sma44 &&
       t1.sma44 > t2.sma44 &&
-      t2.sma44 > t3.sma44 &&
-      (candleDur === 75 || t3.sma44 > t4.sma44)   // Only check for 15m and 5m
+      t2.sma44 > t3.sma44 //&&
+      // (candleDur === 75 || t3.sma44 > t4.sma44)   // Only check for 15m and 5m
     )
       return 'BULLISH'
 
@@ -671,7 +671,11 @@ function checkV3Conditions(df5min, df15min, df75min) {
     console.log(result5min, result15min, result75min)
   }
   
-  if (result5min != result15min || result15min != result75min || !result5min || !result15min || !result75min) {
+  if (
+    result5min != result15min || 
+    // result15min === result75min || 
+    !result5min || !result15min // || !result75min
+  ) {
     return null
   }
 
@@ -691,10 +695,10 @@ function checkV3Conditions(df5min, df15min, df75min) {
     current.close < candleMid &&
     isNarrowRange(current, 0.005) &&
     touchingSma &&
-    touchingSma15 &&
+    // touchingSma15 &&
     // t2.high < current.high &&
     // t3.high < current.high &&
-    result75min === 'BEARISH'
+    result5min === 'BEARISH'
   )
     return 'BEARISH'
 
@@ -712,10 +716,10 @@ function checkV3Conditions(df5min, df15min, df75min) {
     current.close > candleMid &&
     isNarrowRange(current, 0.005) &&
     touchingSma &&
-    touchingSma15 &&
-    // t2.low > current.low &&
-    // t3.low > current.low &&
-    result75min === 'BULLISH'
+    // touchingSma15 &&
+    t2.low > current.low &&
+    t3.low > current.low &&
+    result5min === 'BULLISH'
   )
     return 'BULLISH'
 
