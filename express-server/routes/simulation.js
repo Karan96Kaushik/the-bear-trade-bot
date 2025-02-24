@@ -99,7 +99,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
             let dayEndTime = new Date(currentDate)
 
             dayStartTime.setHours(3, 51, 10, 0)
-            dayEndTime.setHours(9, 0, 10, 0)
+            dayEndTime.setHours(9, 5, 10, 0)
 
             let traded = []
 
