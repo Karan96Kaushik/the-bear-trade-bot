@@ -673,7 +673,7 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   if (
     result5min != result15min || 
-    // result15min === result75min || 
+    // result15min !== result75min || 
     !result5min || !result15min // || !result75min
   ) {
     return null
@@ -688,12 +688,12 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   const candleMid = (current.high + current.low) / 2;
 
-  const touchingSma = (current.high * 1.001) >= current.sma44 && (current.low * 0.999) <= current.sma44
-  const touchingSma15 = (current15.high * 1.001) >= current15.sma44 && (current15.low * 0.999) <= current15.sma44
+  const touchingSma = (current.high * 1.0004) >= current.sma44 && (current.low * 0.9996) <= current.sma44
+  const touchingSma15 = (current15.high * 1.0004) >= current15.sma44 && (current15.low * 0.9996) <= current15.sma44
 
   if (
     current.close < candleMid &&
-    isNarrowRange(current, 0.005) &&
+    isNarrowRange(current, 0.004) &&
     touchingSma &&
     // touchingSma15 &&
     // t2.high < current.high &&
@@ -714,11 +714,11 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   if (
     current.close > candleMid &&
-    isNarrowRange(current, 0.005) &&
+    isNarrowRange(current, 0.004) &&
     touchingSma &&
     // touchingSma15 &&
-    t2.low > current.low &&
-    t3.low > current.low &&
+    // t2.low > current.low &&
+    // t3.low > current.low &&
     result5min === 'BULLISH'
   )
     return 'BULLISH'
