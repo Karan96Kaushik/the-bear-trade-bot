@@ -614,13 +614,16 @@ const scheduleMISJobs = () => {
     sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
     const updateStopLossCB = () => {
-        sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation()));
+        sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
         updateStopLossOrders();
     }
-    const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
-    const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
-    const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15 9 * * 1-5', updateStopLossCB);
-    sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() < updateStopLossJob_3.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_3.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+    // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
+    // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
+    // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
+    const updateStopLossJob = schedule.scheduleJob('*/15 4,5,6,7,8 * * 1-5', updateStopLossCB);
+    const updateStopLossJob_2 = schedule.scheduleJob('0,15,30,45 9 * * 1-5', updateStopLossCB);
+
+    sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
 
     const zaireJobV3CB = () => {
         sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation() < zaireJobV3_2.nextInvocation() ? zaireJobV3.nextInvocation() < zaireJobV3_3.nextInvocation() ? zaireJobV3.nextInvocation() : zaireJobV3_3.nextInvocation() : zaireJobV3_2.nextInvocation()));
