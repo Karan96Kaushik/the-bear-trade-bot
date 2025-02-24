@@ -9,3 +9,5 @@ training*
 trial*
 *.joblib
 test*csv
+
+dump.rdb

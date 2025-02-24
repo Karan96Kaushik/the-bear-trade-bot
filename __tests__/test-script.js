@@ -6,7 +6,7 @@ const { setupZaireOrders } = require("../kite/scheduledJobs")
 const { kiteSession } = require("../kite/setup")
 // const { placeOrder } = require("../kite/processor")
 const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../kite/utils")
-const { Simulator } = require("../simulator/SimulatorV2")
+const { Simulator } = require("../simulator/SimulatorV3")
 
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
@@ -43,7 +43,7 @@ const run = async () => {
 
         let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['TCS']
+        niftyList = ['BEL']
 
         // const selectedStocks = await scanBailyStocks(niftyList, '2024-12-27T04:11:10Z', '5m')
         // console.log(selectedStocks)
@@ -54,17 +54,21 @@ const run = async () => {
 
         // await setupZaireOrders(0,1)
 
-        let date = new Date('2025-01-27T03:46:10Z')
+        let date = new Date('2025-01-27T03:51:10Z')
 
         let traded = []
 
         for (let i = 0; i < 100; i++) {
-            console.log(getDateStringIND(date), '---------', process.env.DEBUG)
+            console.log(getDateStringIND(date), '---------')
 
             // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
-            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true, true);
+            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true, false);
+            if (selectedStocks.length > 0) 
+            console.log(selectedStocks)
 
-            if (selectedStocks.length > 0) {
+            if (selectedStocks.length > 0 && false) {
+
+                // continue
 
                 for (let index = 0; index < selectedStocks.length; index++) {
                     const stock = selectedStocks[index];
