@@ -45,7 +45,7 @@ const memoizeRedis = (fn, ttl = 12*60*60) => { // ttl in seconds for Redis
             if (result?.data) {
                 result = {data: result.data}
             }
-            console.log(result);
+            // console.log(result);
             await redis.setex(key, ttl, JSON.stringify(result));
             // console.log('Cache miss');
             

@@ -14,7 +14,8 @@ class Simulator {
             orderTime,
             cancelInMins,
             updateSL,
-            updateSLInterval
+            updateSLInterval,
+            updateSLFrequency
         } = simulationParams;
 
         this.stockSymbol = stockSymbol;
@@ -35,7 +36,8 @@ class Simulator {
         this.reEnterPosition = reEnterPosition || false;
         this.cancelInMins = cancelInMins || 5;
         this.updateSL = updateSL || false;
-        this.updateSLInterval = updateSLInterval || 5;
+        this.updateSLInterval = updateSLInterval;
+        this.updateSLFrequency = updateSLFrequency;
     }
 
     logAction(time, action, price=0) {
@@ -82,8 +84,9 @@ class Simulator {
             else {
 
                 if (this.updateSL) {
-                    if (currMinute % this.updateSLInterval == 0) {
+                    if (currMinute % this.updateSLFrequency == 0) {
                         let pastData = data.slice(i-this.updateSLInterval, i)
+                        
                         if (direction == 'BULLISH') {
                             let newSL = Math.min(...pastData.map(d => d.low))
                             if (newSL > stopLossPrice) {

@@ -73,7 +73,7 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
 const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // Add jobId parameter
     try {
         let niftyList = ['TCS']
-        let traded = []
+        let allTraded = []
 
         if (!symbol) {
             niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
@@ -99,7 +99,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
             let dayEndTime = new Date(currentDate)
 
             dayStartTime.setHours(3, 51, 10, 0)
-            dayEndTime.setHours(9, 50, 10, 0)
+            dayEndTime.setHours(9, 0, 10, 0)
+
+            let traded = []
+
 
             // Inner loop for each 5-minute interval within the day
             while (dayStartTime < dayEndTime) {
@@ -124,8 +127,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
                     for (let i = 0; i < selectedStocks.length; i++) {
                         const stock = selectedStocks[i];
                         const promise = (async () => {
-                            const { startDate, endDate } = getDateRange(dayStartTime);
+                            const { _startDate, endDate } = getDateRange(dayStartTime);
                             endDate.setHours(11);
+                            const startDate = new Date(endDate);
+                            startDate.setHours(3);
                             // console.log(stock.sym, startDate, endDate)
                             let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
                             yahooData = processYahooData(yahooData);
@@ -178,7 +183,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
                                 orderTime: dayStartTime,
                                 cancelInMins: simulation.cancelInMins,
                                 updateSL: simulation.updateSL,
-                                updateSLInterval: simulation.updateSLInterval
+                                updateSLInterval: simulation.updateSLInterval,
+                                updateSLFrequency: simulation.updateSLFrequency
                             });
 
                             sim.run();
@@ -224,29 +230,33 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
                 dayStartTime = new Date(dayStartTime.getTime() + 5 * 60 * 1000)
             }
 
+            let filTraded = []
+
+            // console.log(traded.map(t => [t.placedAt, t.exitTime]))
+    
+            if (simulation.reEnterPosition) {
+                filTraded = traded.filter(t => !traded.find(t1 => (
+                                                    (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && 
+                                                    (t.sym == t1.sym) && 
+                                                    (+t1.placedAt < +t.exitTime)
+                                                ))
+                                        )
+            }
+            else {
+                filTraded = traded.filter(t => !traded.find(t1 => ((t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && (t.sym == t1.sym))))
+            }
+
+
+            allTraded.push(...filTraded);
+
+
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1)
         }
 
-        let filTraded = []
-
-        // console.log(traded.map(t => [t.placedAt, t.exitTime]))
-
-        if (simulation.reEnterPosition == 'true') {
-            filTraded = traded.filter(t => !traded.find(t1 => (
-                                                (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && 
-                                                (t.sym == t1.sym) && 
-                                                (+t1.placedAt < +t.exitTime)
-                                            ))
-                                    )
-        }
-        else {
-            filTraded = traded.filter(t => !traded.find(t1 => ((t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && (t.sym == t1.sym))))
-        }
-
         // console.log(filTraded)
         
-        return filTraded;
+        return allTraded;
     } catch (error) {
       console.error('Error fetching orders data:', error);
       return null;
