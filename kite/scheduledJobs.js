@@ -449,6 +449,7 @@ async function updateStopLossOrders() {
         // console.log(stockData)
 
         for (const stock of stockData) {
+            let newPrice, shouldUpdate, ltp, type
             try {
 
                 if (!stock.reviseSL) continue;
@@ -471,19 +472,19 @@ async function updateStopLossOrders() {
 
                 if (!existingOrder) continue;
 
-                let newPrice = isBearish 
+                newPrice = isBearish 
                     ? await calculateExtremePrice(sym, 'highest', 15)
                     : await calculateExtremePrice(sym, 'lowest', 15);
 
                 // Get current LTP to validate the new SL price
-                let ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
+                ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
                 ltp = ltp[`NSE:${sym}`]?.last_price;
 
-                let type = 'SL-M'
+                type = 'SL-M'
 
                 // newPrice = isBearish ? newPrice + 1 : newPrice - 1
 
-                const shouldUpdate = isBearish 
+                shouldUpdate = isBearish 
                     ? newPrice < existingOrder.trigger_price
                     : newPrice > existingOrder.trigger_price;
 
@@ -509,8 +510,8 @@ async function updateStopLossOrders() {
                     await sendMessageToChannel(`🔄 Updated SL ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
                 }
             } catch (error) {
-                await sendMessageToChannel('🚨 Error updating stop loss for', stock.stockSymbol, stock.quantity, error?.message);
-                console.error("🚨 Error updating stop loss for: ", stock.stockSymbol, stock.quantity, error?.message);
+                await sendMessageToChannel('🚨 Error updating stop loss for', stock.stockSymbol, newPrice, type, ltp, shouldUpdate, error?.message);
+                console.error("🚨 Error updating stop loss for: ", stock.stockSymbol, newPrice, type, ltp, shouldUpdate, error?.message);
             }
         }
 
