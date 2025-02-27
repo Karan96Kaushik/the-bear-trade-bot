@@ -691,9 +691,11 @@ function checkV3Conditions(df5min, df15min, df75min) {
   const touchingSma = (current.high * 1.0004) >= current.sma44 && (current.low * 0.9996) <= current.sma44
   const touchingSma15 = (current15.high * 1.0004) >= current15.sma44 && (current15.low * 0.9996) <= current15.sma44
 
+  const narrowRange = isNarrowRange(current, 0.004)
+
   if (
     current.close < candleMid &&
-    isNarrowRange(current, 0.004) &&
+    narrowRange &&
     touchingSma &&
     // touchingSma15 &&
     // t2.high < current.high &&
@@ -714,7 +716,7 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   if (
     current.close > candleMid &&
-    isNarrowRange(current, 0.004) &&
+    narrowRange &&
     touchingSma &&
     // touchingSma15 &&
     // t2.low > current.low &&
@@ -724,7 +726,6 @@ function checkV3Conditions(df5min, df15min, df75min) {
     return 'BULLISH'
 
 }
-
 
 function isNarrowRange(candle, tolerance = 0.015) {
   const { high, low } = candle;
