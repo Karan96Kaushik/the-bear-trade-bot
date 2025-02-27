@@ -209,6 +209,68 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
     }
 }
 
+async function getGrowwChartData(sym, start, end, interval = 5, useCached = false) {
+    try {
+
+        if (typeof interval == 'string' && interval.includes('m')) interval = parseInt(interval.split('m')[0])
+
+        let startDate = new Date(start)
+        let endDate = new Date(end)
+
+        if (useCached) {
+            startDate.setHours(2,0,0,0)
+            endDate.setHours(11,0,0,0)
+        }
+
+        let config = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: `https://groww.in/v1/api/charting_service/v2/chart/delayed/exchange/NSE/segment/CASH/${sym}?`,
+            params: {
+                // intervalInMinutes: 5,
+                endTimeInMillis: +endDate,
+                // endTimeInMillis: 1735343980000,
+                intervalInMinutes: interval,
+                startTimeInMillis: +startDate,
+                // startTimeInMillis: 1733616000000
+            },
+            headers: { 
+                'Cookie': '_cfuvid=yton6pkeh.8NN5FjyDWIXddfAxHSOmgJmW2fc46.hJ0-1740478174567-0.0.1.1-604800000'
+            }
+        };
+
+        // const config = {
+        //     method: 'get',
+        //     maxBodyLength: Infinity,
+        //     url: `https://groww.in/v1/api/charting_service/v2/chart/delayed/exchange/NSE/segment/CASH/${sym}`,
+        //     params: {
+        //         endTimeInMillis: +endDate,
+        //         intervalInMinutes: interval,
+        //         startTimeInMillis: +startDate
+        //     },
+        //     headers: {
+        //         'Cookie': '_cfuvid=yton6pkeh.8NN5FjyDWIXddfAxHSOmgJmW2fc46.hJ0-1740478174567-0.0.1.1-604800000'
+        //     }
+        // };
+
+        let response
+
+        if (useCached) {
+            response = await axiosGroww(config);
+        }
+        else {
+            response = await axios.request(config);
+        }
+
+        return response.data;
+    } catch (error) {
+        console.error(`Error fetching Groww chart data for ${sym}:`, error);
+        throw error;
+    }
+}
+
+const axiosGroww = memoize((...args) => axios.request(...args))
+
 /**
  * Search for stocks using the Upstox API
  * @param {string} query - The search query
@@ -278,6 +340,25 @@ function processYahooData(yahooData) {
         low: quote.low[index],
         close: quote.close[index],
         volume: quote.volume[index]
+    }));
+}
+
+/**
+ * Process Groww data into an ordered array of OHLCV objects
+ * @param {Object} growwData - The raw data from Groww
+ * @returns {Array} An array of OHLCV objects
+ */
+function processGrowwData(growwData) {
+    const result = growwData.candles;
+    
+    return result?.map((d, index) => ({
+        time: d[0] * 1000,
+        // time: new Date(timestamp * 1000).toISOString(),
+        open: d[1],
+        high: d[2],
+        low: d[3],
+        close: d[4],
+        volume: d[5]
     }));
 }
 
@@ -540,5 +621,7 @@ module.exports = {
     getUpstoxHistoricalData,
     getNSEChartData,
     processNSEChartData,
-    getMcIndicators
+    getMcIndicators,
+    getGrowwChartData,
+    processGrowwData
 };

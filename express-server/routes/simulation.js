@@ -5,6 +5,7 @@ const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../../
 const { Simulator } = require("../../simulator/SimulatorV3")
 const { scanZaireStocks, scanBailyStocks, getDateRange, addMovingAverage } = require("../../analytics")
 const { readSheetData } = require("../../gsheets")
+const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
 const RISK_AMOUNT = 100;
 
@@ -20,6 +21,7 @@ router.post('/simulate/v2/start', async (req, res) => {
         // Start simulation in background
         simulationJobs.set(jobId, {
             status: 'running',
+            startTime: new Date(),
             currentDate: startdate, // Add current date being processed
             result: null,
             error: null
@@ -72,7 +74,7 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
 
 const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // Add jobId parameter
     try {
-        let niftyList = ['TCS']
+        let niftyList = []
         let allTraded = []
 
         if (!symbol) {
@@ -99,6 +101,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
             let dayEndTime = new Date(currentDate)
 
             dayStartTime.setHours(3, 51, 10, 0)
+
+            // 12:00 PM IST
+            // dayEndTime.setHours(6, 30, 10, 0)
+
+            // 2:00 PM IST
+            // dayEndTime.setHours(8, 30, 10, 0)
+
+            // 2:35 PM IST
             dayEndTime.setHours(9, 5, 10, 0)
 
             let traded = []
@@ -132,8 +142,13 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
                             const startDate = new Date(endDate);
                             startDate.setHours(3);
                             // console.log(stock.sym, startDate, endDate)
-                            let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
-                            yahooData = processYahooData(yahooData);
+
+                            // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
+                            // yahooData = processYahooData(yahooData);
+
+                            let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
+                            yahooData = processGrowwData(yahooData);
+
                             yahooData = addMovingAverage(yahooData,'close',44, 'sma44');
 
                             let triggerPadding = 1;
@@ -184,7 +199,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
                                 cancelInMins: simulation.cancelInMins,
                                 updateSL: simulation.updateSL,
                                 updateSLInterval: simulation.updateSLInterval,
-                                updateSLFrequency: simulation.updateSLFrequency
+                                updateSLFrequency: simulation.updateSLFrequency,
+                                marketOrder: simulation.marketOrder
                             });
 
                             sim.run();

@@ -49,12 +49,14 @@ class Simulator {
         const triggerPrice = this.triggerPrice
         const targetPrice = this.targetPrice
         let stopLossPrice = this.stopLossPrice
-        let openOrder = true
+        let openTriggerOrder = true
 
         this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Placed', price: triggerPrice });
 
         for (let i = 1; i < data.length; i++) {
             const { time, open, high, low, close } = data[i];
+
+            if (time < +this.orderTime) continue;
 
             const currMinute = (time - data[0].time) / (1000 * 60);
             
@@ -68,16 +70,16 @@ class Simulator {
                     this.position = this.triggerPrice;
 
                     this.startedAt = time
-                    openOrder = true
+                    openTriggerOrder = false
                     this.isPositionOpen = true;
                     this.tradeActions.push({ time, action: 'Trigger Hit', price: triggerPrice });
                     this.tradeActions.push({ time, action: 'Target Placed', price: targetPrice });
                     this.tradeActions.push({ time, action: 'Stop Loss Placed', price: stopLossPrice });
                 }
 
-                if (this.cancelInMins && time > +this.orderTime + this.cancelInMins * 60 * 1000 && (i % this.cancelInMins == 0) && openOrder) {
+                if (this.cancelInMins && time > +this.orderTime && (i % this.cancelInMins == 0) && openTriggerOrder) {
                     this.tradeActions.push({ time, action: 'Cancelled', price: 0 });
-                    openOrder = false
+                    openTriggerOrder = false
                     break;
                 }
             }
