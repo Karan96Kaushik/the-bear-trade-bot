@@ -25,7 +25,7 @@ if (process.env.NODE_ENV != 'production') {
     redis = new Redis()
 }
 
-const memoizeRedis = (fn, ttl = 12*60*60) => { // ttl in seconds for Redis
+const memoizeRedis = (fn, ttl = 24*60*60) => { // ttl in seconds for Redis
     return async (...args) => {
         const key = `cache:${JSON.stringify(args)}`;
         
@@ -47,7 +47,7 @@ const memoizeRedis = (fn, ttl = 12*60*60) => { // ttl in seconds for Redis
             }
             // console.log(result);
             await redis.setex(key, ttl, JSON.stringify(result));
-            // console.log('Cache miss');
+            console.log('Cache miss');
             
             return result;
         } catch (error) {
@@ -485,8 +485,6 @@ async function getNSEChartData(tradingSymbol, fromDate, toDate, timeInterval = 1
 
         if (typeof toDate == 'object') toDate = new Date(toDate).getTime() / 1000
         if (typeof fromDate == 'object') fromDate = new Date(fromDate).getTime() / 1000
-
-        console.log(fromDate, toDate)
 
         const data = {
             exch: 'N',
