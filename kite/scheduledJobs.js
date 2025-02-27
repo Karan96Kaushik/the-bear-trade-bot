@@ -449,62 +449,68 @@ async function updateStopLossOrders() {
         // console.log(stockData)
 
         for (const stock of stockData) {
-            if (!stock.reviseSL) continue;
+            try {
 
-            // Only revise SL for stocks that have already been traded
-            if (!stock.lastAction) continue;
+                if (!stock.reviseSL) continue;
 
-            const sym = stock.stockSymbol;
-            const isBearish = stock.type === 'BEARISH';
+                // Only revise SL for stocks that have already been traded
+                if (!stock.lastAction) continue;
 
-            const position = positions.net.find(p => p.tradingsymbol === sym);
-            if (!position) continue;
+                const sym = stock.stockSymbol;
+                const isBearish = stock.type === 'BEARISH';
 
-            const existingOrder = orders.find(order => 
-                order.tradingsymbol === stock.stockSymbol && 
-                order.transaction_type === (isBearish ? 'BUY' : 'SELL') && 
-                order.tag?.includes('stoploss') &&
-                (order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
-            );
+                const position = positions.net.find(p => p.tradingsymbol === sym);
+                if (!position) continue;
 
-            if (!existingOrder) continue;
+                const existingOrder = orders.find(order => 
+                    order.tradingsymbol === stock.stockSymbol && 
+                    order.transaction_type === (isBearish ? 'BUY' : 'SELL') && 
+                    order.tag?.includes('stoploss') &&
+                    (order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
+                );
 
-            let newPrice = isBearish 
-                ? await calculateExtremePrice(sym, 'highest', 15)
-                : await calculateExtremePrice(sym, 'lowest', 15);
+                if (!existingOrder) continue;
 
-            // Get current LTP to validate the new SL price
-            let ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
-            ltp = ltp[`NSE:${sym}`]?.last_price;
+                let newPrice = isBearish 
+                    ? await calculateExtremePrice(sym, 'highest', 15)
+                    : await calculateExtremePrice(sym, 'lowest', 15);
 
-            let type = 'SL-M'
+                // Get current LTP to validate the new SL price
+                let ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
+                ltp = ltp[`NSE:${sym}`]?.last_price;
 
-            // newPrice = isBearish ? newPrice + 1 : newPrice - 1
+                let type = 'SL-M'
 
-            const shouldUpdate = isBearish 
-                ? newPrice < existingOrder.trigger_price
-                : newPrice > existingOrder.trigger_price;
+                // newPrice = isBearish ? newPrice + 1 : newPrice - 1
 
-            // For bearish trades, new SL should be above LTP
-            // For bullish trades, new SL should be below LTP
-            if (shouldUpdate && isBearish && newPrice <= ltp) {
-                type = 'MARKET'
-                newPrice = null
-                await sendMessageToChannel(`ℹ️ Exiting as new SL would be above LTP for ${sym}`);
-            } else if (shouldUpdate && !isBearish && newPrice >= ltp) {
-                type = 'MARKET'
-                newPrice = null
-                await sendMessageToChannel(`ℹ️ Exiting as new SL would be below LTP for ${sym}`);
-            }
+                const shouldUpdate = isBearish 
+                    ? newPrice < existingOrder.trigger_price
+                    : newPrice > existingOrder.trigger_price;
 
-            if (shouldUpdate) {
-                let orderResponse = await placeOrder(isBearish ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
-                await logOrder('PLACED', 'UPDATE SL', orderResponse)
+                // For bearish trades, new SL should be above LTP
+                // For bullish trades, new SL should be below LTP
+                if (shouldUpdate && isBearish && newPrice <= ltp) {
+                    type = 'MARKET'
+                    newPrice = null
+                    await sendMessageToChannel(`ℹ️ Exiting as new SL would be above LTP for ${sym}`);
+                } else if (shouldUpdate && !isBearish && newPrice >= ltp) {
+                    type = 'MARKET'
+                    newPrice = null
+                    await sendMessageToChannel(`ℹ️ Exiting as new SL would be below LTP for ${sym}`);
+                }
 
-                await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
-                await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
+                if (shouldUpdate) {
+                    let orderResponse = await placeOrder(isBearish ? "BUY" : "SELL", type, newPrice, stock.quantity, stock, 'stoploss-UD')
+                    await logOrder('PLACED', 'UPDATE SL', orderResponse)
 
-                await sendMessageToChannel(`🔄 Updated SL ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
+                    await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
+                    await logOrder('CANCELLED', 'UPDATE SL', existingOrder)
+
+                    await sendMessageToChannel(`🔄 Updated SL ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
+                }
+            } catch (error) {
+                await sendMessageToChannel('🚨 Error updating stop loss orders', stock.stockSymbol, stock.quantity, error?.message);
+                console.error("🚨 Error updating stop loss orders: ", stock.stockSymbol, stock.quantity, error?.message);
             }
         }
 
