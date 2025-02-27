@@ -509,8 +509,8 @@ async function updateStopLossOrders() {
                     await sendMessageToChannel(`🔄 Updated SL ${isBearish ? 'BUY' : 'SELL'} order`, stock.stockSymbol, stock.quantity, 'New trigger price:', newPrice);
                 }
             } catch (error) {
-                await sendMessageToChannel('🚨 Error updating stop loss orders', stock.stockSymbol, stock.quantity, error?.message);
-                console.error("🚨 Error updating stop loss orders: ", stock.stockSymbol, stock.quantity, error?.message);
+                await sendMessageToChannel('🚨 Error updating stop loss for', stock.stockSymbol, stock.quantity, error?.message);
+                console.error("🚨 Error updating stop loss for: ", stock.stockSymbol, stock.quantity, error?.message);
             }
         }
 
