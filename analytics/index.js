@@ -366,14 +366,19 @@ function getDateRange(endDateNew) {
     return { startDate, endDate };
 }
 
-function removeIncompleteCandles(df) {
+function removeIncompleteCandles(df, useCached = false) {
     if (!df || df.length === 0) return df;
     
     // Remove last candle as it's likely incomplete
     df.pop();
+
+    /**
+     * 
+     * TODO:
+     *  - Check in production if this is needed
+     */
     
-    // Remove additional candle if it's from today
-    if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
+    if (!useCached) {
         df.pop();
     }
     
@@ -434,7 +439,10 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 
         let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
         df = processYahooData(df);
-        df = removeIncompleteCandles(df);
+        // console.log(df.slice(-3).map(d => ({...d, time: getDateStringIND(d.time)})))
+
+        df = removeIncompleteCandles(df, useCached);
+        // console.log(df.slice(-3).map(d => ({...d, time: getDateStringIND(d.time)})))
 
         if (DEBUG) {
           console.log('----')
@@ -472,7 +480,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 
           let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
           df5min = processYahooData(df5min);
-          df5min = removeIncompleteCandles(df5min);
+          df5min = removeIncompleteCandles(df5min, useCached);
           if (!df5min || df5min.length === 0) continue;
           df5min = addMovingAverage(df5min, 'close', 44, 'sma44');
           df5min = df5min.filter(r => r.close);
@@ -483,7 +491,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 
           let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
           df15min = processYahooData(df15min);
-          df15min = removeIncompleteCandles(df15min);
+          df15min = removeIncompleteCandles(df15min, useCached);
 
           let df15min_copy = [...df15min]
 
@@ -642,18 +650,20 @@ function checkV3Conditions(df5min, df15min, df75min) {
     const t4 = df[df.length - 5];
 
     if (
-      // current.sma44 < t1.sma44 &&
-      t1.sma44 < t2.sma44 &&
-      t2.sma44 < t3.sma44 //&&
+      current.sma44 < t1.sma44 &&
+      // t1.sma44 < t2.sma44 //&&
+      // t2.sma44 < t3.sma44 //&&
       // (candleDur === 75 || t3.sma44 < t4.sma44)   // Only check for 15m and 5m
+      t3.sma44 < t4.sma44
     )
       return 'BEARISH'
 
     if (
-      // current.sma44 > t1.sma44 &&
-      t1.sma44 > t2.sma44 &&
-      t2.sma44 > t3.sma44 //&&
+      current.sma44 > t1.sma44 &&
+      // t1.sma44 > t2.sma44 &&
+      // t2.sma44 > t3.sma44 //&&
       // (candleDur === 75 || t3.sma44 > t4.sma44)   // Only check for 15m and 5m
+      t3.sma44 > t4.sma44 
     )
       return 'BULLISH'
 
@@ -673,8 +683,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   if (
     result5min != result15min || 
-    // result15min !== result75min || 
-    !result5min || !result15min // || !result75min
+    result15min !== result75min || 
+    !result5min
   ) {
     return null
   }
@@ -688,10 +698,10 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   const candleMid = (current.high + current.low) / 2;
 
-  const touchingSma = (current.high * 1.0004) >= current.sma44 && (current.low * 0.9996) <= current.sma44
-  const touchingSma15 = (current15.high * 1.0004) >= current15.sma44 && (current15.low * 0.9996) <= current15.sma44
+  const touchingSma = (current.high * 1.00047) >= current.sma44 && (current.low * 0.99953) <= current.sma44
+  // const touchingSma15 = (current15.high * 1.0004) >= current15.sma44 && (current15.low * 0.9996) <= current15.sma44
 
-  const narrowRange = isNarrowRange(current, 0.004)
+  const narrowRange = isNarrowRange(current, 0.0042)
 
   if (
     current.close < candleMid &&
@@ -719,8 +729,8 @@ function checkV3Conditions(df5min, df15min, df75min) {
     narrowRange &&
     touchingSma &&
     // touchingSma15 &&
-    // t2.low > current.low &&
-    // t3.low > current.low &&
+    t2.low > current.low &&
+    t3.low > current.low &&
     result5min === 'BULLISH'
   )
     return 'BULLISH'
