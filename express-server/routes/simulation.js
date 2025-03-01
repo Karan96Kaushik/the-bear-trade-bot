@@ -15,7 +15,7 @@ const simulationJobs = new Map();
 // New endpoint to start simulation
 router.post('/simulate/v2/start', async (req, res) => {
     try {
-        const { startdate, enddate, symbol, simulation } = req.body;
+        const { startdate, enddate, symbol, simulation, selectionParams } = req.body;
         const jobId = Date.now().toString(); // Simple unique ID
         
         // Start simulation in background
@@ -28,11 +28,12 @@ router.post('/simulate/v2/start', async (req, res) => {
         });
         
         // Run simulation asynchronously
-        simulate(startdate, enddate, symbol, simulation, jobId) // Pass jobId to simulate function
+        simulate(startdate, enddate, symbol, simulation, jobId, selectionParams) // Pass jobId to simulate function
             .then(result => {
                 simulationJobs.set(jobId, {
                     status: 'completed',
                     currentDate: null,
+                    startTime: simulationJobs.get(jobId).startTime,
                     result,
                     error: null
                 });
@@ -72,13 +73,13 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
     }
 });
 
-const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // Add jobId parameter
+const simulate = async (startdate, enddate, symbol, simulation, jobId, selectionParams) => { // Add jobId parameter
     try {
         let niftyList = []
         let allTraded = []
 
         if (!symbol) {
-            niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
+            niftyList = await readSheetData('SimulationTest!E2:E550')  
             niftyList = niftyList.map(stock => stock[0])
         }
         else {
@@ -97,6 +98,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
         // Iterate through each day
         while (currentDate <= finalEndDate) {
             // Update current date in job status
+
+            if (currentDate.getDate() == 26 && currentDate.getMonth() == 2) {
+                currentDate.setDate(currentDate.getDate() + 1)
+            }
 
             if (currentDate.getDay() == 0 || currentDate.getDay() == 6) {
                 currentDate.setDate(currentDate.getDate() + (currentDate.getDay() == 0 ? 1 : 2))
@@ -128,7 +133,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
 
                 
                 // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
-                let selectedStocks = await scanZaireStocks(niftyList, dayStartTime, '5m', false, true, true);
+                let selectedStocks = await scanZaireStocks(niftyList, dayStartTime, '5m', false, true, true, selectionParams);
 
                 // INVERSE THE DIRECTION OF STOCKS
                 // console.log("INVERSE THE DIRECTION OF STOCKS")

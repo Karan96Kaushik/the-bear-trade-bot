@@ -429,7 +429,15 @@ async function getLastCandle(sym, endDateNew, interval = '15m') {
     return null;
 }
 
-async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false) {
+const DEFAULT_PARAMS = {
+  TOUCHING_SMA_TOLERANCE: 0.00045,
+  NARROW_RANGE_TOLERANCE: 0.0046,
+  CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
+  BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
+  MA_WINDOW: 44
+}
+
+async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS) {
     const selectedStocks = [];
 
     for (const sym of stockList) {
@@ -463,7 +471,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
           continue
         }
         
-        df = addMovingAverage(df, 'close', 44, 'sma44');
+        df = addMovingAverage(df, 'close', params.MA_WINDOW || 44, 'sma44');
         df = df.filter(r => r.close);
 
         // const isRising = checkMARising(df, MA_TREND_WINDOW) ? 'BULLISH' : checkMAFalling(df, MA_TREND_WINDOW) ? 'BEARISH' : null;
@@ -482,7 +490,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
           df5min = processYahooData(df5min);
           df5min = removeIncompleteCandles(df5min, useCached);
           if (!df5min || df5min.length === 0) continue;
-          df5min = addMovingAverage(df5min, 'close', 44, 'sma44');
+          df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW || 44, 'sma44');
           df5min = df5min.filter(r => r.close);
 
           // 75 Mins candles needs more data
@@ -496,7 +504,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
           let df15min_copy = [...df15min]
 
           if (!df15min || df15min.length === 0) continue;
-          df15min = addMovingAverage(df15min, 'close', 44, 'sma44');
+          df15min = addMovingAverage(df15min, 'close', params.MA_WINDOW || 44, 'sma44');
           df15min = df15min.filter(r => r.close);
 
           let startIndex = 0;
@@ -529,7 +537,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
           }
           // console.log(df75min.length)
 
-          df75min = addMovingAverage(df75min, 'close', 44, 'sma44');
+          df75min = addMovingAverage(df75min, 'close', params.MA_WINDOW || 44, 'sma44');
           df75min = df75min.filter(r => r.close);
 
           /**
@@ -540,7 +548,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 
           // console.debug(df75min.map(d => ({...d, time: getDateStringIND(d.time)})))
 
-          conditionsMet = checkV3Conditions(df5min, df15min, df75min)
+          conditionsMet = checkV3Conditions(df5min, df15min, df75min, params)
         }
         else if (checkV2) {
           conditionsMet = checkV2Conditions(df)
@@ -640,7 +648,20 @@ function checkV2Conditions(df) {
     return 'BULLISH'
 }
 
-function checkV3Conditions(df5min, df15min, df75min) {
+function checkV3Conditions(df5min, df15min, df75min, params) {
+
+  const { 
+    CANDLE_CONDITIONS_SLOPE_TOLERANCE, 
+    BASE_CONDITIONS_SLOPE_TOLERANCE, 
+    TOUCHING_SMA_TOLERANCE, 
+    NARROW_RANGE_TOLERANCE,
+    MA_WINDOW,
+    CHECK_75MIN
+  } = params
+
+  if (!CANDLE_CONDITIONS_SLOPE_TOLERANCE || !BASE_CONDITIONS_SLOPE_TOLERANCE || !TOUCHING_SMA_TOLERANCE || !NARROW_RANGE_TOLERANCE) {
+    throw new Error('Params are not set')
+  }
 
   const processConditions = (df, candleDur) => {
     const current = df[df.length - 1];
@@ -650,20 +671,20 @@ function checkV3Conditions(df5min, df15min, df75min) {
     const t4 = df[df.length - 5];
 
     if (
-      current.sma44 < t1.sma44 &&
+      t1.sma44 / current.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE &&
       // t1.sma44 < t2.sma44 //&&
       // t2.sma44 < t3.sma44 //&&
       // (candleDur === 75 || t3.sma44 < t4.sma44)   // Only check for 15m and 5m
-      t3.sma44 < t4.sma44
+      t4.sma44 / t3.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE
     )
       return 'BEARISH'
 
     if (
-      current.sma44 > t1.sma44 &&
+      current.sma44 / t1.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE &&
       // t1.sma44 > t2.sma44 &&
       // t2.sma44 > t3.sma44 //&&
       // (candleDur === 75 || t3.sma44 > t4.sma44)   // Only check for 15m and 5m
-      t3.sma44 > t4.sma44 
+      t3.sma44 / t4.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE
     )
       return 'BULLISH'
 
@@ -683,7 +704,7 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   if (
     result5min != result15min || 
-    result15min !== result75min || 
+    (CHECK_75MIN && result15min != result75min) || 
     !result5min
   ) {
     return null
@@ -698,13 +719,13 @@ function checkV3Conditions(df5min, df15min, df75min) {
   
   const candleMid = (current.high + current.low) / 2;
 
-  const touchingSma = (current.high * 1.00047) >= current.sma44 && (current.low * 0.99953) <= current.sma44
+  const touchingSma = (current.high * (1 + TOUCHING_SMA_TOLERANCE)) >= current.sma44 && (current.low * (1 - TOUCHING_SMA_TOLERANCE)) <= current.sma44
   // const touchingSma15 = (current15.high * 1.0004) >= current15.sma44 && (current15.low * 0.9996) <= current15.sma44
 
-  const narrowRange = isNarrowRange(current, 0.0042)
+  const narrowRange = isNarrowRange(current, NARROW_RANGE_TOLERANCE)
 
   if (
-    current.close < candleMid &&
+    candleMid / current.close > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     narrowRange &&
     touchingSma &&
     // touchingSma15 &&
@@ -725,12 +746,12 @@ function checkV3Conditions(df5min, df15min, df75min) {
   }
   
   if (
-    current.close > candleMid &&
+    current.close / candleMid > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     narrowRange &&
     touchingSma &&
     // touchingSma15 &&
-    t2.low > current.low &&
-    t3.low > current.low &&
+    t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
+    t3.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     result5min === 'BULLISH'
   )
     return 'BULLISH'
