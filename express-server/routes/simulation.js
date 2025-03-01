@@ -78,8 +78,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         let niftyList = []
         let allTraded = []
 
+        console.log(selectionParams)
+
         if (!symbol) {
-            niftyList = await readSheetData('SimulationTest!E2:E550')  
+            niftyList = await readSheetData(selectionParams.STOCK_LIST)  
             niftyList = niftyList.map(stock => stock[0])
         }
         else {
