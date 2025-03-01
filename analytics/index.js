@@ -659,9 +659,11 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
     CHECK_75MIN
   } = params
 
-  if (!CANDLE_CONDITIONS_SLOPE_TOLERANCE || !BASE_CONDITIONS_SLOPE_TOLERANCE || !TOUCHING_SMA_TOLERANCE || !NARROW_RANGE_TOLERANCE) {
+  if (CANDLE_CONDITIONS_SLOPE_TOLERANCE === undefined || BASE_CONDITIONS_SLOPE_TOLERANCE === undefined || TOUCHING_SMA_TOLERANCE === undefined || NARROW_RANGE_TOLERANCE === undefined) {
     throw new Error('Params are not set')
   }
+
+  // console.log(params)
 
   const processConditions = (df, candleDur) => {
     const current = df[df.length - 1];
