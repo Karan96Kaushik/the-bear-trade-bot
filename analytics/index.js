@@ -655,7 +655,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
     BASE_CONDITIONS_SLOPE_TOLERANCE, 
     TOUCHING_SMA_TOLERANCE, 
     NARROW_RANGE_TOLERANCE,
-    MA_WINDOW,
+    TOUCHING_SMA_15_TOLERANCE,
     CHECK_75MIN
   } = params
 
@@ -722,7 +722,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
   const candleMid = (current.high + current.low) / 2;
 
   const touchingSma = (current.high * (1 + TOUCHING_SMA_TOLERANCE)) >= current.sma44 && (current.low * (1 - TOUCHING_SMA_TOLERANCE)) <= current.sma44
-  // const touchingSma15 = (current15.high * 1.0004) >= current15.sma44 && (current15.low * 0.9996) <= current15.sma44
+  const touchingSma15 = (current15.high * (1 + TOUCHING_SMA_15_TOLERANCE)) >= current15.sma44 && (current15.low * (1 - TOUCHING_SMA_15_TOLERANCE)) <= current15.sma44
 
   const narrowRange = isNarrowRange(current, NARROW_RANGE_TOLERANCE)
 
@@ -730,7 +730,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
     candleMid / current.close > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     narrowRange &&
     touchingSma &&
-    // touchingSma15 &&
+    touchingSma15 &&
     // t2.high < current.high &&
     // t3.high < current.high &&
     result5min === 'BEARISH'
@@ -751,7 +751,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
     current.close / candleMid > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     narrowRange &&
     touchingSma &&
-    // touchingSma15 &&
+    touchingSma15 &&
     t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     t3.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
     result5min === 'BULLISH'
