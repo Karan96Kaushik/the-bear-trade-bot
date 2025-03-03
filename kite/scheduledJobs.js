@@ -238,6 +238,7 @@ async function setupSpecialOrdersFromSheet() {
     } catch (error) {
         await sendMessageToChannel('🚨 Error running special schedule jobs', error?.message);
     }
+
 }
 
 async function validateOrdersFromSheet() {
@@ -619,6 +620,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
 
+
     const updateStopLossCB = () => {
         sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
         updateStopLossOrders();
@@ -670,6 +672,7 @@ const scheduleMISJobs = () => {
     const dailyReportJob = schedule.scheduleJob('40 10 * * 1-5', () => {
         generateDailyReportF('29Nov')
         sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
+
     });
     sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
 }
