@@ -43,7 +43,7 @@ const run = async () => {
 
         let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['BEL']
+        // niftyList = ['BEL']
 
         // const selectedStocks = await scanBailyStocks(niftyList, '2024-12-27T04:11:10Z', '5m')
         // console.log(selectedStocks)
@@ -54,15 +54,27 @@ const run = async () => {
 
         // await setupZaireOrders(0,1)
 
-        let date = new Date('2025-01-27T03:51:10Z')
+        let date = new Date('2025-01-28T03:51:10Z')
 
         let traded = []
 
         for (let i = 0; i < 100; i++) {
             console.log(getDateStringIND(date), '---------')
 
+            const zaireV3Params = {
+                TOUCHING_SMA_TOLERANCE: 0.0003,
+                TOUCHING_SMA_15_TOLERANCE: 0.00028,
+                NARROW_RANGE_TOLERANCE: 0.004,
+                CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
+                BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
+                MA_WINDOW: 22,
+                CHECK_75MIN: 1
+            }
+
             // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
-            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true, false);
+            console.time('scanZaireStocks')
+            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
+            console.timeEnd('scanZaireStocks')
             if (selectedStocks.length > 0) 
             console.log(selectedStocks)
 

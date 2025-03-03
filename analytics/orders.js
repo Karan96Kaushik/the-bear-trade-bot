@@ -50,7 +50,7 @@ async function getRetrospective(startDate, endDate) {
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
             source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
-            exitReason: a.tag?.split('-')[0] || '-',
+            exitReason: a.tag?.split('-')[0].includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
         })))
         results = await Promise.all(results.map(async a => {

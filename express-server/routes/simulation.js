@@ -88,6 +88,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             niftyList = symbol.split(',').map(s => s.trim())
         }
 
+        console.log(niftyList)
+
         // Convert start and end dates to Date objects
         let currentDate = new Date(startdate)
         let finalEndDate = new Date(enddate)
