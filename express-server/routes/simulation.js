@@ -15,7 +15,7 @@ const simulationJobs = new Map();
 // New endpoint to start simulation
 router.post('/simulate/v2/start', async (req, res) => {
     try {
-        const { startdate, enddate, symbol, simulation } = req.body;
+        const { startdate, enddate, symbol, simulation, selectionParams } = req.body;
         const jobId = Date.now().toString(); // Simple unique ID
         
         // Start simulation in background
@@ -28,11 +28,12 @@ router.post('/simulate/v2/start', async (req, res) => {
         });
         
         // Run simulation asynchronously
-        simulate(startdate, enddate, symbol, simulation, jobId) // Pass jobId to simulate function
+        simulate(startdate, enddate, symbol, simulation, jobId, selectionParams) // Pass jobId to simulate function
             .then(result => {
                 simulationJobs.set(jobId, {
                     status: 'completed',
                     currentDate: null,
+                    startTime: simulationJobs.get(jobId).startTime,
                     result,
                     error: null
                 });
@@ -72,13 +73,15 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
     }
 });
 
-const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // Add jobId parameter
+const simulate = async (startdate, enddate, symbol, simulation, jobId, selectionParams) => { // Add jobId parameter
     try {
         let niftyList = []
         let allTraded = []
 
+        console.log(selectionParams)
+
         if (!symbol) {
-            niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
+            niftyList = await readSheetData(selectionParams.STOCK_LIST)  
             niftyList = niftyList.map(stock => stock[0])
         }
         else {
@@ -88,10 +91,19 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
         // Convert start and end dates to Date objects
         let currentDate = new Date(startdate)
         let finalEndDate = new Date(enddate)
+        let singleDate = false;
+
+        if (currentDate == finalEndDate) {
+            singleDate = true;
+        }
 
         // Iterate through each day
         while (currentDate <= finalEndDate) {
             // Update current date in job status
+
+            if (currentDate.getDate() == 26 && currentDate.getMonth() == 2) {
+                currentDate.setDate(currentDate.getDate() + 1)
+            }
 
             if (currentDate.getDay() == 0 || currentDate.getDay() == 6) {
                 currentDate.setDate(currentDate.getDate() + (currentDate.getDay() == 0 ? 1 : 2))
@@ -117,16 +129,19 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
             // Inner loop for each 5-minute interval within the day
             while (dayStartTime < dayEndTime) {
                 console.log(getDateStringIND(dayStartTime), '---------')
+                // console.log(dayStartTime, '---------')
 
                 simulationJobs.get(jobId).currentDate = dayStartTime;
 
                 
                 // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
-                let selectedStocks = await scanZaireStocks(niftyList, dayStartTime, '5m', false, true, true);
+                let selectedStocks = await scanZaireStocks(niftyList, dayStartTime, '5m', false, true, true, selectionParams);
 
                 // INVERSE THE DIRECTION OF STOCKS
                 // console.log("INVERSE THE DIRECTION OF STOCKS")
                 // selectedStocks = selectedStocks.map(s => ({...s, direction: s.direction == 'BULLISH' ? 'BEARISH' : 'BULLISH'}))
+
+                // console.log(selectedStocks)
 
                 
                 if (selectedStocks.length > 0) {
@@ -205,17 +220,17 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
 
                             sim.run();
 
-                            if (sim.startedAt) {
+                            if (sim.startedAt && !singleDate) {
                                 return {
                                     startedAt: sim.startedAt,
                                     placedAt: sim.orderTime,
-                                    pnl: sim.pnl,
+                                    pnl: sim.pnl || 0,
                                     quantity: sim.quantity,
                                     direction: sim.direction,
                                     sym: sim.stockSymbol,
                                     data: yahooData,
                                     actions: sim.tradeActions,
-                                    exitTime: sim.exitTime
+                                    exitTime: sim.exitTime || null
                                 };
                             }
                             return null;
@@ -251,7 +266,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId) => { // A
             // console.log(traded.map(t => [t.placedAt, t.exitTime]))
     
             if (simulation.reEnterPosition) {
-                filTraded = traded.filter(t => !traded.find(t1 => (
+                filTraded = traded.filter(t => (singleDate && !t.pnl) ||    // Show cancelled trades if it's a single day simulation
+                                                // Remove trades that were started before an active trade
+                                                !traded.find(t1 => (
                                                     (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && 
                                                     (t.sym == t1.sym) && 
                                                     (+t1.placedAt < +t.exitTime)
