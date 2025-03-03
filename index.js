@@ -25,12 +25,14 @@ const slack_app = new App({
 });
 
 const run = async () => {
-	await slack_app.start(process.env.SLACK_PORT || 3000)
+	await slack_app.start(process.env.SLACK_PORT || 3002)
 	console.log('⚡️ Bolt slack_app is running!')
-	expressApp.listen(process.env.EXPRESS_PORT || 9000, () => {console.log(`Express app is running on port ${process.env.EXPRESS_PORT || 9000}`)});
+	expressApp.listen(process.env.EXPRESS_PORT || 9002, () => {console.log(`Express app is running on port ${process.env.EXPRESS_PORT || 9002}`)});
 
 	initialize_slack(slack_app)
 	initialize_server(expressApp)
+
+	console.log("Connecting to database...")
 	await connectToDatabase();
 
 
@@ -40,7 +42,9 @@ const run = async () => {
 
 	setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 
-	scheduleMISJobs()
+	if (process.env.NODE_ENV === 'production') {
+		scheduleMISJobs()
+	}
 
 }
 

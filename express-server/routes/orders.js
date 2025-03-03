@@ -1,6 +1,6 @@
 const express = require('express');
 
-const { readSheetData, processMISSheetData, appendRowToMISD } = require("../../gsheets");
+const { readSheetData, processMISSheetData, appendRowsToMISD } = require("../../gsheets");
 const { createSellOrders } = require("../../kite/processor");
 const { kiteSession } = require("../../kite/setup");
 
@@ -12,7 +12,7 @@ router.get('/kite-orders', async (req, res) => {
     try {
       let sheetData = []
         try {
-            sheetData = await readSheetData('MIS-D!A2:W100')
+            sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
             sheetData = processMISSheetData(sheetData)
             sheetData = sheetData.reverse()
         } catch (error) {
@@ -36,7 +36,7 @@ router.post('/create-sell-orders', async (req, res) => {
   try {
     const order = req.body;
     const result = await createSellOrders(order);
-    await appendRowToMISD(order)
+    await appendRowsToMISD([order])
     res.status(200).json({ success: true, result });
   } catch (error) {
     console.error('Error creating sell orders:', error);

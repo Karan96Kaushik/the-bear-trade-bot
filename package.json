@@ -4,8 +4,14 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon index.js",
-    "deployprod": "ssh the-bear -t \"cd the-bear-trade-bot && git stash && git pull && pm2 restart trade-bot && pm2 log\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "deployprod": "ssh the-bear -t \"cd the-bear-trade-bot-2 && git stash && git pull && pm2 restart trade-bot-2 && pm2 log trade-bot-2\"",
+    "test": "jest --no-watchman",
+    "test:kite-successful-order": "jest --no-watchman __tests__/kite-successful-order.js",
+    "test:close-negative": "jest --no-watchman __tests__/close-negative.js",
+    "test:kite-validation": "jest --no-watchman __tests__/kite-validation.js",
+    "test:kite-schedule": "jest --no-watchman __tests__/kite-schedule-order.js",
+    "test:kite-schedule-update": "jest --no-watchman __tests__/kite-schedule-update.js",
+    "test:zaire-orders": "jest --no-watchman __tests__/zaire-orders.test.js"
   },
   "author": "",
   "license": "ISC",
@@ -17,8 +23,11 @@
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "googleapis": "^144.0.0",
+    "ioredis": "^5.5.0",
+    "jest": "^29.7.0",
     "jsonwebtoken": "^9.0.2",
     "kiteconnect": "^5.0.1",
+    "lodash": "^4.17.21",
     "mongoose": "^8.7.1",
     "morgan": "^1.10.0",
     "node-schedule": "^2.1.1",

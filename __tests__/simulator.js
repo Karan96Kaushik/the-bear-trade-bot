@@ -58,7 +58,7 @@ class ShortSellingSimulator {
                 continue;
             }
 
-            if (!this.position && this.sellPrice === 'MKT') {
+            if (!this.position && this.sellPrice?.trim().toLowerCase() === 'mkt') {
                 // Open a short position at the opening price
                 this.position = open[i];
                 console.log(`Shorted ${this.quantity} shares of ${this.stockSymbol} at ${open[i]}`);

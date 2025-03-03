@@ -1,10 +1,11 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
-const { getDataFromYahoo, searchUpstoxStocks } = require('../../kite/utils'); // Assuming this module exists
+const { getDataFromYahoo, searchUpstoxStocks, processYahooData } = require('../../kite/utils'); // Assuming this module exists
 const { kiteSession } = require('../../kite/setup');
 const { readSheetData, processMISSheetData } = require('../../gsheets');
 const FunctionHistory = require('../../models/FunctionHistory');
+const { addMovingAverage } = require('../../analytics');
 
 const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (process.env.NODE_ENV == 'production' ? 5.5 : 4.5);
 
@@ -27,17 +28,48 @@ router.get('/yahoo', async (req, res) => {
 			days = 2;
 		
 		const cacheKey = `${symbol}-${days}-${interval}-${startDate}-${endDate}`;
-		
+
+		let data
+
 		if (yahooDataCache.has(cacheKey)) {
-			return res.json(yahooDataCache.get(cacheKey));
+			data = yahooDataCache.get(cacheKey);
 		}
-		
-		const data = await getDataFromYahoo(symbol, days, interval, startDate, endDate);
-		yahooDataCache.set(cacheKey, data);
+		else {
+			data = await getDataFromYahoo(symbol, days, interval, startDate, endDate);
+			yahooDataCache.set(cacheKey, data);
+		}
+
+		data = processYahooData(data)
+		data = addMovingAverage(data, 'close', 44, 'sma44')
+		data = data.filter(d => d.sma44 && d.close)
 		res.json(data);
 	} catch (error) {
 		console.error('Error fetching Yahoo Finance data:', error?.data || error);
-		res.status(500).json({ message: 'Server error' });
+		res.status(500).json({ message: ('Error fetching Yahoo Finance data:', error?.data || error) });
+	}
+});
+
+router.get('/nse', async (req, res) => {
+	try {
+		let { symbol, fromDate, toDate } = req.query;
+
+		if (!symbol) {
+			return res.status(400).json({ message: 'Symbol is required' });
+		}
+
+		if (!fromDate) fromDate = new Date()
+		if (!toDate) toDate = new Date()
+
+		if (typeof fromDate == 'string') fromDate = new Date(fromDate)
+		if (typeof toDate == 'string') toDate = new Date(toDate)
+
+		const data = await getNSEChartData(symbol, fromDate, toDate)
+		data = processNSEChartData(data)
+
+		res.json(data);
+	} catch (error) {
+		console.error('Error fetching NSE data:', error?.data || error);
+		res.status(500).json({ message: ('Error fetching NSE data:', error?.data || error) });
 	}
 });
 
@@ -89,14 +121,21 @@ router.get('/', async (req, res) => {
 
 router.post('/save-function', async (req, res) => {
 	try {
-		const { name, code } = req.body;
+		const { name, code, type } = req.body;
 		
-		if (!name || !code) {
-			return res.status(400).json({ message: 'Name and code are required' });
+		if (!name || !code || !type) {
+			return res.status(400).json({ message: 'Name, code and type are required' });
 		}
 
-		const functionHistory = new FunctionHistory({ name, code });
-		await functionHistory.save();
+		const existingFunction = await FunctionHistory.findOne({ name, type });
+		if (existingFunction) {
+			existingFunction.code = code;
+			existingFunction.type = type;
+			await existingFunction.save();
+		} else {
+			const functionHistory = new FunctionHistory({ name, code, type });
+			await functionHistory.save();
+		}
 
 		res.status(201).json({ message: 'Function saved successfully' });
 	} catch (error) {
@@ -113,10 +152,31 @@ router.get('/functions', async (req, res) => {
 		// 	return res.status(400).json({ message: 'Function name is required' });
 		// }
 
-		const savedFunctions = await FunctionHistory.find().sort('-createdAt').limit(10);
+		const savedFunctions = await FunctionHistory.find().sort('-createdAt').limit(20);
 		res.json(savedFunctions);
 	} catch (error) {
 		console.error('Error fetching function history:', error);
+		res.status(500).json({ message: 'Server error' });
+	}
+});
+
+router.post('/delete-function', async (req, res) => {
+	try {
+		const { _id } = req.body;
+		
+		if (!_id) {
+			return res.status(400).json({ message: 'Function _id is required' });
+		}
+
+		const result = await FunctionHistory.findByIdAndDelete(_id);
+
+		if (!result) {
+			return res.status(404).json({ message: 'Function not found' });
+		}
+
+		res.status(200).json({ message: 'Function deleted successfully' });
+	} catch (error) {
+		console.error('Error deleting function:', error);
 		res.status(500).json({ message: 'Server error' });
 	}
 });
