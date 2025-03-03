@@ -13,7 +13,17 @@ const { generateDailyReport } = require('../analytics/reports');
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 
-async function setupZaireOrders(checkV2 = false, checkV3 = false) {
+const zaireV3Params = {
+    TOUCHING_SMA_TOLERANCE: 0.0003,
+    TOUCHING_SMA_15_TOLERANCE: 0.00028,
+    NARROW_RANGE_TOLERANCE: 0.004,
+    CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
+    BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
+    MA_WINDOW: 22,
+    CHECK_75MIN: 1
+}
+
+async function setupZaireOrders() {
     try {
         await sendMessageToChannel(`⌛️ Executing Zaire ${checkV3 ? 'V3' : checkV2 ? 'V2' : ''} MIS Jobs`);
 
@@ -49,7 +59,9 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             null,
             (checkV2 || checkV3) ? '5m' : '15m',
             checkV2,
-            checkV3
+            checkV3,
+            false,
+            zaireV3Params
         )
         // selectedStocks = selectedStocks.filter(s => 
         //                                     (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
