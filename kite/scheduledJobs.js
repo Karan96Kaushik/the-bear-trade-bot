@@ -23,7 +23,7 @@ const zaireV3Params = {
     CHECK_75MIN: 0
 }
 
-async function setupZaireOrders() {
+async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
         await sendMessageToChannel(`⌛️ Executing Zaire ${checkV3 ? 'V3' : checkV2 ? 'V2' : ''} MIS Jobs`);
 
