@@ -41,6 +41,8 @@ async function getRetrospective(startDate, endDate) {
         // }
         // return
 
+        // console.log(completedOrders.map(a => [a.tradingsymbol, a.tag]))
+
         results.push(...completedOrders.map(a => ({
             _timestamp: allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp || a.timestamp,
             timestamp: (allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp && getDateStringIND(allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp)) || getDateStringIND(a.timestamp), 
@@ -50,7 +52,7 @@ async function getRetrospective(startDate, endDate) {
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
             source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
-            exitReason: a.tag?.split('-')[0].includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
+            exitReason: a.tag?.includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
         })))
         results = await Promise.all(results.map(async a => {
@@ -171,6 +173,7 @@ async function getTradeAnalysis(startDate, endDate) {
             zairePnL: parseFloat(zaireTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
             zaireTargetExits: zaireTrades.filter(t => t.exitReason === 'target').length,
             zaireStopLossExits: zaireTrades.filter(t => t.exitReason === 'stoploss').length,
+            zaireStopLossUDExits: zaireTrades.filter(t => t.exitReason === 'stoploss-u').length,
             zaireOtherExits: zaireTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length
         }
     };

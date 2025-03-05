@@ -155,9 +155,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         const stock = selectedStocks[i];
                         const promise = (async () => {
                             const { _startDate, endDate } = getDateRange(dayStartTime);
-                            endDate.setHours(11);
+                            endDate.setHours(11, 0, 0, 0);
                             const startDate = new Date(endDate);
-                            startDate.setHours(3);
+                            startDate.setHours(3, 0, 0, 0);
                             // console.log(stock.sym, startDate, endDate)
 
                             // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
