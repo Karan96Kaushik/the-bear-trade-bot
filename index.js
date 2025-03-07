@@ -40,9 +40,8 @@ const run = async () => {
 
 	await kiteSession.authenticate()
 
-	setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
-
 	if (process.env.NODE_ENV === 'production') {
+		setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 		scheduleMISJobs()
 	}
 
