@@ -620,11 +620,14 @@ const getEarliestTime = (a, b, c) => {
 
 const scheduleMISJobs = () => {
 
-    const sheetSetupJob = schedule.scheduleJob('46,16 3,4,5,6 * * 1-5', () => {
+
+    const sheetSetupJobCB = () => {
         setupOrdersFromSheet()
-        sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
-    });
-    sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(sheetSetupJob.nextInvocation()))
+        sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(getEarliestTime(sheetSetupJob, sheetSetupJob_2)))
+    }
+    const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', sheetSetupJobCB);
+    const sheetSetupJob_2 = schedule.scheduleJob('46,16 4,5,6 * * 1-5', sheetSetupJobCB);
+    sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(getEarliestTime(sheetSetupJob, sheetSetupJob_2)))
 
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
