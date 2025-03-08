@@ -613,9 +613,9 @@ async function setupMissingOrders() {
 }
 
 const getEarliestTime = (a, b, c) => {
-    if (a.nextInvocation() < b.nextInvocation() && a.nextInvocation() < c.nextInvocation()) return a;
-    if (b.nextInvocation() < a.nextInvocation() && b.nextInvocation() < c.nextInvocation()) return b;
-    return c;
+    if (a.nextInvocation() < b.nextInvocation() && a.nextInvocation() < c.nextInvocation()) return a.nextInvocation();
+    if (b.nextInvocation() < a.nextInvocation() && b.nextInvocation() < c.nextInvocation()) return b.nextInvocation();
+    return c.nextInvocation();
 }
 
 const scheduleMISJobs = () => {
