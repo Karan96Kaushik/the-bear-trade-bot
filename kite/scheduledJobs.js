@@ -27,16 +27,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
         await sendMessageToChannel(`⌛️ Executing Zaire ${checkV3 ? 'V3' : checkV2 ? 'V2' : ''} MIS Jobs`);
 
-        // let niftyList = await readSheetData('Nifty!A1:A200') 
-        // niftyList = niftyList.map(stock => stock[0])
-
-        let highBetaData = await readSheetData('HIGHBETA!B2:B150')
-        let niftyList = highBetaData
-                            .map(stock => stock[0])
-                            .filter(d => d !== 'NOT FOUND' && d)
-        highBetaData = highBetaData
-                            .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
-                            .filter(d => d.sym)
+        let highBetaData, niftyList;
 
         if (checkV3) {
             highBetaData = await readSheetData('HIGHBETA!D2:D550')
@@ -46,7 +37,15 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             highBetaData = highBetaData
                             .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
                             .filter(d => d.sym)
-
+        }
+        else {
+            highBetaData = await readSheetData('HIGHBETA!B2:B150')
+            niftyList = highBetaData
+                                .map(stock => stock[0])
+                                .filter(d => d !== 'NOT FOUND' && d)
+            highBetaData = highBetaData
+                                .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
+                                .filter(d => d.sym)
         }
 
         let sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
