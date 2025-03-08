@@ -613,9 +613,9 @@ async function setupMissingOrders() {
 }
 
 const getEarliestTime = (a, b, c={nextInvocation: () => 9999999999999}) => {
-    console.log(+a.nextInvocation(), +b.nextInvocation(), +c.nextInvocation())
-    if (+a.nextInvocation() < +b.nextInvocation() && +a.nextInvocation() < +c.nextInvocation()) return a.nextInvocation();
-    if (+b.nextInvocation() < +a.nextInvocation() && +b.nextInvocation() < +c.nextInvocation()) return b.nextInvocation();
+    console.log(new Date(a.nextInvocation()), new Date(b.nextInvocation()), new Date(c.nextInvocation()))
+    if (new Date(a.nextInvocation()) < new Date(b.nextInvocation()) && new Date(a.nextInvocation()) < new Date(c.nextInvocation())) return a.nextInvocation();
+    if (new Date(b.nextInvocation()) < new Date(a.nextInvocation()) && new Date(b.nextInvocation()) < new Date(c.nextInvocation())) return b.nextInvocation();
     return c.nextInvocation();
 }
 
