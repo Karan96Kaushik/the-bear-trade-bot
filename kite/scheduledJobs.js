@@ -613,6 +613,7 @@ async function setupMissingOrders() {
 }
 
 const getEarliestTime = (a, b, c={nextInvocation: () => 9999999999999}) => {
+    console.log(a.nextInvocation(), b.nextInvocation(), c.nextInvocation())
     if (a.nextInvocation() < b.nextInvocation() && a.nextInvocation() < c.nextInvocation()) return a.nextInvocation();
     if (b.nextInvocation() < a.nextInvocation() && b.nextInvocation() < c.nextInvocation()) return b.nextInvocation();
     return c.nextInvocation();
