@@ -62,6 +62,10 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             false,
             zaireV3Params
         )
+
+        await sendMessageToChannel('🔔 Cancelling Zaire Orders')
+        await cancelZaireOrders()
+
         // selectedStocks = selectedStocks.filter(s => 
         //                                     (s.direction == 'BULLISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 'b') == 'b') ||
         //                                     (s.direction == 'BEARISH' && (highBetaData.find(h => s.sym == h.sym)?.dir || 's') == 's')
@@ -674,14 +678,14 @@ const scheduleMISJobs = () => {
     const baileyJob_3 = schedule.scheduleJob('15 0,5,10,15,20,25,30 9 * * 1-5', baileyJobCB);
     sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
 
-    const zaireCancelCB = () => {
-        sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
-        cancelZaireOrders();
-    }
-    const zaireCancelJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', zaireCancelCB);
-    const zaireCancelJob_2 = schedule.scheduleJob('55 3 * * 1-5', zaireCancelCB);
-    const zaireCancelJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30 9 * * 1-5', zaireCancelCB);
-    sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(getEarliestTime(zaireCancelJob, zaireCancelJob_2, zaireCancelJob_3)));
+    // const zaireCancelCB = () => {
+    //     sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
+    //     cancelZaireOrders();
+    // }
+    // const zaireCancelJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', zaireCancelCB);
+    // const zaireCancelJob_2 = schedule.scheduleJob('55 3 * * 1-5', zaireCancelCB);
+    // const zaireCancelJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30 9 * * 1-5', zaireCancelCB);
+    // sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(getEarliestTime(zaireCancelJob, zaireCancelJob_2, zaireCancelJob_3)));
 
     // const zaireCloseJob = schedule.scheduleJob('10 15,30 4 * * 1-5', () => {
     //     sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
