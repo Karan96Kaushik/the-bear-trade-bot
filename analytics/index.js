@@ -668,10 +668,17 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 		TOUCHING_SMA_TOLERANCE, 
 		NARROW_RANGE_TOLERANCE,
 		TOUCHING_SMA_15_TOLERANCE,
-		CHECK_75MIN
+		CHECK_75MIN,
+		WIDE_RANGE_TOLERANCE
 	} = params
 	
-	if (CANDLE_CONDITIONS_SLOPE_TOLERANCE === undefined || BASE_CONDITIONS_SLOPE_TOLERANCE === undefined || TOUCHING_SMA_TOLERANCE === undefined || NARROW_RANGE_TOLERANCE === undefined) {
+	if (
+		CANDLE_CONDITIONS_SLOPE_TOLERANCE === undefined || 
+		BASE_CONDITIONS_SLOPE_TOLERANCE === undefined || 
+		TOUCHING_SMA_TOLERANCE === undefined || 
+		NARROW_RANGE_TOLERANCE === undefined ||
+		WIDE_RANGE_TOLERANCE === undefined
+	) {
 		throw new Error('Params are not set')
 	}
 	
@@ -737,10 +744,12 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	const touchingSma15 = (current15.high * (1 + TOUCHING_SMA_15_TOLERANCE)) >= current15.sma44 && (current15.low * (1 - TOUCHING_SMA_15_TOLERANCE)) <= current15.sma44
 	
 	const narrowRange = isNarrowRange(current, NARROW_RANGE_TOLERANCE)
+	const wideRange = isWideRange(current, WIDE_RANGE_TOLERANCE)
 	
 	if (
 		candleMid / current.close > BASE_CONDITIONS_SLOPE_TOLERANCE &&
 		narrowRange &&
+		wideRange &&
 		touchingSma &&
 		touchingSma15 &&
 		// t2.high < current.high &&
@@ -776,6 +785,12 @@ function isNarrowRange(candle, tolerance = 0.015) {
 	const { high, low } = candle;
 	const range = (high - low) / ((high + low) / 2);
 	return range < tolerance;
+}
+
+function isWideRange(candle, tolerance = 0.015) {
+	const { high, low } = candle;
+	const range = (high - low) / ((high + low) / 2);
+	return range >= tolerance;
 }
 
 function isBullishCandle(candle) {
