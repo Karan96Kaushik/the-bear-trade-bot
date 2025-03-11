@@ -662,9 +662,9 @@ const scheduleMISJobs = () => {
         // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
         setupZaireOrders(false, true);
     };
-    const zaireJobV3 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
-    const zaireJobV3_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV3CB);
-    const zaireJobV3_3 = schedule.scheduleJob('30 0,5 9 * * 1-5', zaireJobV3CB);
+    const zaireJobV3 = schedule.scheduleJob('1 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
+    const zaireJobV3_2 = schedule.scheduleJob('1 50,55 3 * * 1-5', zaireJobV3CB);
+    const zaireJobV3_3 = schedule.scheduleJob('1 0,5 9 * * 1-5', zaireJobV3CB);
     // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
     sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2, zaireJobV3_3)));
     // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
