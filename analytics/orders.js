@@ -4,6 +4,7 @@ const OrderLog = require('../models/OrderLog');
 const { connectToDatabase } = require('../modules/db');
 const { getDataFromYahoo, processYahooData } = require('../kite/utils');
 const { kiteSession } = require('../kite/setup');
+
 async function getRetrospective(startDate, endDate) {
 
         await connectToDatabase();
@@ -55,14 +56,17 @@ async function getRetrospective(startDate, endDate) {
             exitReason: a.tag?.includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
         })))
+
         results = await Promise.all(results.map(async a => {
             const sym = a.tradingsymbol
             const timestamp = new Date(a._timestamp)
             const timestamp2 = new Date(timestamp)
             if (a.source === 'zaire') {
+
                 let df = await getDataFromYahoo(sym, 5, '15m', timestamp.setDate(timestamp.getDate() - 5), timestamp2);
                 df = processYahooData(df);
                 df = addMovingAverage(df, 'close', 44, 'sma44');
+
                 return {
                     ...a, 
                     high: df[df.length - 2].high, 
@@ -72,6 +76,7 @@ async function getRetrospective(startDate, endDate) {
                     volume: df[df.length - 2].volume,
                     sma44: df[df.length - 2].sma44
                 }
+
             }
             return a
         }))
@@ -152,6 +157,8 @@ async function getTradeAnalysis(startDate, endDate) {
     const analysis = await analyzeTradeResults(trades);
 
     const zaireTrades = analysis.filter(t => t.source === 'zaire');
+    const baileyTrades = analysis.filter(t => t.source === 'bailey');
+    const manualTrades = analysis.filter(t => t.source === 'sheet');
     
     // Calculate overall statistics
     const closedTrades = analysis.filter(t => t.status === 'CLOSED');
@@ -168,13 +175,30 @@ async function getTradeAnalysis(startDate, endDate) {
             totalPnL: parseFloat(totalPnL.toFixed(2)),
             winRate: closedTrades.length ? parseFloat(((winningTrades.length / closedTrades.length) * 100).toFixed(2)) : 0,
             realisedPnL: parseFloat(realisedPnL.toFixed(2)),
+
             zaireTrades: zaireTrades.length,
             zaireWinRate: zaireTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'zaire').length / zaireTrades.length) * 100).toFixed(2)) : 0,
             zairePnL: parseFloat(zaireTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
             zaireTargetExits: zaireTrades.filter(t => t.exitReason === 'target').length,
             zaireStopLossExits: zaireTrades.filter(t => t.exitReason === 'stoploss').length,
             zaireStopLossUDExits: zaireTrades.filter(t => t.exitReason === 'stoploss-u').length,
-            zaireOtherExits: zaireTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length
+            zaireOtherExits: zaireTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
+
+            baileyTrades: baileyTrades.length,
+            baileyWinRate: baileyTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'bailey').length / baileyTrades.length) * 100).toFixed(2)) : 0,
+            baileyPnL: parseFloat(baileyTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
+            baileyTargetExits: baileyTrades.filter(t => t.exitReason === 'target').length,
+            baileyStopLossExits: baileyTrades.filter(t => t.exitReason === 'stoploss').length,
+            baileyStopLossUDExits: baileyTrades.filter(t => t.exitReason === 'stoploss-u').length,
+            baileyOtherExits: baileyTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
+
+            manualTrades: manualTrades.length,
+            manualWinRate: manualTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'sheet').length / manualTrades.length) * 100).toFixed(2)) : 0,
+            manualPnL: parseFloat(manualTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
+            manualTargetExits: manualTrades.filter(t => t.exitReason === 'target').length,
+            manualStopLossExits: manualTrades.filter(t => t.exitReason === 'stoploss').length,
+            manualStopLossUDExits: manualTrades.filter(t => t.exitReason === 'stoploss-u').length,
+            manualOtherExits: manualTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
         }
     };
 }
