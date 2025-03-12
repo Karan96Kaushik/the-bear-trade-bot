@@ -473,7 +473,7 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
         exchange: "NSE",
         tradingsymbol: stock.sym || stock.stockSymbol || stock.tradingsymbol,
         transaction_type: transactionType,
-        quantity: Math.abs(quantity),
+        quantity: Math.abs(parseInt(quantity)),
         order_type: orderType,
         product: "MIS",
         validity: "DAY",
