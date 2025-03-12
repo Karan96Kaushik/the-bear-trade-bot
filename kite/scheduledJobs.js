@@ -343,6 +343,16 @@ async function setupOrdersFromSheet() {
                     sendMessageToChannel('🔔 Ignoring coz already in open positions', stock.stockSymbol)
                     continue
                 }
+                if (stock.type === 'BULLISH' && (stock.triggerPrice > stock.targetPrice || stock.triggerPrice < stock.stopLossPrice)) {
+                    sendMessageToChannel('🔔 Ignoring coz prices failed validation', stock.stockSymbol, stock.quantity, stock.triggerPrice, stock.targetPrice, stock.stopLossPrice)
+                    // await setToIgnoreInSheet(stock, 'Invalid Prices')
+                    continue
+                }
+                if (stock.type === 'BEARISH' && (stock.triggerPrice < stock.targetPrice || stock.triggerPrice > stock.stopLossPrice)) {
+                    sendMessageToChannel('🔔 Ignoring coz prices failed validation', stock.stockSymbol, stock.quantity, stock.triggerPrice, stock.targetPrice, stock.stopLossPrice)
+                    // await setToIgnoreInSheet(stock, 'Invalid Prices')
+                    continue
+                }
 
                 const orderResponse = await createOrders(stock)
 
