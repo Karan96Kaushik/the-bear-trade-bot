@@ -38,18 +38,6 @@ const createBuyLimSLOrders = async (stock, order) => {
             slPrice = Number(stock.triggerPrice) * 1.02
 
     let orderResponse = await placeOrder('BUY', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CBLS')
-    
-    // let orderResponse = await kiteSession.kc.placeOrder("regular", {
-    //     exchange: "NSE",
-    //     tradingsymbol: stock.stockSymbol,
-    //     transaction_type: "BUY",
-    //     quantity: stock.quantity,
-    //     order_type: "SL-M",    // Stop Loss Market
-    //     product: "MIS",        // Intraday
-    //     validity: "DAY",
-    //     trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
-    //     // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
-    // });
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 
@@ -60,19 +48,6 @@ const createBuyLimSLOrders = async (stock, order) => {
         targetPrice = lower_circuit_limit + 0.1
 
     orderResponse = await placeOrder('BUY', 'LIMIT', targetPrice, stock.quantity, stock, 'target-CBLS')
-
-    // orderResponse = await kiteSession.kc.placeOrder("regular", {
-    //     exchange: "NSE",
-    //     tradingsymbol: stock.stockSymbol,
-    //     transaction_type: "BUY",
-    //     quantity: Math.abs(stock.quantity),
-    //     order_type: "LIMIT",    // Stop Loss Market
-    //     product: "MIS",        // Intraday
-    //     validity: "DAY",
-    //     price: Number(stock.targetPrice),  // Stop-loss trigger price
-    //     // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
-    //     // price: stock.targetPrice  // Stop-loss trigger price
-    // });
 
     await logOrder('PLACED', 'CREATE BUY LIM SL', orderResponse)
 }
@@ -103,18 +78,6 @@ const createSellLimSLOrders = async (stock, order) => {
 
     let orderResponse = await placeOrder('SELL', 'SL-M', slPrice, stock.quantity, stock, 'stoploss-CSLS')
 
-    // let orderResponse = await kiteSession.kc.placeOrder("regular", {
-    //     exchange: "NSE",
-    //     tradingsymbol: stock.stockSymbol,
-    //     transaction_type: "SELL",
-    //     quantity: stock.quantity,
-    //     order_type: "SL-M",    // Stop Loss Market
-    //     product: "MIS",        // Intraday
-    //     validity: "DAY",
-    //     trigger_price: Number(stock.stopLossPrice),  // Stop-loss trigger price
-    //     // guid: 'x' + stock.id + 'xSL' + (order.order_type == 'MANUAL' ? 'man' : ''),
-    // });
-
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 
     let targetPrice = stock.targetPrice
@@ -124,19 +87,6 @@ const createSellLimSLOrders = async (stock, order) => {
         targetPrice = upper_circuit_limit - 0.1
 
     orderResponse = await placeOrder('SELL', 'LIMIT', targetPrice, Math.abs(stock.quantity), stock, 'target-CSLS')
-
-    // orderResponse = await kiteSession.kc.placeOrder("regular", {
-    //     exchange: "NSE",
-    //     tradingsymbol: stock.stockSymbol,
-    //     transaction_type: "SELL",
-    //     quantity: Math.abs(stock.quantity),
-    //     order_type: "LIMIT",    // Stop Loss Market
-    //     product: "MIS",        // Intraday
-    //     validity: "DAY",
-    //     price: Number(stock.targetPrice),  // Stop-loss trigger price
-    //     // guid: 'x' + stock.id + 'xLIM' + (order.order_type == 'MANUAL' ? 'man' : ''),
-    //     // price: stock.targetPrice  // Stop-loss trigger price
-    // });
 
     await logOrder('PLACED', 'CREATE SELL LIM SL', orderResponse)
 }

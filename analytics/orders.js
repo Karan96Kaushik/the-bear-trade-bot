@@ -61,6 +61,7 @@ async function getRetrospective(startDate, endDate) {
             const sym = a.tradingsymbol
             const timestamp = new Date(a._timestamp)
             const timestamp2 = new Date(timestamp)
+            
             if (a.source === 'zaire') {
 
                 let df = await getDataFromYahoo(sym, 5, '15m', timestamp.setDate(timestamp.getDate() - 5), timestamp2);
@@ -159,7 +160,7 @@ async function getTradeAnalysis(startDate, endDate) {
     const zaireTrades = analysis.filter(t => t.source === 'zaire');
     const baileyTrades = analysis.filter(t => t.source === 'bailey');
     const manualTrades = analysis.filter(t => t.source === 'sheet');
-    
+
     // Calculate overall statistics
     const closedTrades = analysis.filter(t => t.status === 'CLOSED');
     const realisedPnL = closedTrades.reduce((sum, trade) => sum + trade.pnl, 0);
