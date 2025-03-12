@@ -36,9 +36,9 @@ function processMISSheetData (stockData) {
     let data = stockData.map(s => ({
         id: s[0], 
         stockSymbol: s[1]?.trim().toUpperCase(), 
-        triggerPrice: s[2]?.trim().toLowerCase(), 
-        stopLossPrice: s[3]?.trim(),
-        targetPrice: s[4]?.trim(), 
+        triggerPrice: Number(s[2]?.trim()),
+        stopLossPrice: Number(s[3]?.trim()),
+        targetPrice: Number(s[4]?.trim()), 
         quantity: Number(s[5]?.trim()), 
         lastAction: s[6]?.trim(),
         ignore: s[7]?.trim(),
