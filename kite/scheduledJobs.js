@@ -4,10 +4,9 @@ const { readSheetData, processMISSheetData, appendRowsToMISD, getStockLoc, numbe
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
-const { createOrders, createZaireOrders, placeOrder, logOrder } = require('./processor');
+const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
 const { scanZaireStocks, scanBaileyStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
 const { generateDailyReport } = require('../analytics/reports');
-
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -282,10 +281,22 @@ async function validateOrdersFromSheet() {
                     await sendMessageToChannel('🔔 Cannot place target sell order: LTP lower than Sell Price.', stock.stockSymbol, stock.quantity, "Sell Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
                 }
+                if (stock.type === 'BEARISH' && (stock.triggerPrice < stock.targetPrice || stock.triggerPrice > stock.stopLossPrice)) {
+                    await sendMessageToChannel('🔔 Cannot place trigger order: prices failed validation.', stock.stockSymbol, stock.quantity, "Trigger Price:", stock.triggerPrice, 'Target Price:', stock.targetPrice, 'Stop Loss Price:', stock.stopLossPrice)
+                    await setToIgnoreInSheet(stock, 'Invalid Prices')
+                    continue
+                }
+
                 if (stock.type === 'BULLISH' && Number(stock.triggerPrice) < ltp) {
                     await sendMessageToChannel('🔔 Cannot place target buy order: LTP higher than Buy Price.', stock.stockSymbol, stock.quantity, "Buy Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
                 }
+                if (stock.type === 'BULLISH' && (stock.triggerPrice > stock.targetPrice || stock.triggerPrice < stock.stopLossPrice)) {
+                    await sendMessageToChannel('🔔 Cannot place trigger order: prices failed validation.', stock.stockSymbol, stock.quantity, "Trigger Price:", stock.triggerPrice, 'Target Price:', stock.targetPrice, 'Stop Loss Price:', stock.stopLossPrice)
+                    await setToIgnoreInSheet(stock, 'Invalid Prices')
+                    continue
+                }
+                
                 if (order_value > MAX_ORDER_VALUE || order_value < MIN_ORDER_VALUE) {
                     await sendMessageToChannel(`🔔 Order value ${order_value} not within limits!`, stock.stockSymbol, stock.quantity, "Price:", stock.triggerPrice, 'LTP: ', ltp)
                     continue
@@ -639,7 +650,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
-    const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
+    const validationJob = schedule.scheduleJob('35,46 3,22 * * 1-5', () => {
         validateOrdersFromSheet();
         sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
     });

@@ -200,6 +200,28 @@ const updateNameInSheetForClosedOrder = async (order) => {
     }
 }
 
+const setToIgnoreInSheet = async (order, message) => {
+    try {
+        let updates = []
+        let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+        const rowHeaders = sheetData.map(a => a[1])
+        const colHeaders = sheetData[0]
+
+        const [row, col] = getStockLoc(order.stockSymbol, 'Ignore', rowHeaders, colHeaders)
+
+        updates.push({
+            range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+            values: [[message]], 
+        })
+
+        await bulkUpdateCells(updates)
+
+    } catch (error) {
+        await sendMessageToChannel('📛 Error updating ignore in sheet during validation!', order.sym, order.quantity, order.tag, error?.message)
+        console.trace(error)
+    }
+}
+
 const processSuccessfulOrder = async (order) => {
     try {
         if (order.product == 'MIS' && order.status == 'COMPLETE') {
@@ -594,5 +616,6 @@ module.exports = {
     createZaireOrders,
     placeOrder,
     logOrder,
-    updateNameInSheetForClosedOrder
+    updateNameInSheetForClosedOrder,
+    setToIgnoreInSheet
 }
