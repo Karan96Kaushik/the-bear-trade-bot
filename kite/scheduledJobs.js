@@ -650,7 +650,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
-    const validationJob = schedule.scheduleJob('35,46 3,22 * * 1-5', () => {
+    const validationJob = schedule.scheduleJob('35,47 3,21 * * 1-5', () => {
         validateOrdersFromSheet();
         sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
     });
