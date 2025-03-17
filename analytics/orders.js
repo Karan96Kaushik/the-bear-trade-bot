@@ -88,6 +88,10 @@ const calculatePnLForPairs = async (data) => {
         }
     });
 
+    pnlResults.forEach(a => {
+        a.pnl = parseFloat(a.pnl.toFixed(2));
+    });
+
     return pnlResults;
 }
 
