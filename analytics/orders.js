@@ -5,6 +5,92 @@ const { connectToDatabase } = require('../modules/db');
 const { getDataFromYahoo, processYahooData } = require('../kite/utils');
 const { kiteSession } = require('../kite/setup');
 
+const calculatePnLForPairs = async (data) => {
+    const trades = {};
+    const pnlResults = [];
+
+    // Group trades by symbol and pair them
+    data.forEach(trade => {
+        const symbol = trade.tradingsymbol;
+        if (!trades[symbol]) {
+            trades[symbol] = [];
+        }
+        trades[symbol].push(trade);
+    });
+
+    // Calculate PnL for each pair
+    Object.keys(trades).forEach(symbol => {
+        const symbolTrades = trades[symbol];
+        let i = 0;
+
+        while (i < symbolTrades.length) {
+            const entryTrade = symbolTrades[i];
+            const exitTrade = symbolTrades[i + 1];
+
+            if (exitTrade && exitTrade.isExit) {
+                // Calculate PnL for closed trade
+                let pnl;
+                if (entryTrade.transaction_type === 'BUY' && exitTrade.transaction_type === 'SELL') {
+                    pnl = (exitTrade.price - entryTrade.price) * entryTrade.quantity;
+                } else if (entryTrade.transaction_type === 'SELL' && exitTrade.transaction_type === 'BUY') {
+                    pnl = (entryTrade.price - exitTrade.price) * entryTrade.quantity;
+                } else {
+                    pnl = null; // Invalid pair
+                }
+
+                pnlResults.push({
+                    symbol,
+                    entryTime: entryTrade._timestamp,
+                    entryTime: entryTrade._timestamp,
+                    exitTime: exitTrade._timestamp,
+                    quantity: entryTrade.quantity,
+                    entryPrice: entryTrade.price,
+                    exitPrice: exitTrade.price,
+                    source: entryTrade.source,
+                    exitReason: exitTrade.exitReason,
+                    direction: entryTrade.direction,
+                    status: 'CLOSED',
+                    pnl
+                });
+
+                i += 2; // Move to the next pair
+            } else {
+                // Trade is still open
+                pnlResults.push({
+                    symbol,
+                    entryTime: entryTrade._timestamp,
+                    exitTime: null,
+                    quantity: entryTrade.quantity,
+                    entryPrice: entryTrade.price,
+                    exitPrice: null,
+                    source: entryTrade.source,
+                    exitReason: null,
+                    direction: entryTrade.direction,
+                    status: 'OPEN',
+                    pnl: null
+                });
+
+                i += 1; // Move to the next trade
+            }
+        }
+    });
+
+    const openTradeSymbols = pnlResults.filter(a => a.status === 'OPEN').map(a => a.symbol).map(a => `NSE:${a}`);
+
+    const ltps = await kiteSession.kc.getLTP(openTradeSymbols);
+
+    // console.log(ltps, openTradeSymbols)
+
+    pnlResults.forEach(a => {
+        if (a.status === 'OPEN') {
+            a.ltp = ltps[`NSE:${a.symbol}`].last_price;
+            a.pnl = (a.ltp - a.entryPrice) * a.quantity;
+        }
+    });
+
+    return pnlResults;
+}
+
 async function getRetrospective(startDate, endDate) {
 
         await connectToDatabase();
@@ -54,8 +140,17 @@ async function getRetrospective(startDate, endDate) {
             transaction_type: a.transaction_type,
             source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
             exitReason: a.tag?.includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
-            direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || ''
+            direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || '',
+            isExit: a.tag?.includes('trigger') ? false : true
         })))
+
+        console.table(results)
+        // console.log(JSON.stringify(results))
+        
+
+        
+        const pnlResults = await calculatePnLForPairs(results);
+        // console.table(pnlResults);
 
         results = await Promise.all(results.map(async a => {
             const sym = a.tradingsymbol
@@ -82,7 +177,7 @@ async function getRetrospective(startDate, endDate) {
             return a
         }))
 
-        return results
+        return pnlResults
 }
 
 async function analyzeTradeResults(trades) {
@@ -154,8 +249,10 @@ async function analyzeTradeResults(trades) {
 }
 
 async function getTradeAnalysis(startDate, endDate) {
-    const trades = await getRetrospective(startDate, endDate);
-    const analysis = await analyzeTradeResults(trades);
+    const analysis = await getRetrospective(startDate, endDate);
+    // const analysis = await analyzeTradeResults(trades);
+
+    console.table(analysis)
 
     const zaireTrades = analysis.filter(t => t.source === 'zaire');
     const baileyTrades = analysis.filter(t => t.source === 'bailey');

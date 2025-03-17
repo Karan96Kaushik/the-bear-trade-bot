@@ -95,9 +95,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         let finalEndDate = new Date(enddate)
         let singleDate = false;
 
-        if (currentDate == finalEndDate) {
+        console.log(currentDate, finalEndDate)
+
+        if (currentDate.toISOString() == finalEndDate.toISOString()) {
             singleDate = true;
         }
+
+        singleDate = false
+
 
         // Iterate through each day
         while (currentDate <= finalEndDate) {
@@ -114,7 +119,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             let dayStartTime = new Date(currentDate)
             let dayEndTime = new Date(currentDate)
 
-            dayStartTime.setHours(3, 51, 10, 0)
+            dayStartTime.setHours(3, 50, 20, 0)
 
             // 12:00 PM IST
             // dayEndTime.setHours(6, 30, 10, 0)
@@ -160,11 +165,11 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             startDate.setHours(3, 0, 0, 0);
                             // console.log(stock.sym, startDate, endDate)
 
-                            // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
-                            // yahooData = processYahooData(yahooData);
+                            let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
+                            yahooData = processYahooData(yahooData);
 
-                            let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
-                            yahooData = processGrowwData(yahooData);
+                            // let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
+                            // yahooData = processGrowwData(yahooData);
 
                             yahooData = addMovingAverage(yahooData,'close',44, 'sma44');
 
@@ -222,7 +227,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                             sim.run();
 
-                            if (sim.startedAt && !singleDate) {
+                            // console.log(triggerPrice, targetPrice, stopLossPrice)
+
+                            if (singleDate || sim.startedAt) {
                                 return {
                                     startedAt: sim.startedAt,
                                     placedAt: sim.orderTime,
@@ -232,7 +239,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                     sym: sim.stockSymbol,
                                     data: yahooData,
                                     actions: sim.tradeActions,
-                                    exitTime: sim.exitTime || null
+                                    exitTime: sim.exitTime || null,
+                                    triggerPrice: triggerPrice,
+                                    targetPrice: targetPrice,
+                                    stopLossPrice: stopLossPrice
                                 };
                             }
                             return null;
@@ -262,6 +272,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 dayStartTime = new Date(dayStartTime.getTime() + 5 * 60 * 1000)
             }
+
+            console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: t.placedAt, startedAt: t.startedAt})))
 
             let filTraded = []
 

@@ -66,6 +66,12 @@ class Simulator {
 
             if (!this.isPositionOpen) {
 
+                if (this.cancelInMins && time > +this.orderTime && ((i % this.cancelInMins) == 0) && openTriggerOrder) {
+                    this.tradeActions.push({ time, action: 'Cancelled', price: 0 });
+                    openTriggerOrder = false
+                    break;
+                }
+                
                 if (!this.isPositionOpen && time > +this.orderTime && ((direction == 'BULLISH' && high >= triggerPrice) || (direction == 'BEARISH' && low <= triggerPrice))) {
                     this.position = this.triggerPrice;
 
@@ -76,11 +82,8 @@ class Simulator {
                     this.tradeActions.push({ time, action: 'Target Placed', price: targetPrice });
                     this.tradeActions.push({ time, action: 'Stop Loss Placed', price: stopLossPrice });
                 }
-
-                if (this.cancelInMins && time > +this.orderTime && (i % this.cancelInMins == 0) && openTriggerOrder) {
-                    this.tradeActions.push({ time, action: 'Cancelled', price: 0 });
-                    openTriggerOrder = false
-                    break;
+                if (this.stockSymbol == 'PFC') {
+                    console.log(this.cancelInMins , time > +this.orderTime , ((i % this.cancelInMins) == 0) , openTriggerOrder)
                 }
             }
             else {
