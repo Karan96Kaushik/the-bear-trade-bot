@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { connectToDatabase } = require('../../modules/db');
 const bcrypt = require('bcrypt');
-const { generate, generateRefresh } = require('../modules/auth');
+const { generate, generateRefresh, decodeRefresh } = require('../modules/auth');
 
 // User model (you'll need to create this)
 const User = require('../../models/User');
@@ -80,6 +80,36 @@ router.post('/register', async (req, res) => {
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+router.post('/refresh-token', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    // Verify refresh token and generate new tokens
+    const decoded = decodeRefresh(refreshToken);
+    const user = await User.findById(decoded.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Generate new tokens
+    const accessToken = generate({ id: user._id, email: user.email, role: user.role });
+    const newRefreshToken = generateRefresh({ id: user._id, email: user.email, role: user.role });
+
+    res.json({
+      accessToken,
+      refreshToken: newRefreshToken
+    });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(401).json({ message: 'Invalid refresh token' });
   }
 });
 

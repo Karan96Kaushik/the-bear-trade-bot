@@ -17,7 +17,7 @@ const auth = (req, res, next) => {
 	}
 }
 
-const generate = (data, expiry = 7 * 24 * 60 * 60) => {
+const generate = (data, expiry = 24 * 60 * 60) => {
 	return jwt.sign(data, process.env.JWT_SECRET_KEY || 'JWT_SECRET_KEY', { expiresIn: expiry });
 }
 
