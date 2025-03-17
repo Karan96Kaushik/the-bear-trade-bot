@@ -148,40 +148,11 @@ async function getRetrospective(startDate, endDate) {
             isExit: a.tag?.includes('trigger') ? false : true
         })))
 
-        console.table(results)
+        // console.table(results)
         // console.log(JSON.stringify(results))
-        
+        return results;
 
-        
-        const pnlResults = await calculatePnLForPairs(results);
-        // console.table(pnlResults);
 
-        results = await Promise.all(results.map(async a => {
-            const sym = a.tradingsymbol
-            const timestamp = new Date(a._timestamp)
-            const timestamp2 = new Date(timestamp)
-            
-            if (a.source === 'zaire') {
-
-                let df = await getDataFromYahoo(sym, 5, '15m', timestamp.setDate(timestamp.getDate() - 5), timestamp2);
-                df = processYahooData(df);
-                df = addMovingAverage(df, 'close', 44, 'sma44');
-
-                return {
-                    ...a, 
-                    high: df[df.length - 2].high, 
-                    low: df[df.length - 2].low,
-                    open: df[df.length - 2].open,
-                    close: df[df.length - 2].close,
-                    volume: df[df.length - 2].volume,
-                    sma44: df[df.length - 2].sma44
-                }
-
-            }
-            return a
-        }))
-
-        return pnlResults
 }
 
 async function analyzeTradeResults(trades) {
@@ -253,10 +224,12 @@ async function analyzeTradeResults(trades) {
 }
 
 async function getTradeAnalysis(startDate, endDate) {
-    const analysis = await getRetrospective(startDate, endDate);
+    const trades = await getRetrospective(startDate, endDate);
     // const analysis = await analyzeTradeResults(trades);
+        
+    const analysis = await calculatePnLForPairs(trades);
 
-    console.table(analysis)
+    // console.table(analysis)
 
     const zaireTrades = analysis.filter(t => t.source === 'zaire');
     const baileyTrades = analysis.filter(t => t.source === 'bailey');
