@@ -698,7 +698,7 @@ const scheduleMISJobs = () => {
     const missingOrdersCB = () => {
         sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
         // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(missingOrders.nextInvocation()));
-        setupZaireOrders(false, true);
+        setupMissingOrders();
     };
     const missingOrders = schedule.scheduleJob('21 */7,*/2 4,5,6,7,8 * * 1-5', missingOrdersCB);
     const missingOrders_2 = schedule.scheduleJob('21 52,57 3 * * 1-5', missingOrdersCB);
