@@ -79,12 +79,22 @@ const calculatePnLForPairs = async (data) => {
 
     const ltps = await kiteSession.kc.getLTP(openTradeSymbols);
 
+    const orders = await kiteSession.kc.getOrders();
+    const openOrders = orders
+                            .filter(o => o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+                            .filter(o => o.tag?.includes('target') || o.tag?.includes('stoploss'));
+
     // console.log(ltps, openTradeSymbols)
 
     pnlResults.forEach(a => {
         if (a.status === 'OPEN') {
             a.ltp = ltps[`NSE:${a.symbol}`].last_price;
-            a.pnl = (a.ltp - a.entryPrice) * a.quantity;
+            a.pnl = (a.direction === 'BULLISH' ? a.ltp - a.entryPrice : a.entryPrice - a.ltp) * a.quantity;
+            let sl = openOrders.filter(o => o.tradingsymbol === a.symbol).find(o => o.tag?.includes('stoploss'));
+            let t = openOrders.filter(o => o.tradingsymbol === a.symbol).find(o => o.tag?.includes('target'));
+            sl = sl.trigger_price || sl.price;
+            t = t.trigger_price || t.price;
+            a.exitReason = `${sl}-${a.ltp}-${t}`;
         }
     });
 
@@ -150,7 +160,8 @@ async function getRetrospective(startDate, endDate) {
 
         // console.table(results)
         // console.log(JSON.stringify(results))
-        return results;
+        return results 
+                // .filter(a => a.timestamp !== '2025-03-19 15:10:49');
 
 
 }
