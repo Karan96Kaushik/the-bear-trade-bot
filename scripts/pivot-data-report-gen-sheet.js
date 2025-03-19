@@ -4,7 +4,7 @@ const { addMovingAverage, scanZaireStocks, countMATrendRising,
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
     checkDownwardTrend, printTrendEmojis, isBullishCandle,
     addRSI} = require("../analytics");
-// const { sendMessageToChannel } = require("./slack-actions");
+const { sendMessageToChannel } = require("./slack-actions");
 
 // const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
@@ -78,9 +78,11 @@ async function getPivotData(startTime, endTime) {
         // Update Google Sheet
         await appendRowsToSheet(sheetName + '!A1:Z', rows);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
+        sendMessageToChannel('✅ Successfully added pivot data');
 
     } catch (error) {
         console.trace('Error in get:', error?.response?.data || error?.message);
+        sendMessageToChannel('❌ Error updating pivot data:', error.message);
         // await sendMessageToChannel('❌ Error updating daily stats:', error.message);
     }
 }

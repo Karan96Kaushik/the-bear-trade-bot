@@ -5,6 +5,7 @@
   "scripts": {
     "start": "nodemon index.js",
     "deployprod": "ssh the-bear -t \"cd the-bear-trade-bot-2 && git stash && git pull && pm2 restart trade-bot-2 && pm2 log trade-bot-2\"",
+    "logprod": "ssh the-bear -t \"pm2 log trade-bot-2\"",
     "test": "jest --no-watchman",
     "test:kite-successful-order": "jest --no-watchman __tests__/kite-successful-order.js",
     "test:close-negative": "jest --no-watchman __tests__/close-negative.js",
