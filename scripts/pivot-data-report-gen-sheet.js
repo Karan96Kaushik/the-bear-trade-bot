@@ -82,7 +82,11 @@ async function getPivotData(startTime, endTime) {
 
     } catch (error) {
         console.trace('Error in get:', error?.response?.data || error?.message);
-        sendMessageToChannel('❌ Error updating pivot data:', error.message);
+        try {
+            sendMessageToChannel('❌ Error updating pivot data:', error.message);
+        } catch (error) {
+            console.log('Error sending message to channel:', error);
+        }
         // await sendMessageToChannel('❌ Error updating daily stats:', error.message);
     }
 }
