@@ -516,11 +516,13 @@ const processNSEChartData = (data) => {
 }
 
 const getMcIndicators = async (sym) => {
+
+    let cleanedSym = sym.replace(/&/g, ' ')
     
     let config = {
         method: 'get',
         maxBodyLength: Infinity,
-        url: `https://www.moneycontrol.com/mccode/common/autosuggestion_solr.php?classic=true&query=${sym}&type=1&format=json`, //&callback=suggest1`,
+        url: `https://www.moneycontrol.com/mccode/common/autosuggestion_solr.php?classic=true&query=${cleanedSym}&type=1&format=json`, //&callback=suggest1`,
         headers: { 
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0', 
             'Accept': 'text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01', 
