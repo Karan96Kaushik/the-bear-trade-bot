@@ -4,7 +4,7 @@ const { addMovingAverage, scanZaireStocks, countMATrendRising,
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
     checkDownwardTrend, printTrendEmojis, isBullishCandle,
     addRSI} = require("../analytics");
-const { sendMessageToChannel } = require("./slack-actions");
+const { sendMessageToChannel } = require("../slack-actions");
 
 // const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
