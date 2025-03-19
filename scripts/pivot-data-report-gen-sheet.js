@@ -6,7 +6,7 @@ const { addMovingAverage, scanZaireStocks, countMATrendRising,
     addRSI} = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 
-const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
+// const sheetID = '17eVGOMlgO8M62PrD8JsPIRcavMmPz-KH7c8QW1edzZE'
 const DEBUG = false
 
 const interval = '15m'
@@ -14,12 +14,10 @@ let sheetName = 'Pivot-Data'
 
 // sheetName = '5Dec-15m-Notif'
 
-// let sheetRange = 'HIGHBETA!B2:B200'
-// sheetRange = '4Dec-notif-list!A1:A200'
+//let sheetRange = 'SimulationTest!E2:E550'
+let sheetRange = 'SimulationTest!H2:H550'
 
-sheetRange = 'HIGHBETA!B1:B200'
-
-async function getDailyStats(startTime, endTime) {
+async function getPivotData(startTime, endTime) {
     try {
 
         let niftyList = await readSheetData(sheetRange)  
@@ -76,11 +74,11 @@ async function getDailyStats(startTime, endTime) {
         }
 
         // Update Google Sheet
-        await appendRowsToSheet(sheetName + '!A1:Z', rows, sheetID);
+        await appendRowsToSheet(sheetName + '!A1:Z', rows);
         // await sendMessageToChannel('✅ Successfully updated daily stats sheet');
 
     } catch (error) {
-        console.trace('Error in getDailyStats:', error?.response?.data || error?.message);
+        console.trace('Error in get:', error?.response?.data || error?.message);
         // await sendMessageToChannel('❌ Error updating daily stats:', error.message);
     }
 }
@@ -115,9 +113,15 @@ const run = async () => {
         ]
     ]
 
-    await appendRowsToSheet(sheetName + '!A1:Z', headers, sheetID);
+    await appendRowsToSheet(sheetName + '!A1:Z', headers);
 
-    getDailyStats()
+    getPivotData()
 }
 
-run()
+if (require.main === module) {
+    run()
+}
+
+module.exports = {
+    getPivotData
+}

@@ -7,6 +7,7 @@ const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
 const { scanZaireStocks, scanBaileyStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
 const { generateDailyReport } = require('../analytics/reports');
+const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -721,6 +722,13 @@ const scheduleMISJobs = () => {
 
     });
     sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
+
+    const pivotDataJob = schedule.scheduleJob('30,37 2,11 * * 1-5', () => {
+        getPivotData()
+        sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
+
+    });
+    sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
 }
 
 module.exports = {
