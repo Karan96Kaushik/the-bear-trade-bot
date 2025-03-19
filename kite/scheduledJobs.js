@@ -13,6 +13,8 @@ const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 
+const STOPLOSS_TYPE = 'SL-M'
+
 const zaireV3Params = {
     TOUCHING_SMA_TOLERANCE: 0.0003,
     TOUCHING_SMA_15_TOLERANCE: 0.0003,
@@ -519,7 +521,7 @@ async function updateStopLossOrders() {
                 ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);
                 ltp = ltp[`NSE:${sym}`]?.last_price;
 
-                type = 'SL-M'
+                type = STOPLOSS_TYPE
 
                 // newPrice = isBearish ? newPrice + 1 : newPrice - 1
 
@@ -608,7 +610,7 @@ async function setupMissingOrders() {
                 // Position is bullish (long)
                 if (position.quantity > 0) {
                     if (!hasStoploss) {
-                        await placeOrder('SELL', 'SL-M', stock.stopLossPrice, position.quantity, stock, 'stoploss-missing');
+                        await placeOrder('SELL', STOPLOSS_TYPE, stock.stopLossPrice, position.quantity, stock, 'stoploss-missing');
                     }
                     if (!hasTarget) {
                         await placeOrder('SELL', 'LIMIT', stock.targetPrice, position.quantity, stock, 'target-missing');
@@ -617,7 +619,7 @@ async function setupMissingOrders() {
                 // Position is bearish (short)
                 else {
                     if (!hasStoploss) {
-                        await placeOrder('BUY', 'SL-M', stock.stopLossPrice, Math.abs(position.quantity), stock, 'stoploss-missing');
+                        await placeOrder('BUY', STOPLOSS_TYPE, stock.stopLossPrice, Math.abs(position.quantity), stock, 'stoploss-missing');
                     }
                     if (!hasTarget) {
                         await placeOrder('BUY', 'LIMIT', stock.targetPrice, Math.abs(position.quantity), stock, 'target-missing');
@@ -691,6 +693,17 @@ const scheduleMISJobs = () => {
     // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
     sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2, zaireJobV3_3)));
     // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+
+
+    const missingOrdersCB = () => {
+        sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
+        // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(missingOrders.nextInvocation()));
+        setupZaireOrders(false, true);
+    };
+    const missingOrders = schedule.scheduleJob('21 */7,*/2 4,5,6,7,8 * * 1-5', missingOrdersCB);
+    const missingOrders_2 = schedule.scheduleJob('21 52,57 3 * * 1-5', missingOrdersCB);
+    const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
+    sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
 
     const baileyJobCB = () => {
         sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
