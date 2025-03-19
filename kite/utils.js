@@ -327,12 +327,12 @@ async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
  * @param {Object} yahooData - The raw data from Yahoo Finance
  * @returns {Array} An array of OHLCV objects
  */
-function processYahooData(yahooData) {
+function processYahooData(yahooData, interval, useCached) {
     const result = yahooData.chart.result[0];
     const timestamps = result.timestamp;
     const quote = result.indicators.quote[0];
     
-    return timestamps?.map((timestamp, index) => ({
+    let data = timestamps?.map((timestamp, index) => ({
         time: timestamp * 1000,
         // time: new Date(timestamp * 1000).toISOString(),
         open: quote.open[index],
@@ -341,6 +341,18 @@ function processYahooData(yahooData) {
         close: quote.close[index],
         volume: quote.volume[index]
     }));
+
+    // This is to remove incomplete candles; only applicable for live data
+    if (interval && typeof interval == 'number' && !useCached) {
+        let roundedTimeForReqCandle = Math.floor(data[data.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
+        data = data.filter(d => d.time <= roundedTimeForReqCandle)
+
+        if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low || !data[data.length - 1].volume) {
+            throw new Error(`No data found for ${sym} in the given time range`)
+        }
+    }
+    
+    return data
 }
 
 /**
