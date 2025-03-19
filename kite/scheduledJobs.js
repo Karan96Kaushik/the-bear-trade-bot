@@ -723,7 +723,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
 
-    const pivotDataJob = schedule.scheduleJob('30,11 2,11 * * 1-5', () => {
+    const pivotDataJob = schedule.scheduleJob('30 1 * * 1-5', () => {
         getPivotData()
         sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
 

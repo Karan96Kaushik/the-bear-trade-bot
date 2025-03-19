@@ -28,6 +28,8 @@ async function getPivotData(startTime, endTime) {
         const rows = [
         ];
 
+        const date = getDateStringIND(new Date()).split(' ')[0]
+
         for (const stock of niftyList) {
             try {
 
@@ -41,7 +43,7 @@ async function getPivotData(startTime, endTime) {
 
                 const data = [
                     stock,
-                    getDateStringIND(new Date()).split(' ')[0],
+                    date,
                     classic.pivotPoint,
                     classic.s1,
                     classic.s2,
@@ -87,8 +89,8 @@ const run = async () => {
 
     const headers = [
         [
-            'Timestamp',
             'Sym',
+            'Timestamp',
             'Classic Pivot Point',
             'Classic S1',
             'Classic S2',
