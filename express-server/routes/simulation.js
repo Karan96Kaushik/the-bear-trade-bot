@@ -166,7 +166,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             // console.log(stock.sym, startDate, endDate)
 
                             let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
-                            yahooData = processYahooData(yahooData);
+                            yahooData = processYahooData(yahooData, 1, false);
 
                             // let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                             // yahooData = processGrowwData(yahooData);
