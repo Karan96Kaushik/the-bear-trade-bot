@@ -455,10 +455,10 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 				let df75min = [];
 				
 				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
-				df = processYahooData(df);
+				df = processYahooData(df, interval, useCached);
 				// console.log(df.slice(-3).map(d => ({...d, time: getDateStringIND(d.time)})))
 				
-				df = removeIncompleteCandles(df, useCached);
+				// df = removeIncompleteCandles(df, useCached);
 				// console.log(df.slice(-3).map(d => ({...d, time: getDateStringIND(d.time)})))
 				
 				if (DEBUG) {
@@ -496,8 +496,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 				if (checkV3) {
 					
 					let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
-					df5min = processYahooData(df5min);
-					df5min = removeIncompleteCandles(df5min, useCached);
+					df5min = processYahooData(df5min, '5m', useCached);
+					// df5min = removeIncompleteCandles(df5min, useCached);
 					if (!df5min || df5min.length === 0) return null;
 					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW || 44, 'sma44');
 					df5min = df5min.filter(r => r.close);
@@ -507,8 +507,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					earlierStart.setDate(earlierStart.getDate() - 10)
 					
 					let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
-					df15min = processYahooData(df15min);
-					df15min = removeIncompleteCandles(df15min, useCached);
+					df15min = processYahooData(df15min, '15m', useCached);
+					// df15min = removeIncompleteCandles(df15min, useCached);
 					
 					let df15min_copy = [...df15min]
 					
@@ -966,7 +966,8 @@ module.exports = {
 	addRSI,
 	calculateBollingerBands,
 	scanBaileyStocks,
-	getDateRange
+	getDateRange,
+	removeIncompleteCandles
 };
 
 

@@ -343,7 +343,11 @@ function processYahooData(yahooData, interval, useCached) {
     }));
 
     // This is to remove incomplete candles; only applicable for live data
-    if (interval && typeof interval == 'number' && !useCached) {
+    if (interval && typeof interval == 'string' && !useCached) {
+        if (interval.includes('m')) interval = parseInt(interval.split('m')[0])
+        else if (interval.includes('h')) interval = parseInt(interval.split('h')[0]) * 60
+        else if (interval.includes('d')) interval = parseInt(interval.split('d')[0]) * 24 * 60
+        
         let roundedTimeForReqCandle = Math.floor(data[data.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
         data = data.filter(d => d.time <= roundedTimeForReqCandle)
 
