@@ -150,8 +150,8 @@ async function setupBaileyOrders() {
         let sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
         sheetData = processMISSheetData(sheetData)
 
-
-        let selectedStocks = await scanBaileyStocks(niftyList, null, '5m')
+        let useCached=false
+        let selectedStocks = await scanBaileyStocks(niftyList, null, '5m', useCached)
 
         await sendMessageToChannel('🫷 Bailey MIS Stocks: ', selectedStocks);
 
@@ -700,7 +700,7 @@ const scheduleMISJobs = () => {
         // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(missingOrders.nextInvocation()));
         setupMissingOrders();
     };
-    const missingOrders = schedule.scheduleJob('21 */7,*/2 4,5,6,7,8 * * 1-5', missingOrdersCB);
+    const missingOrders = schedule.scheduleJob('21 2,7,12,17,22,27,32,37,42,47,52,57 4,5,6,7,8 * * 1-5', missingOrdersCB);
     const missingOrders_2 = schedule.scheduleJob('21 52,57 3 * * 1-5', missingOrdersCB);
     const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
     sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));

@@ -880,7 +880,7 @@ function calculateBollingerBands(df, period = 20, stdDev = 2) {
 	}));
 }
 
-async function scanBaileyStocks(stockList, endDateNew, interval = '5m') {
+async function scanBaileyStocks(stockList, endDateNew, interval = '5m', useCached=false) {
 	let endDate = new Date();
 	endDate.setUTCSeconds(10);
 	
@@ -893,8 +893,8 @@ async function scanBaileyStocks(stockList, endDateNew, interval = '5m') {
 	
 	const promises = stockList.map(async (sym) => {
 		try {
-			let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate);
-			df = processYahooData(df);
+			let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
+			df = processYahooData(df, interval, useCached);
 			
 			if (!df || df.length === 0) {
 				console.log('No data for', sym);
