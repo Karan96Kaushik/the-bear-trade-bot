@@ -94,14 +94,14 @@ class Simulator {
                         let pastData = data.slice(i-this.updateSLInterval, i)
                         
                         if (direction == 'BULLISH') {
-                            let newSL = Math.min(...pastData.map(d => d.low))
+                            let newSL = Math.min(...pastData.map(d => d.low).filter(Boolean))
                             if (newSL > stopLossPrice) {
                                 stopLossPrice = newSL
                                 this.tradeActions.push({ time, action: 'Stop Loss Updated', price: stopLossPrice });
                             }
                         }
                         else {
-                            let newSL = Math.max(...pastData.map(d => d.high))
+                            let newSL = Math.max(...pastData.map(d => d.high).filter(Boolean))
                             if (newSL < stopLossPrice) {
                                 stopLossPrice = newSL
                                 this.tradeActions.push({ time, action: 'Stop Loss Updated', price: stopLossPrice });
