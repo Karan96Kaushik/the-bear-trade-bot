@@ -143,7 +143,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 const interval = '5m'
 
                 const candleDate = new Date(dayStartTime)
-                candleDate.setMinutes(candleDate.getMinutes() - parseInt(interval))
+                // candleDate.setMinutes(candleDate.getMinutes() - parseInt(interval))
                 // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
                 let selectedStocks = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
 
@@ -161,8 +161,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             startDate.setHours(3, 0, 0, 0);
                             // console.log(stock.sym, startDate, endDate)
 
-                            let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
-                            yahooData = processYahooData(yahooData, '1m', true);
+                            // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
+                            // yahooData = processYahooData(yahooData, '1m', true);
 
                             // if (stock.sym == 'KPITTECH') {
                             //     console.log(dayStartTime, getDateStringIND(dayStartTime))
@@ -171,10 +171,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             //     console.log(yahooData[yahooData.length - 1].time, getDateStringIND(new Date(yahooData[yahooData.length - 1].time)))
                             // }
 
-                            // let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
-                            // yahooData = processGrowwData(yahooData);
-
-                            yahooData = addMovingAverage(yahooData,'close',44, 'sma44');
+                            let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
+                            yahooData = processGrowwData(yahooData);
 
                             let triggerPadding = 1;
                             if (stock.high < 20)
