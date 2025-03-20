@@ -140,17 +140,13 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 simulationJobs.get(jobId).currentDate = dayStartTime;
 
-                
+                const interval = '5m'
+
+                const candleDate = new Date(dayStartTime)
+                candleDate.setMinutes(candleDate.getMinutes() - parseInt(interval))
                 // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
-                let selectedStocks = await scanZaireStocks(niftyList, dayStartTime, '5m', false, true, true, selectionParams);
+                let selectedStocks = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
 
-                // INVERSE THE DIRECTION OF STOCKS
-                // console.log("INVERSE THE DIRECTION OF STOCKS")
-                // selectedStocks = selectedStocks.map(s => ({...s, direction: s.direction == 'BULLISH' ? 'BEARISH' : 'BULLISH'}))
-
-                // console.log(selectedStocks)
-
-                
                 if (selectedStocks.length > 0) {
                     const BATCH_SIZE = 2;
                     const activePromises = new Set();
@@ -166,7 +162,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             // console.log(stock.sym, startDate, endDate)
 
                             let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
-                            yahooData = processYahooData(yahooData, 1, false);
+                            yahooData = processYahooData(yahooData, '1m', true);
+
+                            // if (stock.sym == 'KPITTECH') {
+                            //     console.log(dayStartTime, getDateStringIND(dayStartTime))
+                            //     console.log(yahooData[yahooData.length - 3].time, getDateStringIND(new Date(yahooData[yahooData.length - 3].time)))
+                            //     console.log(yahooData[yahooData.length - 2].time, getDateStringIND(new Date(yahooData[yahooData.length - 2].time)))
+                            //     console.log(yahooData[yahooData.length - 1].time, getDateStringIND(new Date(yahooData[yahooData.length - 1].time)))
+                            // }
 
                             // let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                             // yahooData = processGrowwData(yahooData);

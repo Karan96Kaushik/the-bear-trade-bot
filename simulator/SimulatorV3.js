@@ -67,6 +67,7 @@ class Simulator {
             if (!this.isPositionOpen) {
 
                 if (this.cancelInMins && time > +this.orderTime && ((i % this.cancelInMins) == 0) && openTriggerOrder) {
+                    this.exitReason = 'cancelled'
                     this.tradeActions.push({ time, action: 'Cancelled', price: 0 });
                     openTriggerOrder = false
                     break;
@@ -113,6 +114,7 @@ class Simulator {
                     this.pnl -= direction == 'BEARISH' ? ((stopLossPrice - this.position) * this.quantity) : ((this.position - stopLossPrice) * this.quantity)
                     this.tradeActions.push({ time, action: 'Stop Loss Hit', price: stopLossPrice });
                     this.exitTime = time
+                    this.exitReason = 'stoploss'
                     this.isPositionOpen = false;
                     if (!this.reEnterPosition) {
                         break;
@@ -125,6 +127,7 @@ class Simulator {
                     // this.pnl += (this.position - targetPrice) * this.quantity + 0.9;
                     this.tradeActions.push({ time, action: 'Target Hit', price: targetPrice });
                     this.exitTime = time
+                    this.exitReason = 'target'
                     this.isPositionOpen = false;
                     if (!this.reEnterPosition) {
                         break;
@@ -141,6 +144,7 @@ class Simulator {
             this.tradeActions.push({ time: lastCandle.time, action: 'Auto Square-off', price: lastCandle.close });
             this.isPositionOpen = false;
             this.exitTime = lastCandle.time
+            this.exitReason = 'squareoff'
         }
 
         this.data = data;
