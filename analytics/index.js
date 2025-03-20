@@ -497,7 +497,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					
 					let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
 					df5min = processYahooData(df5min, '5m', useCached);
-					// df5min = removeIncompleteCandles(df5min, useCached);
+
 					if (!df5min || df5min.length === 0) return null;
 					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW || 44, 'sma44');
 					df5min = df5min.filter(r => r.close);
@@ -508,8 +508,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					
 					let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
 					df15min = processYahooData(df15min, '15m', useCached);
-					// df15min = removeIncompleteCandles(df15min, useCached);
-					
+
 					let df15min_copy = [...df15min]
 					
 					if (!df15min || df15min.length === 0) return null;
@@ -721,6 +720,8 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	if (DEBUG) {
 		console.log('result5min', 'result15min', 'result75min')
 		console.log(result5min, result15min, result75min)
+		console.log(df5min[df5min.length - 1].high, df5min[df5min.length - 1].low, df5min[df5min.length - 1].close, df5min[df5min.length - 1].sma44)
+		console.log(df15min[df15min.length - 1].high, df15min[df15min.length - 1].low, df15min[df15min.length - 1].close, df15min[df15min.length - 1].sma44)
 	}
 	
 	if (
@@ -737,7 +738,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	// const t1 = df5min[df5min.length - 2];
 	const t2 = df5min[df5min.length - 3];
 	const t3 = df5min[df5min.length - 4];
-	
+
 	const candleMid = (current.high + current.low) / 2;
 	
 	const touchingSma = (current.high * (1 + TOUCHING_SMA_TOLERANCE)) >= current.sma44 && (current.low * (1 - TOUCHING_SMA_TOLERANCE)) <= current.sma44
@@ -764,8 +765,8 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	//   result75min === 'BULLISH')
 	
 	if (DEBUG) {
-		console.log('current.close > candleMid', 'isNarrowRange(current, 0.005)', 'touchingSma', 'result75min', 'result5min', 'result15min', 't2.low > current.low', 't3.low > current.low')
-		console.log(current.close > candleMid, isNarrowRange(current, 0.005), touchingSma, result75min, result5min, result15min, t2.low > current.low, t3.low > current.low)
+		console.log('current.close / candleMid > BASE_CONDITIONS_SLOPE_TOLERANCE', 'narrowRange', 'touchingSma', 'touchingSma15', 'result75min', 'result5min', 'result15min', 't2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE', 't2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE')
+		console.log(current.close / candleMid > BASE_CONDITIONS_SLOPE_TOLERANCE, narrowRange, touchingSma, touchingSma15, result75min, result5min, result15min, t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE, t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE)
 	}
 	
 	if (

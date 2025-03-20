@@ -358,6 +358,9 @@ function processYahooData(yahooData, interval, useCached) {
             throw new Error(`Last candle is not found for ${sym}`)
         }
     }
+    if (useCached) {
+        data.pop()
+    }
     
     return data
 }
