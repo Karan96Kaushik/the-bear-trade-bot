@@ -354,6 +354,9 @@ function processYahooData(yahooData, interval, useCached) {
         if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low || !data[data.length - 1].volume) {
             throw new Error(`No data found for ${sym} in the given time range`)
         }
+        if (data[data.length - 1].time < roundedTimeForReqCandle) {
+            throw new Error(`Last candle is not found for ${sym}`)
+        }
     }
     
     return data
