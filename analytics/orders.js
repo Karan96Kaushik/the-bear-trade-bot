@@ -92,8 +92,8 @@ const calculatePnLForPairs = async (data) => {
             a.pnl = (a.direction === 'BULLISH' ? a.ltp - a.entryPrice : a.entryPrice - a.ltp) * a.quantity;
             let sl = openOrders.filter(o => o.tradingsymbol === a.symbol).find(o => o.tag?.includes('stoploss'));
             let t = openOrders.filter(o => o.tradingsymbol === a.symbol).find(o => o.tag?.includes('target'));
-            sl = sl.trigger_price || sl.price;
-            t = t.trigger_price || t.price;
+            sl = sl?.trigger_price || sl?.price || 'NA';
+            t = t?.trigger_price || t?.price || 'NA';
             a.exitReason = `${sl}-${a.ltp}-${t}`;
         }
     });
