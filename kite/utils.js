@@ -358,7 +358,7 @@ function processYahooData(yahooData, interval, useCached) {
             throw new Error(`Last candle is not found for ${sym}`)
         }
     }
-    if (useCached) {
+    else if (useCached && new Date(data[data.length - 1].time).getHours() < 10) {
         data.pop()
     }
     
