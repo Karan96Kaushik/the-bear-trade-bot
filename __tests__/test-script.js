@@ -1,4 +1,4 @@
-const { scanZaireStocks, scanBailyStocks, getDateRange } = require("../analytics")
+const { scanZaireStocks, scanBailyStocks, getDateRange, scanLightyearStocks } = require("../analytics")
 const { readSheetData, processMISSheetData, getStockLoc, appendRowsToMISD } = require("../gsheets")
 const { updateNameInSheetForClosedOrder, processSuccessfulOrder } = require("../kite/processor")
 const { setupZaireOrders } = require("../kite/scheduledJobs")
@@ -8,6 +8,8 @@ const { kiteSession } = require("../kite/setup")
 const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../kite/utils")
 const { Simulator } = require("../simulator/SimulatorV3")
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 const RISK_AMOUNT = 100;
@@ -15,6 +17,18 @@ const RISK_AMOUNT = 100;
 const run = async () => {
 
     try {
+
+        niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
+        niftyList = niftyList.map(stock => stock[0])
+        niftyList = ['HONASA']
+
+        let useCached = true
+
+        const selectedStocks = await scanLightyearStocks(niftyList, '2025-03-21T11:00:00Z', '1d', useCached)
+        console.log(selectedStocks)
+
+        return
+
 
         // await kiteSession.authenticate()
 
@@ -41,7 +55,7 @@ const run = async () => {
 
         // return
 
-        let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
+        niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
         // niftyList = ['BEL']
 

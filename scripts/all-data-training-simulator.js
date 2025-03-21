@@ -1,4 +1,6 @@
-const { getDataFromYahoo, processYahooData, getDateStringIND } = require("../kite/utils");
+const { getDataFromYahoo, processYahooData, getDateStringIND,
+    getGrowwChartData, processGrowwData
+ } = require("../kite/utils");
 const { appendRowsToSheet, readSheetData } = require("../gsheets");
 const { addMovingAverage, scanZaireStocks, countMATrendRising, 
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
@@ -47,9 +49,15 @@ const headers = {
 
     sma44: 'SMA44',
     rsi: 'RSI14',
-    bb_middle: 'BB Middle',
-    bb_upper: 'BB Upper',
-    bb_lower: 'BB Lower',
+    bb_middle: 'BB_Middle',
+    bb_upper: 'BB_Upper',
+    bb_lower: 'BB_Lower',
+
+    sma44_1: 'SMA44_T-1',
+    sma44_2: 'SMA44_T-2',
+    sma44_3: 'SMA44_T-3',
+    sma44_4: 'SMA44_T-4',
+
 
     t1h: 'T5-1H',
     t1l: 'T5-1L',
@@ -141,8 +149,8 @@ const headers = {
 
     // volume: 'Volume Prev Day Avg',
     // volume5m: 'Volume 5m',
-    volume15m: 'Volume 15m',
-    volume75m: 'Volume 75m',
+    volume15m: 'Volume_15m',
+    volume75m: 'Volume_75m',
 
     pnl: 'PnL',
     direction: 'Direction'
@@ -168,14 +176,15 @@ const runSimulation = async (stock, dayStartTime) => {
     const endTime = new Date(dayStartTime);
     endTime.setUTCHours(11, 0, 0, 0);
 
-    let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startTime, endTime, true);
-    yahooData = processYahooData(yahooData, '1m', false);
-    yahooData = removeIncompleteCandles(yahooData);
+    
+    // const useCached = true
+    // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startTime, endTime, useCached);
+    // yahooData = processYahooData(yahooData, '1m', useCached);
 
-    // let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
-    // yahooData = processGrowwData(yahooData);
+    let yahooData = await getGrowwChartData(stock.sym, startTime, endTime, 1, true);
+    yahooData = processGrowwData(yahooData);
 
-    yahooData = addMovingAverage(yahooData,'close',44, 'sma44');
+    yahooData = addMovingAverage(yahooData,'close',22, 'sma44');
 
     let triggerPadding = 1;
     if (stock.high < 20)
@@ -229,6 +238,18 @@ const runSimulation = async (stock, dayStartTime) => {
 
     sim.run();
 
+    // console.log(getDateStringIND(sim.orderTime), sim.pnl, sim.direction, sim.quantity, simulation)
+    // console.table(sim.tradeActions.map(t => ({
+    //     time: getDateStringIND(t.time),
+    //     action: t.action,
+    //     price: t.price,
+    // })))
+
+    // if (getDateStringIND(sim.orderTime) == '2025-03-20 13:10:20') {
+    //     throw new Error('Test error')
+    // }
+
+
     return {
         // startedAt: sim.startedAt,
         placedAt: sim.orderTime,
@@ -256,6 +277,7 @@ async function processStock(stock, date) {
     try {
 
         const { startDate, endDate } = getDateRange(date)
+        startDate.setDate(startDate.getDate() - 2)
 
         // Run simulations for each 5-minute interval from 3:45 AM to 7:15 AM
         const simulationResults = [];
@@ -343,6 +365,11 @@ async function processStock(stock, date) {
                 bb_middle: current5mCandle.bb_middle,
                 bb_upper: current5mCandle.bb_upper,
                 bb_lower: current5mCandle.bb_lower,
+
+                sma44_1: df5m.length > 1 ? df5m[df5m.length - 2].sma44 : null,
+                sma44_2: df5m.length > 2 ? df5m[df5m.length - 3].sma44 : null,
+                sma44_3: df5m.length > 3 ? df5m[df5m.length - 4].sma44 : null,
+                sma44_4: df5m.length > 4 ? df5m[df5m.length - 5].sma44 : null,
                 
                 // Previous 5m candles
                 t1h: df5m.length > 1 ? df5m[df5m.length - 2].high : null,
@@ -443,7 +470,7 @@ async function processStock(stock, date) {
         }
 
         // console.log(simulationResults.length)
-        // console.log(simulationResults[simulationResults.length - 1])
+        // console.log(simulationResults.find(r => r.candleTimestamp == '2025-03-20 13:05:20'))
         
         return simulationResults;
     } catch (error) {
@@ -567,10 +594,12 @@ const run = async () => {
 
     console.log(niftyList)
 
-    const baseDate = new Date(`2025-03-18`)
+    
+    const baseDate = new Date(`2025-02-18`)
+    
     baseDate.setUTCHours(3, 45, 10, 0);
 
-    const today = new Date('2025-03-19')
+    const today = new Date('2025-03-20')
     today.setUTCHours(3, 0, 0, 0);
     // const days = 50
     // baseDate.setDate(baseDate.getDate() - days)
