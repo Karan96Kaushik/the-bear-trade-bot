@@ -27,6 +27,10 @@ const calculatePnLForPairs = async (data) => {
             const entryTrade = symbolTrades[i];
             const exitTrade = symbolTrades[i + 1];
 
+            if (symbol === 'ABCAPITAL') {
+                console.table([entryTrade, exitTrade, ...trades[symbol]])
+            }
+
             if (exitTrade && exitTrade.isExit) {
                 // Calculate PnL for closed trade
                 let pnl;
@@ -132,6 +136,8 @@ async function getRetrospective(startDate, endDate) {
 
         const completedOrders = allOrders.filter(a => a.bear_status === 'COMPLETED');
 
+        console.table(completedOrders.filter(a => a.tradingsymbol === 'ABCAPITAL'))
+
         // for (const order of completedOrders) {
         //     const placeOrder = allOrders.find(o => o.order_id === order.order_id && o.bear_status.includes('PLACE'));
         //     if (!placeOrder) {
@@ -149,7 +155,7 @@ async function getRetrospective(startDate, endDate) {
             timestamp: (allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp && getDateStringIND(allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp)) || getDateStringIND(a.timestamp), 
             tradingsymbol: a.tradingsymbol, 
             quantity: a.quantity, 
-            price: a.price || a.average_price, 
+            price: a.average_price || a.price, 
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
             source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
