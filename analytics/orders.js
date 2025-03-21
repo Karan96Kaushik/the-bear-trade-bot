@@ -27,9 +27,9 @@ const calculatePnLForPairs = async (data) => {
             const entryTrade = symbolTrades[i];
             const exitTrade = symbolTrades[i + 1];
 
-            if (symbol === 'ABCAPITAL') {
-                console.table([entryTrade, exitTrade, ...trades[symbol]])
-            }
+            // if (symbol === 'ABCAPITAL') {
+            //     console.table([entryTrade, exitTrade, ...trades[symbol]])
+            // }
 
             if (exitTrade && exitTrade.isExit) {
                 // Calculate PnL for closed trade
@@ -52,7 +52,7 @@ const calculatePnLForPairs = async (data) => {
                     exitPrice: exitTrade.price,
                     source: entryTrade.source,
                     exitReason: exitTrade.exitReason,
-                    direction: entryTrade.direction,
+                    direction: entryTrade.direction || (entryTrade.transaction_type == 'BUY' ? 'BULLISH' : 'BEARISH'),
                     status: 'CLOSED',
                     pnl
                 });
