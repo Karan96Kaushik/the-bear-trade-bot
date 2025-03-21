@@ -6,7 +6,7 @@ const { getDataFromYahoo, processYahooData } = require("./utils");
 
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
-const RISK_AMOUNT = 100;
+const RISK_AMOUNT = 200;
 
 // Add this helper function near the top of the file
 const logOrder = async (status, initiator, orderResponse) => {
