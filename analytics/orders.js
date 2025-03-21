@@ -113,14 +113,6 @@ async function getRetrospective(startDate, endDate) {
 
         await connectToDatabase();
 
-        // const times = ['04:15'];
-        const times = ['04:01', '04:16'];
-        // const dates = ['2024-11-12'];
-        // const dates = ['2024-11-12', '2024-11-13', '2024-11-14'];
-        const dates = ['2024-11-19'];
-
-        const timestamp = getDateStringIND(new Date());
-
         let results = [];
 
         const allOrders = await OrderLog.find({
@@ -132,23 +124,10 @@ async function getRetrospective(startDate, endDate) {
         })
         .sort({ timestamp: 1 });
 
+        allOrders.sort((a, b) => a.timestamp - b.timestamp);
         allOrders.sort((a, b) => a.tradingsymbol.localeCompare(b.tradingsymbol));
 
         const completedOrders = allOrders.filter(a => a.bear_status === 'COMPLETED');
-
-        console.table(completedOrders.filter(a => a.tradingsymbol === 'ABCAPITAL'))
-
-        // for (const order of completedOrders) {
-        //     const placeOrder = allOrders.find(o => o.order_id === order.order_id && o.bear_status.includes('PLACE'));
-        //     if (!placeOrder) {
-        //         console.log(order.tradingsymbol)
-        //         console.log(allOrders.filter(o => o.tradingsymbol === order.tradingsymbol).map(o => [o.bear_status, o.order_id, order.order_id]))
-        //         console.log(allOrders.filter(o => o.order_id === order.order_id).map(o => [o.timestamp, o.bear_status]))
-        //     }
-        // }
-        // return
-
-        // console.log(completedOrders.map(a => [a.tradingsymbol, a.tag]))
 
         results.push(...completedOrders.map(a => ({
             _timestamp: allOrders.find(o => o.order_id === a.order_id && o.bear_status.includes('COMPLE'))?.timestamp || a.timestamp,
@@ -297,5 +276,6 @@ async function getTradeAnalysis(startDate, endDate) {
 
 module.exports = {
     getRetrospective,
-    getTradeAnalysis
+    getTradeAnalysis,
+    calculatePnLForPairs
 }

@@ -5,6 +5,7 @@ traderState.json
 tp.sh
 training.csv
 nifty-list.csv
+nifty-list-test.csv
 training*
 trial*
 *.joblib
