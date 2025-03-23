@@ -20,12 +20,19 @@ const run = async () => {
 
         niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
-        niftyList = ['HONASA']
+        // niftyList = ['HONASA']
 
         let useCached = true
 
-        const selectedStocks = await scanLightyearStocks(niftyList, '2025-03-21T11:00:00Z', '1d', useCached)
-        console.log(selectedStocks)
+        let date = new Date('2025-02-21T11:00:00Z')
+        for (let i = 0; i < 100; i++) {
+            const selectedStocks = await scanLightyearStocks(niftyList, date, '1d', useCached)
+            console.log(selectedStocks)
+            if (selectedStocks.length > 0) break
+            date = new Date(date.getTime() + 1 * 24 * 60 * 60 * 1000)
+            if (date > new Date('2025-03-21T11:00:00Z'))
+                break
+        }
 
         return
 
@@ -68,7 +75,7 @@ const run = async () => {
 
         // await setupZaireOrders(0,1)
 
-        let date = new Date('2025-01-28T03:51:10Z')
+        // let date = new Date('2025-01-28T03:51:10Z')
 
         let traded = []
 
