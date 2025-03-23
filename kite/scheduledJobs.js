@@ -1,13 +1,21 @@
 const schedule = require('node-schedule');
 const { sendMessageToChannel } = require('../slack-actions');
-const { readSheetData, processMISSheetData, appendRowsToMISD, getStockLoc, numberToExcelColumn, bulkUpdateCells } = require('../gsheets');
+const { 
+    readSheetData, processMISSheetData, appendRowsToMISD, getStockLoc, 
+    numberToExcelColumn, bulkUpdateCells, appendRowsToSheet, processSheetWithHeaders
+} = require('../gsheets');
 const { kiteSession } = require('./setup');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
-const { scanZaireStocks, scanBaileyStocks, isBullishCandle, getLastCandle, isBearishCandle } = require('../analytics');
+const { 
+    scanZaireStocks, scanBaileyStocks, isBullishCandle, 
+    getLastCandle, isBearishCandle 
+} = require('../analytics');
+const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
+const { createLightyearOrders, setupLightyearDayOneOrders } = require('./lightyear');
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -24,6 +32,82 @@ const zaireV3Params = {
     BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
     MA_WINDOW: 22,
     CHECK_75MIN: 1
+}
+
+async function setupLightyearOrders() {
+    try {
+        await sendMessageToChannel(`⌛️ Executing Lightyear MIS Jobs`);
+
+        let niftyList;
+
+        niftyList = await readSheetData('HIGHBETA!F2:F550')
+        niftyList = niftyList
+                        .map(stock => stock[0])
+
+        let sheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
+        sheetData = processSheetWithHeaders(sheetData)
+
+        await kiteSession.authenticate();
+        
+        let selectedStocks = await scanLightyearStocks(niftyList)
+
+        const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
+
+        sendMessageToChannel(`🔔 Lightyear MIS Stocks: `, selectedStocks);
+
+        if (
+            positions.net.filter(p => p.quantity !== 0).length >= 5
+            // || 
+            // orders.find(o => o.tradingsymbol === stock.sym)
+        ) {
+            await sendMessageToChannel('🔔 Active positions are more than 5')
+            return
+        }
+
+        const sheetEntries = []
+
+        for (const stock of selectedStocks) {
+            try {
+                // Skip if stock is already in position or open orders
+                if (
+                    positions.net.find(p => p.tradingsymbol === stock.sym)
+                    // (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
+                ) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
+                    continue
+                }
+                
+                if (sheetData.find(s => s.symbol === stock.sym)) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in lightyear sheet', stock.sym)
+                    continue
+                }
+
+                let sheetEntry = await createLightyearOrders(stock);
+
+                sheetEntries.push(sheetEntry)
+                // await appendRowsToMISD([sheetEntry])
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel(`🚨 Error running Lightyear MIS Jobs`, stock, error?.message);
+            }
+        }
+
+        if (sheetEntries.length > 0) {
+            await appendRowsToSheet('MIS-LIGHTYEAR!A2:W1000', sheetEntries)
+
+            let dayOneOrders = await setupLightyearDayOneOrders(sheetEntries)
+
+            if (dayOneOrders.length > 0) {
+                await appendRowsToMISD(dayOneOrders, 'Lightyear')
+            }
+
+        }
+
+
+    } catch (error) {
+        await sendMessageToChannel(`🚨 Error running Lightyear MIS Jobs`, error?.message);
+    }
 }
 
 async function setupZaireOrders(checkV2 = false, checkV3 = false) {
@@ -328,6 +412,7 @@ async function setupOrdersFromSheet() {
         const positions = await kiteSession.kc.getPositions();
 
         const openOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN'));
+        const lightyearOrders = orders.filter(o => o.tag?.includes('light'));
 
         await kiteSession.authenticate()
         console.log(orders)
@@ -344,6 +429,10 @@ async function setupOrdersFromSheet() {
                 }
                 if ( positions.net.find(p => p.tradingsymbol === stock.stockSymbol && p.quantity != 0) ) {
                     sendMessageToChannel('🔔 Ignoring coz already in open positions', stock.stockSymbol)
+                    continue
+                }
+                if (lightyearOrders.find(o => o.tradingsymbol === stock.stockSymbol)) {
+                    sendMessageToChannel('🔔 Ignoring coz already in lightyear orders', stock.stockSymbol)
                     continue
                 }
                 if (stock.type === 'BULLISH' && (stock.triggerPrice > stock.targetPrice || stock.triggerPrice < stock.stopLossPrice)) {
