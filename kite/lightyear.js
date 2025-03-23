@@ -183,6 +183,11 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
             }
             // Active order
             else {
+                // No status and found trigger order
+                if (!(stock.status.trim())) {
+                    status = 'Active'
+                }
+                
                 let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
 
                 let {entry_trigger_price, final_stop_loss, target, quantity} = stock
@@ -190,12 +195,10 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
                 final_stop_loss = Number(final_stop_loss)
                 target = Number(target)
                 quantity = Number(quantity)
-                let triggerPrice, stopLossPrice;
 
-                // No status and found trigger order
-                if (!(stock.status.trim())) {
-                    status = 'Active'
-                }
+                let triggerPrice, stopLossPrice, targetPrice;
+
+                targetPrice = target
 
                 let from = new Date();
                 from.setHours(from.getHours() - (from.getDay() == 0 ? 3 : from.getDay() == 6 ? 2 : 1));
@@ -223,7 +226,7 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
                 }
 
                 newOrders.push({
-                    stockSymbol: sym,
+                    stockSymbol: stock.symbol,
                     triggerPrice,
                     stopLossPrice,
                     targetPrice,
