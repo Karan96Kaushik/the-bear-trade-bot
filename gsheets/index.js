@@ -51,6 +51,21 @@ function processMISSheetData (stockData) {
     }))
 }
 
+function processSheetWithHeaders (stockData) {
+    let headers = stockData[0]
+    headers = headers.map(h => h.trim().toLowerCase().replace(/ /g, '_'))
+    let data = []
+    for (let i = 1; i < stockData.length; i++) {
+        let row = stockData[i]
+        let obj = {}
+        for (let j = 0; j < headers.length; j++) {
+            obj[headers[j]] = row[j]?.trim()
+        }
+        data.push(obj)
+    }
+    return data
+}
+
 async function bulkUpdateCells(updates) {
     const body = {
         valueInputOption: 'RAW',
@@ -102,14 +117,14 @@ function numberToExcelColumn(n) {
     return column;
 }
 
-async function appendRowsToMISD(stocks) {
+async function appendRowsToMISD(stocks, source='Zaire') {
     try {
         // Read existing data to determine the last row and ID
         let existingData = await readSheetData('MIS-ALPHA!A2:W1000');
         let lastRow = existingData.length + 2; // +2 because we start from A2
-        let lastId = parseInt(existingData[existingData.length - 1]?.[0]?.split('TMD')?.[1]);
-        if (isNaN(lastId))
-            lastId = 0
+        // let lastId = parseInt(existingData[existingData.length - 1]?.[0]?.split('ZAIRE')?.[1]);
+        // if (isNaN(lastId))
+        //     lastId = 0
         existingData = processMISSheetData(existingData);
 
         const rowsToAppend = [];
@@ -136,11 +151,11 @@ async function appendRowsToMISD(stocks) {
                 continue;
             }
 
-            lastId++;
-            const newId = 'TMD' + lastId;
+            // lastId++;
+            // const newId = source + lastId;
             
             // Prepare the new row data with the generated ID
-            rowsToAppend.push([newId.toString(), ...newRowData]);
+            rowsToAppend.push([source, ...newRowData]);
         }
 
         if (rowsToAppend.length === 0) {
@@ -197,5 +212,6 @@ module.exports = {
     processMISSheetData,
     getOrderLoc,
     appendRowsToMISD,
-    appendRowsToSheet
+    appendRowsToSheet,
+    processSheetWithHeaders
 }
