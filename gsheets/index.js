@@ -34,7 +34,7 @@ async function readSheetData(range=READ_RANGE) {
 
 function processMISSheetData (stockData) {
     let data = stockData.map(s => ({
-        id: s[0], 
+        source: s[0], 
         stockSymbol: s[1]?.trim().toUpperCase(), 
         triggerPrice: Number(s[2]?.trim()),
         stopLossPrice: Number(s[3]?.trim()),

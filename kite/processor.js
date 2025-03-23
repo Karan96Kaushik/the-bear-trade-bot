@@ -485,6 +485,13 @@ const shouldPlaceMarketOrder = (ltp, triggerPrice, targetPrice, direction) => {
 
 const createOrders = async (stock) => {
     try {
+
+        let source = 'CO'
+
+        if (stock.source.toLowerCase() == 'lightyear') {
+            source = 'light'
+        }
+
         if (stock.ignore)
             return console.log('IGNORING', stock.stockSymbol)
 
@@ -531,7 +538,7 @@ const createOrders = async (stock) => {
                 }
             }
 
-            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, 'trigger-m-CO')
+            orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'MARKET', null, stock.quantity, stock, `trigger-m-${source}`)
 
         }
         else {
@@ -541,14 +548,14 @@ const createOrders = async (stock) => {
                 (stock.type == 'BULLISH' && ltp > stock.triggerPrice)
             ) {
                 if (shouldPlaceMarketOrder(ltp, stock.triggerPrice, stock.targetPrice, stock.type)) {
-                    orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", "MARKET", null, stock.quantity, stock, 'trigger-mkt-CO')
+                    orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", "MARKET", null, stock.quantity, stock, `trigger-mk-${source}`)
                 }
                 else {
                     return sendMessageToChannel('🔔 Sheet: SELL order not placed: LTP too close to target price', stock.stockSymbol, stock.quantity, stock.targetPrice, ltp)
                 }
             }
             else {
-                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, 'trigger-CO');
+                orderResponse = await placeOrder(stock.type == 'BEARISH' ? "SELL" : "BUY", 'SL-M', stock.triggerPrice, stock.quantity, stock, `trigger-${source}`);
             }
 
         }
