@@ -32,11 +32,10 @@ const run = async () => {
 	initialize_slack(slack_app)
 	initialize_server(expressApp)
 
+	await sendMessageToChannel('🚀 Starting app!')
+
 	console.log("Connecting to database...")
 	await connectToDatabase();
-
-
-	await sendMessageToChannel('🚀 Starting app!')
 
 	await kiteSession.authenticate()
 
