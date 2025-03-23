@@ -39,7 +39,9 @@ class Simulator {
         this.updateSL = updateSL || false;
         this.updateSLInterval = updateSLInterval;
         this.updateSLFrequency = updateSLFrequency;
-        // this.marketOrder = marketOrder || false;
+
+        // Primarily for Lightyear simulation where trigger is placed at the start of the day (09:15)
+        this.isDayStartOrder = new Date(this.orderTime).getHours() == 3 && new Date(this.orderTime).getMinutes() == 45;
     }
 
     logAction(time, action, price=0) {
@@ -53,17 +55,25 @@ class Simulator {
         let stopLossPrice = this.stopLossPrice
         let openTriggerOrder = true
 
-        let shouldPlaceMarketOrder = this.shouldPlaceMarketOrder(data[0].close, triggerPrice, targetPrice, direction)
+
+        if (!data.length) {
+            console.log('No data', this.stockSymbol, new Date(this.orderTime).toISOString().split('T')[0])
+            return;
+        }
+
+        // Primarily for Lightyear simulation where trigger is placed at the start of the day (09:15) and candle changes can be drastic
+        let shouldPlaceMarketOrder = (!this.isDayStartOrder) || this.shouldPlaceMarketOrder(data[0].close, triggerPrice, targetPrice, direction)
 
         if (shouldPlaceMarketOrder) {
             this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Placed', price: triggerPrice });
         }
 
+        if (!shouldPlaceMarketOrder) {
+            this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Not Placed - too close to trigger price', price: triggerPrice });
+        }
+        else 
         for (let i = 1; i < data.length; i++) {
-            if (!shouldPlaceMarketOrder) {
-                this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Not Placed - too close to trigger price', price: triggerPrice });
-                break
-            }
+            
             const { time, open, high, low, close } = data[i];
 
             if (time < +this.orderTime) continue;
@@ -90,19 +100,17 @@ class Simulator {
                     this.startedAt = time
                     openTriggerOrder = false
                     this.isPositionOpen = true;
-                    this.tradeActions.push({ time, action: 'Trigger Hit', price: triggerPrice });
+                    this.tradeActions.push({ time, action: 'Trigger Hit', price: this.position });
                     this.tradeActions.push({ time, action: 'Target Placed', price: targetPrice });
                     this.tradeActions.push({ time, action: 'Stop Loss Placed', price: stopLossPrice });
-                }
-                if (this.stockSymbol == 'PFC') {
-                    console.log(this.cancelInMins , time > +this.orderTime , ((i % this.cancelInMins) == 0) , openTriggerOrder)
                 }
             }
             else {
 
                 if (this.updateSL) {
                     if (currMinute % this.updateSLFrequency == 0) {
-                        let pastData = data.slice(i-this.updateSLInterval, i)
+                        let pastData = data.slice(currMinute-this.updateSLInterval, currMinute)
+                        // let pastData = data.slice(i-this.updateSLInterval, i)
                         
                         if (direction == 'BULLISH') {
                             let newSL = Math.min(...pastData.map(d => d.low).filter(Boolean))
@@ -171,8 +179,18 @@ class Simulator {
             ? targetPrice - triggerPrice
             : triggerPrice - targetPrice;
 
-        console.log('shouldPlaceMarketOrder', ltp, triggerPrice, targetPrice, direction, targetGain, (targetPrice - ltp) / targetGain)
-    
+        if (targetGain < 0) {
+            this.exitReason = 'below-target'
+            return false;
+        }
+
+        if (
+            !(direction == 'BEARISH' && ltp < triggerPrice) &&
+            !(direction == 'BULLISH' && ltp > triggerPrice)
+        ) {
+            return true
+        }
+
         if (direction === 'BULLISH') {
             return ltp > triggerPrice && ((targetPrice - ltp) / targetGain > 0.8);
         } else {

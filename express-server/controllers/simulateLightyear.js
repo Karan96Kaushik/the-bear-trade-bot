@@ -104,7 +104,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         while (currentDate <= finalEndDate) {
             // Update current date in job status
 
-            if (currentDate.getDate() == 26 && currentDate.getMonth() == 2) {
+            if (
+                (currentDate.getDate() == 26 && currentDate.getMonth()+1 == 2) || 
+                (currentDate.getDate() == 14 && currentDate.getMonth()+1 == 3)) {
                 currentDate.setDate(currentDate.getDate() + 1)
             }
 
@@ -157,12 +159,12 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         // let candleLength = stock.high - stock.low;
 
                         if (direction == 'BULLISH') {
-                            entryTriggerPrice = stock.prev.high + triggerPadding;
+                            entryTriggerPrice = stock.high + triggerPadding;
                             finalStopLossPrice = Math.min(stock.prev.low, stock.low) - triggerPadding;
                             targetPrice = entryTriggerPrice + ((entryTriggerPrice - finalStopLossPrice) * 2);
                         }
                         else if (direction == 'BEARISH') {
-                            entryTriggerPrice = stock.prev.low - triggerPadding;
+                            entryTriggerPrice = stock.low - triggerPadding;
                             finalStopLossPrice = Math.max(stock.prev.high, stock.high) + triggerPadding;
                             targetPrice = entryTriggerPrice - ((finalStopLossPrice - entryTriggerPrice) * 2);
                         }
@@ -191,15 +193,12 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                         orderStartTime = (new Date(startDate)).setDate(startDate.getDate() + 1);
 
-                        console.log(stock.sym, {entryTriggerPrice, targetPrice, finalStopLossPrice})
-
-
                         // Skip weekends and 26th Feb
                         if ( [0, 6].includes(startDate.getDay()) ) {
                             startDate.setDate(startDate.getDate() - (startDate.getDay() == 0 ? 2 : 1))
                             endDate.setDate(endDate.getDate() - (endDate.getDay() == 0 ? 2 : 1))
                         }
-                        if (startDate.getDate() == 26 && startDate.getMonth()+1 == 2) {
+                        if ((startDate.getDate() == 26 && startDate.getMonth()+1 == 2) || (startDate.getDate() == 14 && startDate.getMonth()+1 == 3)) {
                             startDate.setDate(startDate.getDate() - 1)
                             endDate.setDate(endDate.getDate() - 1)
                         }
@@ -215,10 +214,15 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             // Skip weekends and 26th Feb
                             if (
                                 [0, 6].includes(startDate.getDay()) || 
-                                (startDate.getDate() == 26 && startDate.getMonth()+1 == 2)) {
+                                (startDate.getDate() == 26 && startDate.getMonth()+1 == 2) || 
+                                (startDate.getDate() == 14 && startDate.getMonth()+1 == 3)) {
                                 continue;
                             }
                             currentDay++;
+
+                            if (startDate > new Date()) {
+                                break;
+                            }
 
                             let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                             yahooData = processGrowwData(yahooData);
@@ -261,7 +265,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 updateSL: simulation.updateSL,
                                 updateSLInterval: simulation.updateSLInterval,
                                 updateSLFrequency: simulation.updateSLFrequency,
-                                marketOrder: true // simulation.marketOrder
+                                // marketOrder: true // simulation.marketOrder
                             });
 
                             sim.run();
@@ -279,6 +283,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                             if (currentDay == 1 && !sim.startedAt) {
                                 exit = 'cancelled'
+                            }
+
+                            if (sim.exitReason == 'below-target') {
+                                exit = 'below-target'
                             }
 
                             // if (sim.startedAt) {
@@ -328,7 +336,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             pnl: perDayResults.reduce((sum, r) => sum + r.pnl, 0),
                             placedAt: orderStartTime,
                             quantity,
-                            data: [],//perDayResults.map(r => r.data).flat(),
+                            data: [], //perDayResults.map(r => r.data).flat(),
                             direction,
                             triggerPrice: entryTriggerPrice,
                             targetPrice,
