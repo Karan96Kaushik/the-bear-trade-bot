@@ -831,6 +831,13 @@ const scheduleMISJobs = () => {
 
     });
     sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
+
+    const lightyearJob = schedule.scheduleJob('30 11 * * 1-5', () => {
+        scanLightyearStocks()
+        sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
+
+    });
+    sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
 }
 
 module.exports = {
