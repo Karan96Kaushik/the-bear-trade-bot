@@ -178,6 +178,7 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
 
             let triggerOrder = lightyearTriggerOrders.find(o => o.tradingsymbol === stock.symbol)
 
+            // No status and no trigger order
             if (!(stock.status.trim()) && !triggerOrder) {
                 status = 'Cancelled'
             }
@@ -210,31 +211,44 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
                 let last45mins = pastData.slice(-3);
                 let last15mins = pastData.slice(-1);
 
-                let triggerPadding = getTriggerPadding(entry_trigger_price);
+                let dayLow = pastData.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000)
+                let dayHigh = pastData.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0)
 
-                if (direction == 'BULLISH') {
-                    let last15minsHigh = last15mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
-                    let last45minsLow = last45mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
-                    triggerPrice = last15minsHigh;
-                    stopLossPrice = last45minsLow;
+                if (direction == 'BULLISH' && dayLow < final_stop_loss) {
+                    status = 'Cancelled'
                 }
-                else if (direction == 'BEARISH') {
-                    let last15minsLow = last15mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
-                    let last45minsHigh = last45mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
-                    triggerPrice = last15minsLow;
-                    stopLossPrice = last45minsHigh;
+                else if (direction == 'BEARISH' && dayHigh > target) {
+                    status = 'Cancelled'
                 }
+                else {
 
-                newOrders.push({
-                    stockSymbol: stock.symbol,
-                    triggerPrice,
-                    stopLossPrice,
-                    targetPrice,
-                    quantity,
-                    lastAction: '',
-                    ignore: '',
-                    reviseSL: true,
-                })
+                    let triggerPadding = getTriggerPadding(entry_trigger_price);
+    
+                    if (direction == 'BULLISH') {
+                        let last15minsHigh = last15mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
+                        let last45minsLow = last45mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
+                        triggerPrice = last15minsHigh;
+                        stopLossPrice = last45minsLow;
+                    }
+                    else if (direction == 'BEARISH') {
+                        let last15minsLow = last15mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
+                        let last45minsHigh = last45mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
+                        triggerPrice = last15minsLow;
+                        stopLossPrice = last45minsHigh;
+                    }
+    
+                    newOrders.push({
+                        stockSymbol: stock.symbol,
+                        triggerPrice,
+                        stopLossPrice,
+                        targetPrice,
+                        quantity,
+                        lastAction: '',
+                        ignore: '',
+                        reviseSL: true,
+                    })
+
+                }
 
             }
 
