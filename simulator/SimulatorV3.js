@@ -15,7 +15,8 @@ class Simulator {
             cancelInMins,
             updateSL,
             updateSLInterval,
-            updateSLFrequency
+            updateSLFrequency,
+            // marketOrder
         } = simulationParams;
 
         this.stockSymbol = stockSymbol;
@@ -34,10 +35,11 @@ class Simulator {
         this.isPositionOpen = false;
         this.logAction = this.logAction.bind(this);
         this.reEnterPosition = reEnterPosition || false;
-        this.cancelInMins = cancelInMins || 5;
+        this.cancelInMins = cancelInMins;
         this.updateSL = updateSL || false;
         this.updateSLInterval = updateSLInterval;
         this.updateSLFrequency = updateSLFrequency;
+        // this.marketOrder = marketOrder || false;
     }
 
     logAction(time, action, price=0) {
@@ -51,9 +53,17 @@ class Simulator {
         let stopLossPrice = this.stopLossPrice
         let openTriggerOrder = true
 
-        this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Placed', price: triggerPrice });
+        let shouldPlaceMarketOrder = this.shouldPlaceMarketOrder(data[0].close, triggerPrice, targetPrice, direction)
+
+        if (shouldPlaceMarketOrder) {
+            this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Placed', price: triggerPrice });
+        }
 
         for (let i = 1; i < data.length; i++) {
+            if (!shouldPlaceMarketOrder) {
+                this.tradeActions.push({ time: +new Date(this.orderTime), action: 'Trigger Not Placed - too close to trigger price', price: triggerPrice });
+                break
+            }
             const { time, open, high, low, close } = data[i];
 
             if (time < +this.orderTime) continue;
@@ -74,7 +84,8 @@ class Simulator {
                 }
                 
                 if (!this.isPositionOpen && time > +this.orderTime && ((direction == 'BULLISH' && high >= triggerPrice) || (direction == 'BEARISH' && low <= triggerPrice))) {
-                    this.position = this.triggerPrice;
+                    if (i == 1) this.position = data[0].close;
+                    else this.position = this.triggerPrice;
 
                     this.startedAt = time
                     openTriggerOrder = false
@@ -153,6 +164,20 @@ class Simulator {
     async run() {
         const data = this.yahooData;
         this.simulateTrading(data);
+    }
+
+    shouldPlaceMarketOrder(ltp, triggerPrice, targetPrice, direction) {
+        const targetGain = direction === 'BULLISH' 
+            ? targetPrice - triggerPrice
+            : triggerPrice - targetPrice;
+
+        console.log('shouldPlaceMarketOrder', ltp, triggerPrice, targetPrice, direction, targetGain, (targetPrice - ltp) / targetGain)
+    
+        if (direction === 'BULLISH') {
+            return ltp > triggerPrice && ((targetPrice - ltp) / targetGain > 0.8);
+        } else {
+            return ltp < triggerPrice && ((ltp - targetPrice) / targetGain > 0.8);
+        }
     }
 }
 
