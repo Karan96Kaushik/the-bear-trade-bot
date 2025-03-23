@@ -15,7 +15,7 @@ const {
 const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
-const { createLightyearOrders, setupLightyearDayOneOrders } = require('./lightyear');
+const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet } = require('./lightyear');
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -99,7 +99,7 @@ async function setupLightyearOrders() {
             let dayOneOrders = await setupLightyearDayOneOrders(sheetEntries)
 
             if (dayOneOrders.length > 0) {
-                await appendRowsToMISD(dayOneOrders, 'Lightyear')
+                await appendRowsToMISD(dayOneOrders, 'Lightyear-D1')
             }
 
         }
@@ -107,6 +107,25 @@ async function setupLightyearOrders() {
 
     } catch (error) {
         await sendMessageToChannel(`🚨 Error running Lightyear MIS Jobs`, error?.message);
+    }
+}
+
+async function updateLightyearOrders() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Lightyear Update Job');
+
+        let sheetData = await readSheetData('MIS-LIGHTYEAR!A2:W1000')
+        sheetData = processSheetWithHeaders(sheetData)
+
+        let orders = await kiteSession.kc.getOrders()
+
+        let lightyearTriggerOrders = orders.filter(o => o.tag?.includes('lgy') && o.tag?.includes('trigger') && !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN'))
+
+        await updateLightyearSheet(sheetData, lightyearTriggerOrders)
+
+
+    } catch (error) {
+        await sendMessageToChannel(`🚨 Error running Lightyear Update Job`, error?.message);
     }
 }
 
@@ -412,7 +431,7 @@ async function setupOrdersFromSheet() {
         const positions = await kiteSession.kc.getPositions();
 
         const openOrders = orders.filter(o => (o.status === 'TRIGGER PENDING' || o.status === 'OPEN'));
-        const lightyearOrders = orders.filter(o => o.tag?.includes('light'));
+        const lightyearOrders = orders.filter(o => o.tag?.includes('lgy'));
 
         await kiteSession.authenticate()
         console.log(orders)
@@ -832,8 +851,16 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
 
+
+    const lightyearUpdateJob = schedule.scheduleJob('0 11 * * 1-5', () => {
+        updateLightyearOrders()
+        sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
+
+    });
+    sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
+
     const lightyearJob = schedule.scheduleJob('30 11 * * 1-5', () => {
-        scanLightyearStocks()
+        setupLightyearOrders()
         sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
 
     });

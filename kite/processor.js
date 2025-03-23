@@ -489,7 +489,10 @@ const createOrders = async (stock) => {
         let source = 'CO'
 
         if (stock.source.toLowerCase() == 'lightyear') {
-            source = 'light'
+            source = 'lgy'
+        }
+        else if (stock.source.toLowerCase() == 'lightyear-d1') {
+            source = 'lgy1'
         }
 
         if (stock.ignore)
