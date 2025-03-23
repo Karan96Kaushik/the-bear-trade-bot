@@ -327,7 +327,7 @@ async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
  * @param {Object} yahooData - The raw data from Yahoo Finance
  * @returns {Array} An array of OHLCV objects
  */
-function processYahooData(yahooData, interval, useCached) {
+function processYahooData(yahooData, interval, useCached, isPostMarket = false) {
     const result = yahooData.chart.result[0];
     const timestamps = result.timestamp;
     const quote = result.indicators.quote[0];
@@ -343,7 +343,7 @@ function processYahooData(yahooData, interval, useCached) {
     }));
 
     // This is to remove incomplete candles; only applicable for live data
-    if (interval && typeof interval == 'string' && !useCached) {
+    if (interval && typeof interval == 'string' && !useCached && !isPostMarket) {
         if (interval.includes('m')) interval = parseInt(interval.split('m')[0])
         else if (interval.includes('h')) interval = parseInt(interval.split('h')[0]) * 60
         else if (interval.includes('d')) interval = parseInt(interval.split('d')[0]) * 24 * 60
@@ -352,10 +352,10 @@ function processYahooData(yahooData, interval, useCached) {
         data = data.filter(d => d.time <= roundedTimeForReqCandle)
 
         if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low || !data[data.length - 1].volume) {
-            throw new Error(`No data found for ${sym} in the given time range`)
+            throw new Error(`No data found in the given time range`)
         }
         if (data[data.length - 1].time < roundedTimeForReqCandle) {
-            throw new Error(`Last candle is not found for ${sym}`)
+            throw new Error(`Last candle is not found`)
         }
     }
     else if (useCached && new Date(data[data.length - 1].time).getHours() < 10) {
@@ -407,8 +407,8 @@ async function getMoneycontrolData(sym, from, to, resolution = 1, useCached = fa
         params: {
             symbol: sym,
             resolution,
-            from: +from / 1000,
-            to: +to / 1000,
+            from: parseInt(+from / 1000),
+            to: parseInt(+to / 1000),
             countback: 131,
             currencyCode: 'INR'
         }
@@ -423,7 +423,7 @@ async function getMoneycontrolData(sym, from, to, resolution = 1, useCached = fa
         response = await axios.request(config);
     }
 
-    console.log(response.request.path)
+    // console.log(response.request.path)
 
     return response.data;
 }
