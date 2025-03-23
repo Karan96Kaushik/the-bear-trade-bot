@@ -48,7 +48,7 @@ async function createLightyearOrders(stock) {
         else quantity = -Math.abs(quantity);
 
         let startDate = new Date(stock.time.split(' ')[0]);
-        startDate.setDate(startDate.getDate() + (startDate.getDay() == 5 ? 3 : startDate.getDay() == 6 ? 2 : 1));
+        skipForwardDateHolidays(startDate)
 
         return [
                 stock.sym,
@@ -116,9 +116,8 @@ async function setupLightyearDayOneOrders(stocks) {
                 let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
 
                 let from = new Date();
-                from.setHours(from.getHours() - (from.getDay() == 0 ? 3 : from.getDay() == 6 ? 2 : 1));
+                skipBackDateHolidays(from)
                 let to = new Date();
-                to.setHours(to.getHours() + 1);
                 let pastData = await getMoneycontrolData(sym, from, to, 15, false);
                 pastData = processMoneycontrolData(pastData);
 
@@ -212,9 +211,8 @@ async function updateLightyearSheet(sheetData, lightyearOrders) {
                 targetPrice = target
 
                 let from = new Date();
-                from.setHours(from.getHours() - (from.getDay() == 0 ? 3 : from.getDay() == 6 ? 2 : 1));
+                skipBackDateHolidays(from)
                 let to = new Date();
-                to.setHours(to.getHours() + 1);
                 let pastData = await getMoneycontrolData(stock.symbol, from, to, 15, false);
                 pastData = processMoneycontrolData(pastData);
 
@@ -285,8 +283,68 @@ async function updateLightyearSheet(sheetData, lightyearOrders) {
     }
 }
 
+async function skipBackDateHolidays(date) {
+    date.setDate(date.getDate() - 1)
+
+    const holidaySkips = {
+        '2025-04-01': 2,
+        '2024-04-10': 1, 
+        // '2024-04-14': 1, 
+        // '2024-04-18': 3, 
+        // '2024-05-01': 1, 
+        // '2024-08-15': 3, 
+        // '2024-08-27': 1, 
+        // '2024-10-02': 1, 
+        // '2024-10-02': 1, 
+        // '2024-10-21': 1, 
+        // '2024-10-21': 1, 
+    }
+
+    const dateString = date.toISOString().split('T')[0]
+
+    if (holidaySkips[dateString]) {
+        date.setDate(date.getDate() - holidaySkips[dateString])
+    }
+    if ([0, 6].includes(date.getDay())) {
+        date.setDate(date.getDate() - (date.getDay() == 0 ? 2 : date.getDay() == 6 ? 1 : 0));
+        skipBackDateHolidays(date)
+    }
+
+    return 0
+}
+
+async function skipForwardDateHolidays(date) {
+
+    date.setDate(date.getDate() + 1)
+
+    const holidaySkips = {
+        '2025-03-31': 1,
+        '2024-04-10': 1, 
+        '2024-04-14': 1, 
+        '2024-04-18': 3, 
+        '2024-05-01': 1, 
+        '2024-08-15': 3, 
+        '2024-08-27': 1, 
+        // '2024-10-02': 1, 
+        // '2024-10-02': 1, 
+        // '2024-10-21': 1, 
+        // '2024-10-21': 1, 
+    }
+
+    const dateString = date.toISOString().split('T')[0]
+
+    if (holidaySkips[dateString]) {
+        date.setDate(date.getDate() - holidaySkips[dateString])
+    }
+    if ([0, 6].includes(date.getDay())) {
+        date.setDate(date.getDate() + (date.getDay() == 0 ? 1 : date.getDay() == 6 ? 2 : 1));
+        skipForwardDateHolidays(date)
+    }
+}
+
 module.exports = {
     createLightyearOrders,
     setupLightyearDayOneOrders,
-    updateLightyearSheet
+    updateLightyearSheet,
+    skipBackDateHolidays
 }
