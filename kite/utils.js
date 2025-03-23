@@ -384,6 +384,72 @@ function processGrowwData(growwData) {
     }));
 }
 
+const axiosMoneycontrol = memoize((...args) => axios.request(...args))
+
+/**
+ * Fetch stock data from Moneycontrol API
+ * @param {string} sym - The stock symbol
+ * @param {Date} from - Start date
+ * @param {Date} to - End date
+ * @param {number} [resolution=1] - Time resolution (1 for minute, 5 for 5 minutes, etc.)
+*/
+async function getMoneycontrolData(sym, from, to, resolution = 1, useCached = false) {
+
+    if (useCached) {
+        from = new Date(from).setHours(2,0,0,0)
+        to = new Date(to).setHours(11,0,0,0)
+    }
+
+    let config = {
+        method: 'get',
+        maxBodyLength: Infinity,
+        url: `https://priceapi.moneycontrol.com/techCharts/indianMarket/stock/history?`, // ?symbol=${sym}&resolution=1&from=${from}&to=${to}&countback=${countback}&currencyCode=INR`,
+        params: {
+            symbol: sym,
+            resolution,
+            from: +from / 1000,
+            to: +to / 1000,
+            countback: 131,
+            currencyCode: 'INR'
+        }
+    };
+
+    let response
+
+    if (useCached) {
+        response = await axiosMoneycontrol(config);
+    }
+    else {
+        response = await axios.request(config);
+    }
+
+    console.log(response.request.path)
+
+    return response.data;
+}
+
+/**
+ * Process Moneycontrol data into an ordered array of OHLCV objects
+ * @param {Object} data - The raw data from Moneycontrol
+ * @returns {Array} An array of OHLCV objects
+ */
+function processMoneycontrolData(data) {
+    return data.t.map((t, index) => ({
+        time: t * 1000,
+        open: data.o[index],
+        high: data.h[index],
+        low: data.l[index],
+        close: data.c[index],
+        volume: data.v[index]
+    }))
+}
+
+
+// getMoneycontrolData('MGL', new Date('2025-03-20'), new Date('2025-03-21'), 30)
+//     .then(processMoneycontrolData)
+//     .then(console.log).catch(e => console.error(e?.response?.data || e.message))
+
+
 /**
  * Fetch NIFTY50 stock data from Dhan API
  * @param {number} [pgno=0] - Page number for pagination
@@ -645,5 +711,7 @@ module.exports = {
     processNSEChartData,
     getMcIndicators,
     getGrowwChartData,
-    processGrowwData
+    processGrowwData,
+    getMoneycontrolData,
+    processMoneycontrolData
 };
