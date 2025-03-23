@@ -1,4 +1,6 @@
-const { getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, getOrderLoc, processMISSheetData, appendRowsToMISD } = require("../gsheets")
+const { 
+    getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, 
+    getOrderLoc, processMISSheetData, appendRowsToMISD } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 const OrderLog = require('../models/OrderLog');
