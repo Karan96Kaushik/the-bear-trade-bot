@@ -1,6 +1,7 @@
 const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../../kite/utils")
 const { Simulator } = require("../../simulator/SimulatorV3")
-const { scanZaireStocks, scanBailyStocks, getDateRange, addMovingAverage, scanLightyearStocks } = require("../../analytics")
+const { scanZaireStocks, scanBailyStocks, getDateRange, addMovingAverage } = require("../../analytics")
+const { scanLightyearStocks } = require("../../analytics/lightyear")
 const { readSheetData } = require("../../gsheets")
 const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
