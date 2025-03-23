@@ -164,8 +164,11 @@ async function setupLightyearDayOneOrders(stocks) {
     }
 }
 
-async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
+async function updateLightyearSheet(sheetData, lightyearOrders) {
     try {
+
+        let lightyearTriggerOrders = lightyearOrders.filter(o => o.tag?.includes('trigger'))
+        let lightyearTargetOrders = lightyearOrders.filter(o => o.tag?.includes('target'))
 
         let updates = []
         let newOrders = []
@@ -173,10 +176,17 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
         let row = 1
         for (const stock of sheetData) {
             row += 1
+
+            // Only active and D1 orders
+            if (!(stock.status.trim()) && stock.status.trim() != 'Active') {
+                continue
+            }
+
             let col = Object.keys(stock).findIndex(key => key === 'status')
             let status = ''
 
             let triggerOrder = lightyearTriggerOrders.find(o => o.tradingsymbol === stock.symbol)
+            let targetOrder = lightyearTargetOrders.find(o => o.tradingsymbol === stock.symbol)
 
             // No status and no trigger order
             if (!(stock.status.trim()) && !triggerOrder) {
@@ -215,10 +225,13 @@ async function updateLightyearSheet(sheetData, lightyearTriggerOrders) {
                 let dayHigh = pastData.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0)
 
                 if (direction == 'BULLISH' && dayLow < final_stop_loss) {
-                    status = 'Cancelled'
+                    status = 'Stoploss'
                 }
-                else if (direction == 'BEARISH' && dayHigh > target) {
-                    status = 'Cancelled'
+                else if (direction == 'BEARISH' && dayHigh > final_stop_loss) {
+                    status = 'Stoploss'
+                }
+                else if (targetOrder) {
+                    status = 'Target'
                 }
                 else {
 

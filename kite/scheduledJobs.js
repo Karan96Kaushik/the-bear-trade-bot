@@ -119,9 +119,9 @@ async function updateLightyearOrders() {
 
         let orders = await kiteSession.kc.getOrders()
 
-        let lightyearTriggerOrders = orders.filter(o => o.tag?.includes('lgy') && o.tag?.includes('trigger') && !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN'))
+        let lightyearOrders = orders.filter(o => o.tag?.includes('lgy') && !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN'))
 
-        await updateLightyearSheet(sheetData, lightyearTriggerOrders)
+        await updateLightyearSheet(sheetData, lightyearOrders)
 
 
     } catch (error) {
