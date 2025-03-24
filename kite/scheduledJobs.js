@@ -817,9 +817,9 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
         setupBaileyOrders();
     };
-    const baileyJob = schedule.scheduleJob('35 */5 4,5,6,7,8 * * 1-5', baileyJobCB);
-    const baileyJob_2 = schedule.scheduleJob('35 50,55 3 * * 1-5', baileyJobCB);
-    const baileyJob_3 = schedule.scheduleJob('35 0,5,10,15,20,25,30 9 * * 1-5', baileyJobCB);
+    const baileyJob = schedule.scheduleJob('50 */5 4,5,6,7,8 * * 1-5', baileyJobCB);
+    const baileyJob_2 = schedule.scheduleJob('50 50,55 3 * * 1-5', baileyJobCB);
+    const baileyJob_3 = schedule.scheduleJob('50 0,5,10,15,20,25,30 9 * * 1-5', baileyJobCB);
     sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
 
     // const zaireCancelCB = () => {
