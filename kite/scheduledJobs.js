@@ -113,21 +113,28 @@ async function setupLightyearOrders() {
 async function updateLightyearOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Lightyear Update Job');
+        await kiteSession.authenticate();
 
-        let sheetData = await readSheetData('MIS-LIGHTYEAR!A2:W1000')
-        sheetData = processSheetWithHeaders(sheetData)
+        let lightyearSheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
+        lightyearSheetData = processSheetWithHeaders(lightyearSheetData)
+
+        let alphaSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+        alphaSheetData = processSheetWithHeaders(alphaSheetData)
 
         let orders = await kiteSession.kc.getOrders()
 
-        let lightyearOrders = orders.filter(o => o.tag?.includes('lgy') && !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN'))
+        let lightyearCompleteOrders = orders.filter(o => o.tag?.includes('lgy') && o.status === 'COMPLETE')
 
-        await updateLightyearSheet(sheetData, lightyearOrders)
-
+        await updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyearCompleteOrders)
 
     } catch (error) {
         await sendMessageToChannel(`🚨 Error running Lightyear Update Job`, error?.message);
     }
 }
+
+updateLightyearOrders().then(() => {
+    console.log('Lightyear Update Job completed')
+})
 
 async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {

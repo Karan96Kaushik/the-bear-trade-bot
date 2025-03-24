@@ -163,122 +163,148 @@ async function setupLightyearDayOneOrders(stocks) {
     }
 }
 
-async function updateLightyearSheet(sheetData, lightyearOrders) {
+async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyearCompleteOrders) {
     try {
 
-        let lightyearTriggerOrders = lightyearOrders.filter(o => o.tag?.includes('trigger'))
-        let lightyearTargetOrders = lightyearOrders.filter(o => o.tag?.includes('target'))
+        let lightyearTriggerOrders = lightyearCompleteOrders.filter(o => o.tag?.includes('trigger'))
+        let lightyearTargetOrders = lightyearCompleteOrders.filter(o => o.tag?.includes('target'))
 
         let updates = []
+        let alphaUpdates = []
         let newOrders = []
 
         let row = 1
-        for (const stock of sheetData) {
-            row += 1
+        for (const stock of lightyearSheetData) {
+            try {
+                row += 1
 
-            // Only active and D1 orders
-            if (!stock.status && stock.status != 'Active') {
-                continue
-            }
-
-            let col = Object.keys(stock).findIndex(key => key === 'status')
-            let status = ''
-
-            let triggerOrder = lightyearTriggerOrders.find(o => o.tradingsymbol === stock.symbol)
-            let targetOrder = lightyearTargetOrders.find(o => o.tradingsymbol === stock.symbol)
-
-            // No status and no trigger order
-            if (!stock.status && !triggerOrder) {
-                status = 'Cancelled'
-            }
-            // Active order
-            else {
-                // No status and found trigger order
-                if (!stock.status) {
-                    status = 'Active'
+                // Only active and D1 orders
+                if (stock.status && stock.status != 'Active') {
+                    continue
                 }
-                
-                let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
 
-                let { entry_trigger_price, final_stop_loss, target, quantity } = stock
-                entry_trigger_price = Number(entry_trigger_price)
-                final_stop_loss = Number(final_stop_loss)
-                target = Number(target)
-                quantity = Number(quantity)
+                let col = Object.keys(stock).findIndex(key => key === 'status')
+                let ignoreCol = Object.keys(alphaSheetData[0]).findIndex(key => key === 'ignore')
+                let alphaRow = (alphaSheetData.findIndex(s => s.symbol === stock.symbol)) + 2
+                console.log(stock.symbol, alphaRow, ignoreCol)
+                console.log(alphaSheetData.map(s => s.symbol), alphaSheetData[alphaRow - 1]?.symbol)
+                let status = ''
+                let alphaIgnore = ''
 
-                let triggerPrice, stopLossPrice, targetPrice;
+                let triggerOrder = lightyearTriggerOrders.find(o => o.tradingsymbol === stock.symbol)
+                let targetOrder = lightyearTargetOrders.find(o => o.tradingsymbol === stock.symbol)
 
-                targetPrice = target
-
-                let from = new Date();
-                skipBackDateHolidays(from)
-                let to = new Date();
-                let pastData = await getMoneycontrolData(stock.symbol, from, to, 15, false);
-                pastData = processMoneycontrolData(pastData);
-
-                let last45mins = pastData.slice(-3);
-                let last15mins = pastData.slice(-1);
-
-                let dayLow = pastData.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000)
-                let dayHigh = pastData.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0)
-
-                if (direction == 'BULLISH' && dayLow < final_stop_loss) {
-                    status = 'Stoploss'
+                // No status and no trigger order
+                if (!stock.status && !triggerOrder) {
+                    status = 'Cancelled'
+                    alphaIgnore = 'Cancelled'
                 }
-                else if (direction == 'BEARISH' && dayHigh > final_stop_loss) {
-                    status = 'Stoploss'
-                }
-                else if (targetOrder) {
-                    status = 'Target'
-                }
+                // Active order
                 else {
+                    // No status and found trigger order
+                    if (!stock.status) {
+                        status = 'Active'
+                    }
 
-                    let triggerPadding = getTriggerPadding(entry_trigger_price);
-    
-                    if (direction == 'BULLISH') {
-                        let last15minsHigh = last15mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
-                        let last45minsLow = last45mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
-                        triggerPrice = last15minsHigh;
-                        stopLossPrice = last45minsLow;
+                    let { entry_trigger_price, final_stop_loss, target, quantity } = stock
+                    entry_trigger_price = Number(entry_trigger_price)
+                    final_stop_loss = Number(final_stop_loss)
+                    target = Number(target)
+                    quantity = Number(quantity)
+
+                    let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
+
+                    let triggerPrice, stopLossPrice, targetPrice;
+
+                    targetPrice = target
+
+                    let from = new Date();
+                    skipBackDateHolidays(from)
+                    let to = new Date();
+                    let pastData = await getMoneycontrolData(stock.symbol, from, to, 15, false);
+                    pastData = processMoneycontrolData(pastData);
+
+                    let last45mins = pastData.slice(-3);
+                    let last15mins = pastData.slice(-1);
+
+                    let dayLow = pastData.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000)
+                    let dayHigh = pastData.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0)
+
+                    if (direction == 'BULLISH' && dayLow < final_stop_loss) {
+                        status = 'Stoploss'
                     }
-                    else if (direction == 'BEARISH') {
-                        let last15minsLow = last15mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
-                        let last45minsHigh = last45mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
-                        triggerPrice = last15minsLow;
-                        stopLossPrice = last45minsHigh;
+                    else if (direction == 'BEARISH' && dayHigh > final_stop_loss) {
+                        status = 'Stoploss'
                     }
-    
-                    newOrders.push({
-                        stockSymbol: stock.symbol,
-                        triggerPrice,
-                        stopLossPrice,
-                        targetPrice,
-                        quantity,
-                        lastAction: '',
-                        ignore: '',
-                        reviseSL: true,
-                    })
+                    else if (targetOrder) {
+                        status = 'Target'
+                    }
+                    else {
+
+                        let triggerPadding = getTriggerPadding(entry_trigger_price);
+        
+                        if (direction == 'BULLISH') {
+                            let last15minsHigh = last15mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
+                            let last45minsLow = last45mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
+                            triggerPrice = last15minsHigh;
+                            stopLossPrice = last45minsLow;
+                        }
+                        else if (direction == 'BEARISH') {
+                            let last15minsLow = last15mins.reduce((min, curr) => Math.min(min, (curr.low || 999999)), 1000000) - triggerPadding;
+                            let last45minsHigh = last45mins.reduce((max, curr) => Math.max(max, (curr.high || 0)), 0) + triggerPadding;
+                            triggerPrice = last15minsLow;
+                            stopLossPrice = last45minsHigh;
+                        }
+        
+                        newOrders.push({
+                            stockSymbol: stock.symbol,
+                            triggerPrice,
+                            stopLossPrice,
+                            targetPrice,
+                            quantity,
+                            lastAction: '',
+                            ignore: '',
+                            reviseSL: true,
+                        })
+
+                    }
 
                 }
 
-            }
+                if (status) {
+                    updates.push({
+                        range: 'MIS-LIGHTYEAR!' + numberToExcelColumn(col) + String(row), 
+                        values: [[status]], 
+                    })
+                }
 
-            if (status) {
-                updates.push({
-                    range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
-                    values: [[status]], 
-                })
+                if (alphaIgnore) {
+
+                    if (alphaRow == 1) {
+                        sendMessageToChannel('🚨 Lightyear Alpha row is 1', stock.symbol)
+                        continue
+                    }
+
+                    alphaUpdates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(ignoreCol) + String(alphaRow), 
+                        values: [[alphaIgnore]], 
+                    })
+                }
+            }
+            catch (error) {
+                await sendMessageToChannel('🚨 Error updating Lightyear order', stock.sym, error?.message);
+                console.error("🚨 Error updating Lightyear order: ", stock.sym, error?.message);
             }
         }
 
         await bulkUpdateCells(updates)
-        
+        await bulkUpdateCells(alphaUpdates)
         await appendRowsToMISD(newOrders, 'Lightyear')
 
     }
     catch (error) {
-        await sendMessageToChannel('🚨 Error updating Lightyear Sheet', stock.sym, error?.message);
-        console.error("🚨 Error updating Lightyear Sheet: ", stock.sym, error?.message);
+        await sendMessageToChannel('🚨 Error updating Lightyear Sheet', error?.message);
+        console.error("🚨 Error updating Lightyear Sheet: ", error?.message);
         throw error;
     }
 }
