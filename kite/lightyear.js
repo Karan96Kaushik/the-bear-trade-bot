@@ -127,12 +127,12 @@ async function setupLightyearDayOneOrders(stocks) {
                 if (direction == 'BULLISH') {
                     triggerPrice = entryTriggerPrice;
                     stopLossPrice = last45mins.reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
-                    quantity = Math.ceil(RISK_AMOUNT / (entryTriggerPrice - stopLossPrice));
+                    quantity = Math.abs(Math.ceil(RISK_AMOUNT / (entryTriggerPrice - stopLossPrice)));
                 }
                 else if (direction == 'BEARISH') {
                     triggerPrice = entryTriggerPrice;
                     stopLossPrice = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
-                    quantity = Math.ceil(RISK_AMOUNT / (stopLossPrice - entryTriggerPrice));
+                    quantity = -Math.abs(Math.ceil(RISK_AMOUNT / (stopLossPrice - entryTriggerPrice)));
                 }
 
                 sheetEntries.push({
@@ -140,6 +140,7 @@ async function setupLightyearDayOneOrders(stocks) {
                     triggerPrice,
                     stopLossPrice,
                     targetPrice,
+                    quantity,
                     lastAction: '',
                     ignore: '',
                     reviseSL: true,
