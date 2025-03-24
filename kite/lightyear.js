@@ -177,7 +177,7 @@ async function updateLightyearSheet(sheetData, lightyearOrders) {
             row += 1
 
             // Only active and D1 orders
-            if (!(stock.status.trim()) && stock.status.trim() != 'Active') {
+            if (!stock.status && stock.status != 'Active') {
                 continue
             }
 
@@ -188,19 +188,19 @@ async function updateLightyearSheet(sheetData, lightyearOrders) {
             let targetOrder = lightyearTargetOrders.find(o => o.tradingsymbol === stock.symbol)
 
             // No status and no trigger order
-            if (!(stock.status.trim()) && !triggerOrder) {
+            if (!stock.status && !triggerOrder) {
                 status = 'Cancelled'
             }
             // Active order
             else {
                 // No status and found trigger order
-                if (!(stock.status.trim())) {
+                if (!stock.status) {
                     status = 'Active'
                 }
                 
                 let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
 
-                let {entry_trigger_price, final_stop_loss, target, quantity} = stock
+                let { entry_trigger_price, final_stop_loss, target, quantity } = stock
                 entry_trigger_price = Number(entry_trigger_price)
                 final_stop_loss = Number(final_stop_loss)
                 target = Number(target)
