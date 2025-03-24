@@ -404,7 +404,7 @@ async function createZaireOrders(stock, tag='zaire') {
             sheetEntry.stopLossPrice = stopLossPrice
             sheetEntry.triggerPrice = triggerPrice
 
-            await appendRowsToMISD([sheetEntry])
+            await appendRowsToMISD([sheetEntry], 'Bailey')
 
             let targetGain = triggerPrice - targetPrice
             
