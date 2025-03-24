@@ -8,7 +8,12 @@ const { getDataFromYahoo, processYahooData } = require("./utils");
 
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
+
 const RISK_AMOUNT = 200;
+
+const ZAIRE_RISK_AMOUNT = 200;
+const BAILEY_RISK_AMOUNT = 100;
+const DEFAULT_RISK_AMOUNT = 100;
 
 // Add this helper function near the top of the file
 const logOrder = async (status, initiator, orderResponse) => {
@@ -107,16 +112,16 @@ const setupReversalOrders = async (order) => {
         if (order.transaction_type == 'BUY') {
             direction = 'BULLISH'
             transaction_type = 'SELL'
-            stopLossPrice = triggerPrice - (RISK_AMOUNT/quantity)
-            targetPrice = triggerPrice + ((RISK_AMOUNT*2)/quantity)
+            stopLossPrice = triggerPrice - (DEFAULT_RISK_AMOUNT/quantity)
+            targetPrice = triggerPrice + ((DEFAULT_RISK_AMOUNT*2)/quantity)
             if (targetPrice > upper_circuit_limit)
                 targetPrice = upper_circuit_limit - 0.1
         }
         else {
             direction = 'BEARISH'
             transaction_type = 'BUY'
-            stopLossPrice = triggerPrice + (RISK_AMOUNT/quantity)
-            targetPrice = triggerPrice - ((RISK_AMOUNT*2)/quantity)
+            stopLossPrice = triggerPrice + (DEFAULT_RISK_AMOUNT/quantity)
+            targetPrice = triggerPrice - ((DEFAULT_RISK_AMOUNT*2)/quantity)
             if (targetPrice < lower_circuit_limit)
                 targetPrice = lower_circuit_limit + 0.1
         }
@@ -304,6 +309,9 @@ const processSuccessfulOrder = async (order) => {
 
 async function createZaireOrders(stock, tag='zaire') {
     try {
+
+        const SOURCE_RISK_AMOUNT = tag == 'zaire' ? ZAIRE_RISK_AMOUNT : tag == 'bailey' ? BAILEY_RISK_AMOUNT : DEFAULT_RISK_AMOUNT
+
         await kiteSession.authenticate();
 
         let triggerPrice, stopLossPrice, targetPrice, quantity, orderResponse;
@@ -352,7 +360,7 @@ async function createZaireOrders(stock, tag='zaire') {
             targetPrice = Math.round(targetPrice * 10) / 10;
 
             // Quantity is risk amount divided by difference between high and low
-            quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
+            quantity = Math.ceil(SOURCE_RISK_AMOUNT / (triggerPrice - stopLossPrice));
             if (quantity < 1)
                 quantity = 1
 
@@ -395,7 +403,7 @@ async function createZaireOrders(stock, tag='zaire') {
             targetPrice = Math.round(targetPrice * 10) / 10;
 
             // Quantity is risk amount divided by difference between high and low
-            quantity = Math.ceil(RISK_AMOUNT / (stopLossPrice - triggerPrice));
+            quantity = Math.ceil(SOURCE_RISK_AMOUNT / (stopLossPrice - triggerPrice));
             if (quantity < 1)
                 quantity = 1
 
