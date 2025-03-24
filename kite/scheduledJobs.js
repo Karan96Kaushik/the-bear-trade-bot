@@ -110,10 +110,6 @@ async function setupLightyearOrders() {
     }
 }
 
-setupLightyearOrders().then(() => {
-    console.log('Lightyear Setup Job completed')
-})
-
 async function updateLightyearOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Lightyear Update Job');
