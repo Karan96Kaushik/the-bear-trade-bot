@@ -137,7 +137,7 @@ async function getRetrospective(startDate, endDate) {
             price: a.average_price || a.price, 
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
-            source: !a.tag ? '?' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
+            source: !a.tag ? '?' : a.tag?.includes('lgy') ? 'lightyear' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
             exitReason: a.tag?.includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || '',
             isExit: a.tag?.includes('trigger') ? false : true
@@ -229,6 +229,7 @@ async function getTradeAnalysis(startDate, endDate) {
 
     const zaireTrades = analysis.filter(t => t.source === 'zaire');
     const baileyTrades = analysis.filter(t => t.source === 'bailey');
+    const lightyearTrades = analysis.filter(t => t.source === 'lightyear');
     const manualTrades = analysis.filter(t => t.source === 'sheet');
 
     // Calculate overall statistics
@@ -270,6 +271,14 @@ async function getTradeAnalysis(startDate, endDate) {
             manualStopLossExits: manualTrades.filter(t => t.exitReason === 'stoploss').length,
             manualStopLossUDExits: manualTrades.filter(t => t.exitReason === 'stoploss-u').length,
             manualOtherExits: manualTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
+
+            lightyearTrades: lightyearTrades.length,
+            lightyearWinRate: lightyearTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'lightyear').length / lightyearTrades.length) * 100).toFixed(2)) : 0,
+            lightyearPnL: parseFloat(lightyearTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
+            lightyearTargetExits: lightyearTrades.filter(t => t.exitReason === 'target').length,
+            lightyearStopLossExits: lightyearTrades.filter(t => t.exitReason === 'stoploss').length,
+            lightyearStopLossUDExits: lightyearTrades.filter(t => t.exitReason === 'stoploss-u').length,
+            lightyearOtherExits: lightyearTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
         }
     };
 }
