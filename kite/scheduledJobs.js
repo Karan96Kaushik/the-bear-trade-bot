@@ -132,10 +132,6 @@ async function updateLightyearOrders() {
     }
 }
 
-updateLightyearOrders().then(() => {
-    console.log('Lightyear Update Job completed')
-})
-
 async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
         await sendMessageToChannel(`⌛️ Executing Zaire ${checkV3 ? 'V3' : checkV2 ? 'V2' : ''} MIS Jobs`);
