@@ -6,6 +6,7 @@ const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 const { getDataFromYahoo, processYahooData, processMoneycontrolData, getMoneycontrolData } = require("./utils");
 const { placeOrder, logOrder } = require("./processor");
+
 const RISK_AMOUNT = 100;
 
 async function createLightyearOrders(stock) {
@@ -42,11 +43,6 @@ async function createLightyearOrders(stock) {
         finalStopLossPrice = Math.round(finalStopLossPrice * 10) / 10;
         targetPrice = Math.round(targetPrice * 10) / 10;
 
-        let quantity = Math.ceil(RISK_AMOUNT / Math.abs(entryTriggerPrice - finalStopLossPrice));
-
-        if (stock.direction == 'BULLISH') quantity = Math.abs(quantity);
-        else quantity = -Math.abs(quantity);
-
         let startDate = new Date(stock.time.split(' ')[0]);
         skipForwardDateHolidays(startDate)
 
@@ -56,11 +52,11 @@ async function createLightyearOrders(stock) {
                 entryTriggerPrice,
                 finalStopLossPrice,
                 targetPrice,
-                quantity,
-                '',      // Last action
+                direction,
+                '',      // Status
                 '',      // ignore
                 true,    // reviseSL
-            ]                
+            ]
 
         // const sym = `NSE:${stock.sym}`
         // let ltp = await kiteSession.kc.getQuote([sym]);
@@ -102,18 +98,19 @@ async function setupLightyearDayOneOrders(stocks) {
 
         for (const stock of stocks) {
             try {
-                const [
+                let [
                     sym,
                     startDate,
                     entryTriggerPrice,
                     finalStopLossPrice,
                     targetPrice,
-                    quantity,
+                    direction,
+                    status,
                 ] = stock
 
-                let triggerPrice, stopLossPrice;
+                let triggerPrice, stopLossPrice, quantity;
 
-                let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
+                direction = direction.trim().toUpperCase()
 
                 let from = new Date();
                 skipBackDateHolidays(from)
@@ -130,10 +127,12 @@ async function setupLightyearDayOneOrders(stocks) {
                 if (direction == 'BULLISH') {
                     triggerPrice = entryTriggerPrice;
                     stopLossPrice = last45mins.reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
+                    quantity = Math.ceil(RISK_AMOUNT / (entryTriggerPrice - stopLossPrice));
                 }
                 else if (direction == 'BEARISH') {
                     triggerPrice = entryTriggerPrice;
                     stopLossPrice = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
+                    quantity = Math.ceil(RISK_AMOUNT / (stopLossPrice - entryTriggerPrice));
                 }
 
                 sheetEntries.push({
@@ -141,7 +140,6 @@ async function setupLightyearDayOneOrders(stocks) {
                     triggerPrice,
                     stopLossPrice,
                     targetPrice,
-                    quantity,
                     lastAction: '',
                     ignore: '',
                     reviseSL: true,
@@ -186,8 +184,7 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                 let col = Object.keys(stock).findIndex(key => key === 'status')
                 let ignoreCol = Object.keys(alphaSheetData[0]).findIndex(key => key === 'ignore')
                 let alphaRow = (alphaSheetData.findIndex(s => s.symbol === stock.symbol)) + 2
-                console.log(stock.symbol, alphaRow, ignoreCol)
-                console.log(alphaSheetData.map(s => s.symbol), alphaSheetData[alphaRow - 1]?.symbol)
+                
                 let status = ''
                 let alphaIgnore = ''
 
@@ -206,23 +203,25 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                         status = 'Active'
                     }
 
-                    let { entry_trigger_price, final_stop_loss, target, quantity } = stock
+                    let { entry_trigger_price, final_stop_loss, target, direction } = stock
                     entry_trigger_price = Number(entry_trigger_price)
                     final_stop_loss = Number(final_stop_loss)
                     target = Number(target)
-                    quantity = Number(quantity)
 
-                    let direction = quantity > 0 ? 'BULLISH' : 'BEARISH';
+                    direction = direction.trim().toUpperCase()
 
                     let triggerPrice, stopLossPrice, targetPrice;
 
                     targetPrice = target
 
                     let from = new Date();
-                    skipBackDateHolidays(from)
+                    from.setDate(from.getDate() - 1)
                     let to = new Date();
+                    
                     let pastData = await getMoneycontrolData(stock.symbol, from, to, 15, false);
                     pastData = processMoneycontrolData(pastData);
+
+                    pastData = pastData.filter(d => d.time > +from)
 
                     let last45mins = pastData.slice(-3);
                     let last15mins = pastData.slice(-1);
@@ -255,6 +254,8 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                             triggerPrice = last15minsLow;
                             stopLossPrice = last45minsHigh;
                         }
+
+                        quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice))
         
                         newOrders.push({
                             stockSymbol: stock.symbol,
