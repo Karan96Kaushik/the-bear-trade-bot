@@ -1,9 +1,11 @@
-const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../../kite/utils")
+const {
+    getDateStringIND, getDataFromYahoo, processYahooData,
+    getGrowwChartData, processGrowwData
+} = require("../../kite/utils")
 const { Simulator } = require("../../simulator/SimulatorV3")
-const { scanZaireStocks, scanBailyStocks, getDateRange, addMovingAverage } = require("../../analytics")
+const { getDateRange, addMovingAverage } = require("../../analytics")
 const { scanLightyearStocks } = require("../../analytics/lightyear")
 const { readSheetData } = require("../../gsheets")
-const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
 const RISK_AMOUNT = 100;
 
@@ -141,6 +143,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 for (let i = 0; i < selectedStocks.length; i++) {
                     const stock = selectedStocks[i];
+
                     const promise = (async () => {
 
                         let triggerPadding = 1;
@@ -173,9 +176,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         entryTriggerPrice = Math.round(entryTriggerPrice * 10) / 10;
                         finalStopLossPrice = Math.round(finalStopLossPrice * 10) / 10;
                         targetPrice = Math.round(targetPrice * 10) / 10;
-
-                        let quantity = Math.ceil(RISK_AMOUNT / Math.abs(entryTriggerPrice - finalStopLossPrice));
-                        quantity = Math.abs(quantity);
 
                         let exit = null;
                         let currentDay = 0;
@@ -253,6 +253,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 }
                             }
 
+                            let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
+                            quantity = Math.abs(quantity);
+    
+
                             const sim = new Simulator({
                                 stockSymbol: stock.sym,
                                 triggerPrice,
@@ -320,29 +324,34 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                         ///////////////////
 
-                        console.table(perDayResults.map(r => ({
-                            sym:r.sym, 
-                            pnl:r.pnl, 
-                            // date:getDateStringIND(r.data[0].time), 
-                            // startedAt: r.startedAt,
-                            placedAt: getDateStringIND(r.placedAt),
-                            exit: r.exit,
-                            day:r.currentDay, 
-                            // triggerPrice: r.triggerPrice,
-                            // targetPrice: r.targetPrice, stopLossPrice: r.stopLossPrice
-                        })))
+                        // console.table(perDayResults.map(r => ({
+                        //     sym:r.sym, 
+                        //     pnl:r.pnl, 
+                        //     // date:getDateStringIND(r.data[0].time), 
+                        //     // startedAt: r.startedAt,
+                        //     placedAt: getDateStringIND(r.placedAt),
+                        //     exit: r.exit,
+                        //     day:r.currentDay, 
+                        //     placedAtTimestamp: r.placedAt,
+                        //     // triggerPrice: r.triggerPrice,
+                        //     // targetPrice: r.targetPrice, stopLossPrice: r.stopLossPrice
+                        // })))
+
+                        let exitDate = new Date(perDayResults[perDayResults.length - 1].placedAt)
+                        exitDate.setHours(11, 0, 0, 0)
 
                         let result = {
                             sym: stock.sym,
                             pnl: perDayResults.reduce((sum, r) => sum + r.pnl, 0),
                             placedAt: orderStartTime,
-                            quantity,
+                            quantity: perDayResults.length + ' Days',
                             data: [], //perDayResults.map(r => r.data).flat(),
                             direction,
                             triggerPrice: entryTriggerPrice,
                             targetPrice,
                             stopLossPrice: finalStopLossPrice,
-                            perDayResults
+                            perDayResults,
+                            exitDate
                         }
 
                         // console.log(result)
@@ -374,26 +383,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             // console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: getDateStringIND(t.placedAt), placedAtUk: t.placedAt, startedAt: t.startedAt})))
 
-            let filTraded = []
-
-            // console.log(traded.map(t => [t.placedAt, t.exitTime]))
-    
-            // if (simulation.reEnterPosition) {
-            //     filTraded = traded.filter(t => (singleDate && !t.pnl) ||    // Show cancelled trades if it's a single day simulation
-            //                                     // Remove trades that were started before an active trade
-            //                                     !traded.find(t1 => (
-            //                                         (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && 
-            //                                         (t.sym == t1.sym) && 
-            //                                         (+t1.placedAt < +t.exitTime)
-            //                                     ))
-            //                             )
-            // }
-            // else {
-            //     filTraded = traded.filter(t => !traded.find(t1 => ((t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && (t.sym == t1.sym))))
-            // }
-
-
-            // allTraded.push(...filTraded);
             allTraded.push(...traded);
 
 
@@ -401,9 +390,21 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             currentDate.setDate(currentDate.getDate() + 1)
         }
 
+        let filTraded = []
+
         // console.log(filTraded)
+
+        // console.table(allTraded.map(t => ({sym: t.sym, placedAt: t.placedAt, exitDate: t.exitDate})))
+
+        // Filter out trades that were started after an active trade
+        filTraded = allTraded.filter(t => !allTraded.find(t_prev => (
+            (t.sym == t_prev.sym) && 
+            (+t_prev.placedAt < +t.placedAt) && 
+            (+t_prev.exitDate > +t.placedAt)
+        )))
+
         
-        return allTraded;
+        return filTraded;
     } catch (error) {
       console.error('Error fetching orders data:', error);
       return null;

@@ -1,6 +1,7 @@
 const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../../kite/utils")
 const { Simulator } = require("../../simulator/SimulatorV3")
-const { scanZaireStocks, getDateRange, addMovingAverage } = require("../../analytics")
+const { scanBaileyStocks } = require("../../analytics/bailey")
+const { getDateRange, addMovingAverage } = require("../../analytics")
 const { readSheetData } = require("../../gsheets")
 const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
@@ -10,7 +11,7 @@ const RISK_AMOUNT = 200;
 const simulationJobs = new Map();
 
 // New endpoint to start simulation
-const startZaireSimulation = async (req, res) => {
+const startBaileySimulation = async (req, res) => {
     try {
         const { startdate, enddate, symbol, simulation, selectionParams } = req.body;
         const jobId = Date.now().toString(); // Simple unique ID
@@ -52,7 +53,7 @@ const startZaireSimulation = async (req, res) => {
 }
 
 // New endpoint to check simulation status
-const checkZaireSimulationStatus = (req, res) => {
+const checkBaileySimulationStatus = (req, res) => {
     const { jobId } = req.params;
     const job = simulationJobs.get(jobId);
     
@@ -141,7 +142,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 const candleDate = new Date(dayStartTime)
                 // candleDate.setMinutes(candleDate.getMinutes() - parseInt(interval))
-                let selectedStocks = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
+
+                const useCached = true
+
+                let selectedStocks = await scanBaileyStocks(niftyList, candleDate, interval, useCached);
 
                 if (selectedStocks.length > 0) {
                     const BATCH_SIZE = 2;
@@ -308,6 +312,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 }
 
 module.exports = {
-    startZaireSimulation,
-    checkZaireSimulationStatus
+    startBaileySimulation,
+    checkBaileySimulationStatus
 }
