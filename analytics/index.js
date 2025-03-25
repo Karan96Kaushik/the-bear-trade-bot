@@ -1,5 +1,6 @@
 const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data, getMcIndicators } = require("../kite/utils");
 const { getDateStringIND } = require("../kite/utils");
+
 const _ = require('lodash')
 
 const MA_TREND_WINDOW = 10;
@@ -881,70 +882,6 @@ function calculateBollingerBands(df, period = 20, stdDev = 2) {
 	}));
 }
 
-async function scanBaileyStocks(stockList, endDateNew, interval = '5m', useCached=false) {
-	let endDate = new Date();
-	endDate.setUTCSeconds(10);
-	
-	if (endDateNew) {
-		endDate = new Date(endDateNew);
-	}
-	
-	const startDate = new Date(endDate);
-	startDate.setDate(startDate.getDate() - 6);
-	
-	const promises = stockList.map(async (sym) => {
-		try {
-			let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
-			df = processYahooData(df, interval, useCached);
-			
-			if (!df || df.length === 0) {
-				console.log('No data for', sym);
-				return null;
-			}
-			
-			df.pop();
-			if (new Date(df[df.length - 2].time).getDate() === new Date().getDate()) {
-				df.pop();
-			}
-			
-			if (!df || df.length === 0 || df[df.length - 1].high > MAX_STOCK_PRICE) {
-				return null;
-			}
-			
-			const indicators = await getMcIndicators(sym);
-			const classic = indicators.pivotLevels.find(p => p.key == 'Classic').pivotLevel;
-			const currentCandle = df[df.length - 1];
-			const { s3, r3 } = classic;
-			const candleMid = (currentCandle.high + currentCandle.low) / 2;
-			
-			let direction = null;
-			if (currentCandle.high > r3 && currentCandle.low < r3 && currentCandle.close < candleMid) {
-				direction = 'BEARISH';
-			}
-			if (currentCandle.high > s3 && currentCandle.low < s3 && currentCandle.close > candleMid) {
-				direction = 'BULLISH';
-			}
-			
-			return direction ? {
-				sym,
-				open: currentCandle.open,
-				close: currentCandle.close,
-				high: currentCandle.high,
-				low: currentCandle.low,
-				time: getDateStringIND(currentCandle.time),
-				direction,
-			} : null;
-		} catch (error) {
-			console.error(`Error processing ${sym}:`, error);
-			return null;
-		}
-	});
-	
-	const results = await Promise.all(promises);
-	return results.filter(result => result !== null);
-}
-
-
 module.exports = { 
 	analyzeDataForTrends,
 	calculateMovingAverage,
@@ -967,7 +904,6 @@ module.exports = {
 	getLastCandle,
 	addRSI,
 	calculateBollingerBands,
-	scanBaileyStocks,
 	getDateRange,
 	removeIncompleteCandles,
 };
