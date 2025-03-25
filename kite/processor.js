@@ -307,10 +307,13 @@ const processSuccessfulOrder = async (order) => {
     }
 }
 
+const capitalize = (val) => String(val).charAt(0).toUpperCase() + String(val).slice(1);
+
 async function createZaireOrders(stock, tag='zaire') {
     try {
 
         const SOURCE_RISK_AMOUNT = tag == 'zaire' ? ZAIRE_RISK_AMOUNT : tag == 'bailey' ? BAILEY_RISK_AMOUNT : DEFAULT_RISK_AMOUNT
+        const source = capitalize(tag)
 
         await kiteSession.authenticate();
 
@@ -369,7 +372,7 @@ async function createZaireOrders(stock, tag='zaire') {
             sheetEntry.stopLossPrice = stopLossPrice
             sheetEntry.triggerPrice = triggerPrice
 
-            await appendRowsToMISD([sheetEntry])
+            await appendRowsToMISD([sheetEntry], source)
 
             let targetGain = targetPrice - triggerPrice
         
@@ -412,7 +415,7 @@ async function createZaireOrders(stock, tag='zaire') {
             sheetEntry.stopLossPrice = stopLossPrice
             sheetEntry.triggerPrice = triggerPrice
 
-            await appendRowsToMISD([sheetEntry], 'Bailey')
+            await appendRowsToMISD([sheetEntry], source)
 
             let targetGain = triggerPrice - targetPrice
             
