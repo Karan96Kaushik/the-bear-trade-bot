@@ -109,7 +109,8 @@ class Simulator {
 
                 if (this.updateSL) {
                     if (currMinute % this.updateSLFrequency == 0) {
-                        let pastData = data.slice(currMinute-this.updateSLInterval, currMinute)
+                        const intStart = currMinute-this.updateSLInterval < 0 ? 0 : currMinute-this.updateSLInterval
+                        let pastData = data.slice(intStart, currMinute)
                         // let pastData = data.slice(i-this.updateSLInterval, i)
                         
                         if (direction == 'BULLISH') {
