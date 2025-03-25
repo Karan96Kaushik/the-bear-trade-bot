@@ -713,5 +713,6 @@ module.exports = {
     getGrowwChartData,
     processGrowwData,
     getMoneycontrolData,
-    processMoneycontrolData
+    processMoneycontrolData,
+    memoize
 };
