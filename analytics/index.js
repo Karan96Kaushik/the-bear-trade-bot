@@ -519,7 +519,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					let startIndex = 0;
 					for (let i = 0; i < df15min_copy.length; i++) {
 						const ts = new Date(df15min_copy[i].time);
-						if (['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes())) {
+						if (['3:45','5:0','6:15','7:30','8:45'].includes(ts.getUTCHours() + ':' + ts.getUTCMinutes())) {
 							startIndex = i;
 							break;
 						}
@@ -531,8 +531,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 						const fiveCandles = df15min_copy.slice(i, i + 5);
 						
 						// const ts = new Date(fiveCandles[0].time)
-						// console.debug(ts.getHours() + ':' + ts.getMinutes(), ['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes()) ? '✅' : '❌')
-						// if (!['3:45','5:0','6:15','7:30','8:45'].includes(ts.getHours() + ':' + ts.getMinutes())) continue
+						// console.debug(ts.getUTCHours() + ':' + ts.getUTCMinutes(), ['3:45','5:0','6:15','7:30','8:45'].includes(ts.getUTCHours() + ':' + ts.getUTCMinutes()) ? '✅' : '❌')
+						// if (!['3:45','5:0','6:15','7:30','8:45'].includes(ts.getUTCHours() + ':' + ts.getUTCMinutes())) continue
 						
 						const combined = {
 							time: fiveCandles[0].time,

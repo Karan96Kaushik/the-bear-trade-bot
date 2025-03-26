@@ -143,8 +143,8 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
 
         if (useCached) {
             usingCache = true
-            today.setHours(11,0,0,0)
-            period1Date.setHours(2,0,0,0)
+            today.setUTCHours(11,0,0,0)
+            period1Date.setUTCHours(2,0,0,0)
         }
 
         // console.log(getDateStringIND(today), getDateStringIND(period1Date))
@@ -218,8 +218,8 @@ async function getGrowwChartData(sym, start, end, interval = 5, useCached = fals
         let endDate = new Date(end)
 
         if (useCached) {
-            startDate.setHours(2,0,0,0)
-            endDate.setHours(11,0,0,0)
+            startDate.setUTCHours(2,0,0,0)
+            endDate.setUTCHours(11,0,0,0)
         }
 
         let config = {
@@ -358,7 +358,7 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
             throw new Error(`Last candle is not found`)
         }
     }
-    else if (useCached && new Date(data[data.length - 1].time).getHours() < 10 && !isPostMarket) {
+    else if (useCached && new Date(data[data.length - 1].time).getUTCHours() < 10 && !isPostMarket) {
         data.pop()
     }
     
@@ -396,8 +396,8 @@ const axiosMoneycontrol = memoize((...args) => axios.request(...args))
 async function getMoneycontrolData(sym, from, to, resolution = 1, useCached = false) {
 
     if (useCached) {
-        from = new Date(from).setHours(2,0,0,0)
-        to = new Date(to).setHours(11,0,0,0)
+        from = new Date(from).setUTCHours(2,0,0,0)
+        to = new Date(to).setUTCHours(11,0,0,0)
     }
 
     let config = {

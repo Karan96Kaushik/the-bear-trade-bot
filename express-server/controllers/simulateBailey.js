@@ -117,16 +117,16 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             let dayStartTime = new Date(currentDate)
             let dayEndTime = new Date(currentDate)
 
-            dayStartTime.setHours(3, 50, 20, 0)
+            dayStartTime.setUTCHours(3, 50, 20, 0)
 
             // 12:00 PM IST
-            // dayEndTime.setHours(6, 30, 10, 0)
+            // dayEndTime.setUTCHours(6, 30, 10, 0)
 
             // 2:00 PM IST
-            // dayEndTime.setHours(8, 30, 10, 0)
+            // dayEndTime.setUTCHours(8, 30, 10, 0)
 
             // 2:35 PM IST
-            dayEndTime.setHours(9, 5, 10, 0)
+            dayEndTime.setUTCHours(9, 5, 10, 0)
 
             let traded = []
 
@@ -141,7 +141,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 const interval = '15m'
 
                 const candleDate = new Date(dayStartTime)
-                // candleDate.setMinutes(candleDate.getMinutes() - parseInt(interval))
+                // candleDate.setUTCMinutes(candleDate.getUTCMinutes() - parseInt(interval))
 
                 const useCached = true
 
@@ -156,9 +156,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         const stock = selectedStocks[i];
                         const promise = (async () => {
                             const { _startDate, endDate } = getDateRange(dayStartTime);
-                            endDate.setHours(11, 0, 0, 0);
+                            endDate.setUTCHours(11, 0, 0, 0);
                             const startDate = new Date(endDate);
-                            startDate.setHours(3, 0, 0, 0);
+                            startDate.setUTCHours(3, 0, 0, 0);
                             // console.log(stock.sym, startDate, endDate)
 
                             // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);

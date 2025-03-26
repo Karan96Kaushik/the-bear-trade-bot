@@ -77,7 +77,7 @@ router.get('/retrospective', async (req, res) => {
     try {
         const { date } = req.query;
         const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
+        startDate.setUTCHours(0, 0, 0, 0);
         const endDate = new Date(date);
         endDate.setDate(endDate.getDate() + 1);
         const results = await getRetrospective(startDate, endDate);
@@ -92,7 +92,7 @@ router.get('/trade-analysis', async (req, res) => {
     try {
         const { date } = req.query;
         const startDate = new Date(date);
-        startDate.setHours(0, 0, 0, 0);
+        startDate.setUTCHours(0, 0, 0, 0);
         const endDate = new Date(date);
         endDate.setDate(endDate.getDate() + 1);
         const results = await getTradeAnalysis(startDate, endDate);
@@ -110,9 +110,9 @@ router.get('/date-range-analytics', async (req, res) => {
         
         // Parse dates
         const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
+        start.setUTCHours(0, 0, 0, 0);
         const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        end.setUTCHours(23, 59, 59, 999);
         
         // Get all trades within date range
         const trades = await getRetrospective(start, end);

@@ -63,6 +63,10 @@ async function scanBaileyStocks(stockList, endDateNew, interval = '5m', useCache
 			else {
                 let dateStr = endDateNew.toISOString().split('T')[0];
                 const pivotLevels = await getPivotLevelsFromSheet(sym, dateStr);
+				if (!pivotLevels) {
+					console.log('No pivot levels for', sym, dateStr)
+					return null;
+				}
 				support = pivotLevels.classic_s3;
 				resistance = pivotLevels.classic_r3;
 			}

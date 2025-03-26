@@ -123,6 +123,7 @@ function analyseLightyearDataUpward(df, sym, tolerance = 0.01) {
 		const maValue = currentCandle.sma44;
 		const touchingMA = 
 			Math.abs(maValue - currentCandle.low) < (maValue * tolerance) || 
+			Math.abs(maValue - currentCandle.high) < (maValue * tolerance) || 
 			(maValue > currentCandle.low && maValue < currentCandle.high);
 		
 		// Check for bullish candle pattern
@@ -158,8 +159,10 @@ function analyseLightyearDataDownward(df, sym, tolerance = 0.01) {
 		// Check if current price is near the moving average
 		const currentCandle = df[i];
 		const maValue = currentCandle.sma44;
+
 		const touchingMA = 
 			Math.abs(maValue - currentCandle.high) < (maValue * tolerance) || 
+			Math.abs(maValue - currentCandle.low) < (maValue * tolerance) || 
 			(maValue > currentCandle.low && maValue < currentCandle.high);
 		
 		// Check for bearish candle pattern

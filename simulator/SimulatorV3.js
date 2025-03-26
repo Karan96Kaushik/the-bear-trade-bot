@@ -47,7 +47,7 @@ class Simulator {
         this.placeAverageMarketPrice = true // placeAverageMarketPrice;
 
         // Primarily for Lightyear simulation where trigger is placed at the start of the day (09:15)
-        this.isDayStartOrder = new Date(this.orderTime).getHours() == 3 && new Date(this.orderTime).getMinutes() == 45;
+        this.isDayStartOrder = new Date(this.orderTime).getUTCHours() == 3 && new Date(this.orderTime).getUTCMinutes() == 45;
     }
 
     logAction(time, action, price=0) {

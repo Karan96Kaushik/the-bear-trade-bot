@@ -14,8 +14,8 @@ router.get('/selected-stocks', async (req, res) => {
     const intervalMins = parseInt(interval.split('m')[0]);
     
     // Round to nearest 15 minutes
-    date.setMinutes(Math.round(date.getMinutes() / intervalMins) * intervalMins);
-    date.setSeconds(10); // Add 10 seconds
+    date.setUTCMinutes(Math.round(date.getUTCMinutes() / intervalMins) * intervalMins);
+    date.setUTCSeconds(10); // Add 10 seconds
     
     if (date.getUTCHours() < 4 && intervalMins >= 15) {
         date.setUTCHours(4,0,10,0);

@@ -579,7 +579,7 @@ async function calculateExtremePrice(sym, type, timeFrame = 15) {
     data = processYahooData(data)
 
     const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    today.setUTCHours(0, 0, 0, 0)
 
     data = data.filter(d => +d.time >= +today)
 

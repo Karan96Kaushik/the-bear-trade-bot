@@ -119,7 +119,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             let dayStartTime = new Date(currentDate)
 
-            dayStartTime.setHours(11, 0, 20, 0)
+            dayStartTime.setUTCHours(11, 0, 20, 0)
+            dayStartTime.setDate(dayStartTime.getDate() - 1)
 
             let traded = []
 
@@ -131,6 +132,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             const useCached = true
 
             const candleDate = new Date(dayStartTime)
+
+            console.log(candleDate)
 
             let selectedStocks = await scanLightyearStocks(niftyList, candleDate, interval, useCached);
 
@@ -185,9 +188,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         let perDayResults = [];
 
                         const { endDate } = getDateRange(dayStartTime);
-                        endDate.setHours(11, 0, 0, 0);
+                        endDate.setUTCHours(11, 0, 0, 0);
                         const startDate = new Date(endDate);
-                        startDate.setHours(3, 0, 0, 0);
+                        startDate.setUTCHours(3, 0, 0, 0);
 
                         endDate.setDate(endDate.getDate() - 1)
                         startDate.setDate(startDate.getDate() - 1)
@@ -220,8 +223,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 continue;
                             }
                             currentDay++;
+                            
                             const today = new Date()
-                            today.setHours(1, 0, 0, 0)
+
+                            //Only check todays data after markets closed
+                            if (today.getUTCHours() < 10) {
+                                today.setUTCHours(1, 0, 0, 0)
+                            }
+
                             if (startDate > today) {
                                 break;
                             }
@@ -266,7 +275,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 quantity,
                                 direction,
                                 yahooData,
-                                orderTime: new Date(startDate).setHours(3, 45, 0, 0),
+                                orderTime: new Date(startDate).setUTCHours(3, 45, 0, 0),
                                 // cancelInMins: simulation.cancelInMins,
                                 updateSL: simulation.updateSL,
                                 updateSLInterval: simulation.updateSLInterval,
@@ -338,8 +347,15 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         //     // targetPrice: r.targetPrice, stopLossPrice: r.stopLossPrice
                         // })))
 
-                        let exitDate = new Date(perDayResults[perDayResults.length - 1].placedAt)
-                        exitDate.setHours(11, 0, 0, 0)
+                        let reversePerDayResults = [...perDayResults].reverse()
+                        let exitDate = reversePerDayResults.find(r => r.placedAt)?.placedAt
+                        exitDate = exitDate && new Date(exitDate)
+                        if (exitDate) {
+                            exitDate.setUTCHours(11, 0, 0, 0)
+                        }
+                        else {
+                            exitDate = null
+                        }
 
                         let result = {
                             sym: stock.sym,
@@ -401,7 +417,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         filTraded = allTraded.filter(t => !allTraded.find(t_prev => (
             (t.sym == t_prev.sym) && 
             (+t_prev.placedAt < +t.placedAt) && 
-            (+t_prev.exitDate > +t.placedAt)
+            (t_prev.exitDate && (+t_prev.exitDate > +t.placedAt))
         )))
 
         

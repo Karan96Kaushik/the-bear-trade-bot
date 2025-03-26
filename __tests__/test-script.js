@@ -1,4 +1,4 @@
-const { scanZaireStocks, scanBailyStocks, getDateRange, scanLightyearStocks } = require("../analytics")
+const { scanZaireStocks, getDateRange, scanLightyearStocks } = require("../analytics")
 const { readSheetData, processMISSheetData, getStockLoc, appendRowsToMISD } = require("../gsheets")
 const { updateNameInSheetForClosedOrder, processSuccessfulOrder } = require("../kite/processor")
 const { setupZaireOrders } = require("../kite/scheduledJobs")
@@ -17,6 +17,36 @@ const RISK_AMOUNT = 100;
 const run = async () => {
 
     try {
+
+
+        let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
+        stockData = processMISSheetData(stockData);
+
+        // console.log(orders)
+        // console.log(stockData)
+
+        for (const stock of stockData) {
+            let newPrice, shouldUpdate, ltp, type
+            try {
+
+                if (!stock.reviseSL) continue;
+
+                // Only revise SL for stocks that have already been traded
+                if (!stock.lastAction) continue;
+
+                if (stock.stockSymbol[0] == '*' || stock.stockSymbol[0] == '-') continue;
+
+                let reviseSLInterval = parseInt(stock.reviseSL)
+                if (isNaN(reviseSLInterval)) reviseSLInterval = 15
+
+                console.log(stock.stockSymbol, reviseSLInterval)
+            }
+            catch (error) {
+                console.trace(error)
+            }
+        }
+
+        return
 
         niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
@@ -66,7 +96,7 @@ const run = async () => {
         niftyList = niftyList.map(stock => stock[0])
         // niftyList = ['BEL']
 
-        // const selectedStocks = await scanBailyStocks(niftyList, '2024-12-27T04:11:10Z', '5m')
+        // const selectedStocks = await (niftyList, '2024-12-27T04:11:10Z', '5m')
         // console.log(selectedStocks)
 
         // await kiteSession.authenticate();
@@ -92,7 +122,7 @@ const run = async () => {
                 CHECK_75MIN: 1
             }
 
-            // const selectedStocks = await scanBailyStocks(niftyList, date, '5m')
+            // const selectedStocks = await (niftyList, date, '5m')
             console.time('scanZaireStocks')
             let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
             console.timeEnd('scanZaireStocks')
@@ -107,7 +137,7 @@ const run = async () => {
                     const stock = selectedStocks[index];
 
                     const { startDate, endDate } = getDateRange(date);
-                    endDate.setHours(11)
+                    endDate.setUTCHours(11)
     
                     let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
                     yahooData = processYahooData(yahooData)

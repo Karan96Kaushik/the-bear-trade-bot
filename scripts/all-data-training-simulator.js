@@ -341,7 +341,7 @@ async function processStock(stock, date) {
             simulationStart.setMinutes(simulationStart.getMinutes() - 5); // Start sim 5 min before
             
             const simulationEnd = new Date(intervalTime);
-            simulationEnd.setHours(simulationEnd.getHours() + 4); // Run for 4 hours
+            simulationEnd.setUTCHours(simulationEnd.getHours() + 4); // Run for 4 hours
 
             
             const simResult = await runSimulation(stockData, intervalTime);

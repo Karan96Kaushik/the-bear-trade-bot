@@ -110,7 +110,7 @@ async function setupLightyearDayOneOrders(stocks) {
                 pastData = processMoneycontrolData(pastData);
 
                 // Filter out data after 3:30 PM - not sure why this is happening
-                pastData = pastData.filter(d => new Date(d.time).getHours() < 10)
+                pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
 
                 let last45mins = pastData.slice(-3);
                 let last15mins = pastData.slice(-1);
@@ -219,7 +219,7 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                     pastData = processMoneycontrolData(pastData);
 
                     // Filter out data after 3:30 PM - not sure why this is happening
-                    pastData = pastData.filter(d => new Date(d.time).getHours() < 10)
+                    pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
 
                     pastData = pastData.filter(d => d.time > +from)
 
