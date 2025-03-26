@@ -1,3 +1,8 @@
+const getAverageMarketOrderPrice = (candle) => {
+    const { open, high, low, close } = candle;
+    return (open + high + low + close) / 4;
+}
+
 class Simulator {
     constructor(simulationParams) {
         const {
@@ -39,6 +44,7 @@ class Simulator {
         this.updateSL = updateSL || false;
         this.updateSLInterval = updateSLInterval;
         this.updateSLFrequency = updateSLFrequency;
+        this.placeAverageMarketPrice = true // placeAverageMarketPrice;
 
         // Primarily for Lightyear simulation where trigger is placed at the start of the day (09:15)
         this.isDayStartOrder = new Date(this.orderTime).getHours() == 3 && new Date(this.orderTime).getMinutes() == 45;
@@ -76,6 +82,8 @@ class Simulator {
             
             const { time, open, high, low, close } = data[i];
 
+            const avgMarketOrderPrice = getAverageMarketOrderPrice(data[i])
+
             if (time < +this.orderTime) continue;
 
             const currMinute = (time - data[0].time) / (1000 * 60);
@@ -85,8 +93,7 @@ class Simulator {
             }
 
             if (!this.isPositionOpen) {
-
-                if (this.cancelInMins && time > +this.orderTime && ((i % this.cancelInMins) == 0) && openTriggerOrder) {
+                if (this.cancelInMins && time > +this.orderTime && ((currMinute % this.cancelInMins) == 0) && openTriggerOrder) {
                     this.exitReason = 'cancelled'
                     this.tradeActions.push({ time, action: 'Cancelled', price: 0 });
                     openTriggerOrder = false
@@ -96,6 +103,7 @@ class Simulator {
                 if (!this.isPositionOpen && time > +this.orderTime && ((direction == 'BULLISH' && high >= triggerPrice) || (direction == 'BEARISH' && low <= triggerPrice))) {
                     if (i == 1) this.position = data[0].close;
                     else this.position = this.triggerPrice;
+                    // else this.position = this.placeAverageMarketPrice ? avgMarketOrderPrice : this.triggerPrice;
 
                     this.startedAt = time
                     openTriggerOrder = false
@@ -131,8 +139,10 @@ class Simulator {
                 }
                 
                 if ((direction == 'BEARISH' && stopLossPrice && high >= stopLossPrice) || (direction == 'BULLISH' && stopLossPrice && low <= stopLossPrice)) {
-                    this.pnl -= direction == 'BEARISH' ? ((stopLossPrice - this.position) * this.quantity) : ((this.position - stopLossPrice) * this.quantity)
-                    this.tradeActions.push({ time, action: 'Stop Loss Hit', price: stopLossPrice });
+                    const exitPrice = stopLossPrice
+                    // const exitPrice = this.placeAverageMarketPrice ? avgMarketOrderPrice : stopLossPrice
+                    this.pnl -= ((direction == 'BULLISH' ? this.position - exitPrice : exitPrice - this.position) * this.quantity)
+                    this.tradeActions.push({ time, action: 'Stop Loss Hit', price: exitPrice });
                     this.exitTime = time
                     this.exitReason = 'stoploss'
                     this.isPositionOpen = false;
@@ -143,9 +153,11 @@ class Simulator {
 
 
                 if ((direction == 'BEARISH' && low <= targetPrice) || (direction == 'BULLISH' && high >= targetPrice) ) {
-                    this.pnl += direction == 'BEARISH' ? ((this.position - targetPrice) * this.quantity) : ((targetPrice - this.position) * this.quantity)
+                    const exitPrice = targetPrice
+                    // const exitPrice = this.placeAverageMarketPrice ? avgMarketOrderPrice : targetPrice
+                    this.pnl += Math.abs((exitPrice - this.position) * this.quantity)
                     // this.pnl += (this.position - targetPrice) * this.quantity + 0.9;
-                    this.tradeActions.push({ time, action: 'Target Hit', price: targetPrice });
+                    this.tradeActions.push({ time, action: 'Target Hit', price: exitPrice });
                     this.exitTime = time
                     this.exitReason = 'target'
                     this.isPositionOpen = false;

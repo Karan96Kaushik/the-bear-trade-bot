@@ -5,7 +5,7 @@ const { getDateRange, addMovingAverage } = require("../../analytics")
 const { readSheetData } = require("../../gsheets")
 const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
-const RISK_AMOUNT = 200;
+const RISK_AMOUNT = 100;
 
 // Store ongoing simulations
 const simulationJobs = new Map();
@@ -138,7 +138,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 simulationJobs.get(jobId).currentDate = dayStartTime;
 
-                const interval = '5m'
+                const interval = '15m'
 
                 const candleDate = new Date(dayStartTime)
                 // candleDate.setMinutes(candleDate.getMinutes() - parseInt(interval))

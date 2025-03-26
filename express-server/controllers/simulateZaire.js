@@ -9,6 +9,8 @@ const RISK_AMOUNT = 200;
 // Store ongoing simulations
 const simulationJobs = new Map();
 
+const LIST_CANCELLED = false
+
 // New endpoint to start simulation
 const startZaireSimulation = async (req, res) => {
     try {
@@ -98,14 +100,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             singleDate = true;
         }
 
-        singleDate = false
-
+        singleDate = LIST_CANCELLED
 
         // Iterate through each day
         while (currentDate <= finalEndDate) {
+            
             // Update current date in job status
 
-            if (currentDate.getDate() == 26 && currentDate.getMonth() == 2) {
+            if (currentDate.getDate() == 26 && currentDate.getMonth()+1 == 2) {
                 currentDate.setDate(currentDate.getDate() + 1)
             }
 
@@ -115,6 +117,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             let dayStartTime = new Date(currentDate)
             let dayEndTime = new Date(currentDate)
+
+            console.log(dayStartTime, dayEndTime)
 
             dayStartTime.setHours(3, 50, 20, 0)
 

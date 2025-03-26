@@ -220,8 +220,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 continue;
                             }
                             currentDay++;
-
-                            if (startDate > new Date()) {
+                            const today = new Date()
+                            today.setHours(1, 0, 0, 0)
+                            if (startDate > today) {
                                 break;
                             }
 
