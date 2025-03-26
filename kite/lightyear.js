@@ -4,7 +4,7 @@ const {
 } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
-const { getDataFromYahoo, processYahooData, processMoneycontrolData, getMoneycontrolData } = require("./utils");
+const { getDataFromYahoo, processYahooData, processMoneycontrolData, getMoneycontrolData, getDateStringIND } = require("./utils");
 const { placeOrder, logOrder } = require("./processor");
 
 const RISK_AMOUNT = 100;
@@ -14,16 +14,7 @@ async function createLightyearOrders(stock) {
         await kiteSession.authenticate();
 
         // <20.  0.1.  :    20-50.  0.2  :  50-100     0.3. :    100- 300.   0.5.     >300    Re 1
-        let triggerPadding = 1
-        if (stock.high < 20)
-            triggerPadding = 0.1
-        else if (stock.high < 50)
-            triggerPadding = 0.2
-        else if (stock.high < 100)
-            triggerPadding = 0.3
-        else if (stock.high < 300)
-            triggerPadding = 0.5
-        
+        let triggerPadding = getTriggerPadding(stock.high);
 
         let direction = stock.direction;
         let entryTriggerPrice, targetPrice, finalStopLossPrice;
@@ -118,11 +109,14 @@ async function setupLightyearDayOneOrders(stocks) {
                 let pastData = await getMoneycontrolData(sym, from, to, 15, false);
                 pastData = processMoneycontrolData(pastData);
 
+                // Filter out data after 3:30 PM - not sure why this is happening
+                pastData = pastData.filter(d => new Date(d.time).getHours() < 10)
+
                 let last45mins = pastData.slice(-3);
                 let last15mins = pastData.slice(-1);
 
                 // <20.  0.1.  :    20-50.  0.2  :  50-100     0.3. :    100- 300.   0.5.     >300    Re 1
-                let triggerPadding = getTriggerPadding(stock.high);
+                let triggerPadding = getTriggerPadding(pastData[0].high);
 
                 if (direction == 'BULLISH') {
                     triggerPrice = entryTriggerPrice;
@@ -131,6 +125,8 @@ async function setupLightyearDayOneOrders(stocks) {
                 }
                 else if (direction == 'BEARISH') {
                     triggerPrice = entryTriggerPrice;
+                    // console.log('BR 45 min', stock.sym, last45mins.map(d => d.high), last45mins.reduce((max, curr) => Math.max(max, curr.high), 0), triggerPadding)
+                    // console.log('BR 45 min', stock.sym, last45mins.map(d => getDateStringIND(d.time)))
                     stopLossPrice = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
                     quantity = -Math.abs(Math.ceil(RISK_AMOUNT / (stopLossPrice - entryTriggerPrice)));
                 }
@@ -221,6 +217,9 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                     
                     let pastData = await getMoneycontrolData(stock.symbol, from, to, 15, false);
                     pastData = processMoneycontrolData(pastData);
+
+                    // Filter out data after 3:30 PM - not sure why this is happening
+                    pastData = pastData.filter(d => new Date(d.time).getHours() < 10)
 
                     pastData = pastData.filter(d => d.time > +from)
 
