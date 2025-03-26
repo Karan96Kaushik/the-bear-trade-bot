@@ -576,6 +576,12 @@ async function closeZaireOppositePositions() {
 async function calculateExtremePrice(sym, type, timeFrame = 15) {
     let data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
     data = processYahooData(data)
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    data = data.filter(d => +d.time >= +today)
+
     const priceType = type === 'highest' ? 'high' : 'low';
     const lastData = data
                             .slice(-timeFrame)
@@ -609,6 +615,9 @@ async function updateStopLossOrders() {
                 // Only revise SL for stocks that have already been traded
                 if (!stock.lastAction) continue;
 
+                let reviseSLInterval = parseInt(stock.reviseSL)
+                if (isNaN(reviseSLInterval)) reviseSLInterval = 15
+
                 const sym = stock.stockSymbol;
                 const isBearish = stock.type === 'BEARISH';
 
@@ -625,8 +634,8 @@ async function updateStopLossOrders() {
                 if (!existingOrder) continue;
 
                 newPrice = isBearish 
-                    ? await calculateExtremePrice(sym, 'highest', 15)
-                    : await calculateExtremePrice(sym, 'lowest', 15);
+                    ? await calculateExtremePrice(sym, 'highest', reviseSLInterval)
+                    : await calculateExtremePrice(sym, 'lowest', reviseSLInterval);
 
                 // Get current LTP to validate the new SL price
                 ltp = await kiteSession.kc.getLTP([`NSE:${sym}`]);

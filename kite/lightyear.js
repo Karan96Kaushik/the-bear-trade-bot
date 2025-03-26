@@ -55,7 +55,7 @@ async function createLightyearOrders(stock) {
                 direction,
                 '',      // Status
                 '',      // ignore
-                true,    // reviseSL
+                '75',    // reviseSL
             ]
 
         // const sym = `NSE:${stock.sym}`
