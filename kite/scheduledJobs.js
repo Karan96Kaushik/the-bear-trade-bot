@@ -9,9 +9,10 @@ const { kiteSession } = require('./setup');
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
 const { 
-    scanZaireStocks, scanBaileyStocks, isBullishCandle, 
+    scanZaireStocks, isBullishCandle, 
     getLastCandle, isBearishCandle 
 } = require('../analytics');
+const { scanBaileyStocks } = require('../analytics/bailey');
 const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
