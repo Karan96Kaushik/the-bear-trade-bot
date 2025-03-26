@@ -616,6 +616,9 @@ async function updateStopLossOrders() {
                 // Only revise SL for stocks that have already been traded
                 if (!stock.lastAction) continue;
 
+                // Skip stocks that are closed / cancelled
+                if (stock.stockSymbol[0] == '*' || stock.stockSymbol[0] == '-') continue;
+
                 let reviseSLInterval = parseInt(stock.reviseSL)
                 if (isNaN(reviseSLInterval)) reviseSLInterval = 15
 
