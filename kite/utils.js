@@ -97,7 +97,7 @@ async function getInstrumentToken(tradingSymbol) {
 
         // Find the matching instrument
         const instrument = instruments.find(
-            (inst) => `${inst.exchange}:${inst.tradingsymbol}` === tradingSymbol
+            (inst) => `${inst.exchange}:${inst.tradingsymbol}` === `NSE:${tradingSymbol}`
         );
 
         if (!instrument) {
@@ -358,7 +358,7 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
             throw new Error(`Last candle is not found`)
         }
     }
-    else if (useCached && new Date(data[data.length - 1].time).getHours() < 10) {
+    else if (useCached && new Date(data[data.length - 1].time).getHours() < 10 && !isPostMarket) {
         data.pop()
     }
     

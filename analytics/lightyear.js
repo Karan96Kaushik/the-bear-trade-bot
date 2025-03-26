@@ -22,6 +22,8 @@ async function scanLightyearStocks(stockList, endDateNew, interval = '1d', useCa
 				startDate.setDate(startDate.getDate() - 80);
 				
 				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
+
+				// If using cached data, we need not check for post market data
 				const isPostMarket = true;
 				df = processYahooData(df, interval, useCached, isPostMarket);
 				
