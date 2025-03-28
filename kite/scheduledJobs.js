@@ -57,27 +57,10 @@ async function setupLightyearOrders() {
 
         sendMessageToChannel(`🔔 Lightyear MIS Stocks: `, selectedStocks);
 
-        if (
-            positions.net.filter(p => p.quantity !== 0).length >= 5
-            // || 
-            // orders.find(o => o.tradingsymbol === stock.sym)
-        ) {
-            await sendMessageToChannel('🔔 Active positions are more than 5')
-            return
-        }
-
         const sheetEntries = []
 
         for (const stock of selectedStocks) {
             try {
-                // Skip if stock is already in position or open orders
-                if (
-                    positions.net.find(p => p.tradingsymbol === stock.sym)
-                    // (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
-                ) {
-                    await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
-                    continue
-                }
                 
                 if (sheetData.find(s => s.symbol === stock.sym)) {
                     await sendMessageToChannel('🔔 Ignoring coz already in lightyear sheet', stock.sym)
