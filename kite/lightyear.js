@@ -4,7 +4,7 @@ const {
 } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
-const { getDataFromYahoo, processYahooData, processMoneycontrolData, getMoneycontrolData, getDateStringIND } = require("./utils");
+const { processMoneycontrolData, getMoneycontrolData, skipBackDateHolidays } = require("./utils");
 const { placeOrder, logOrder } = require("./processor");
 
 const RISK_AMOUNT = 100;
@@ -310,35 +310,6 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
     }
 }
 
-async function skipBackDateHolidays(date) {
-    date.setDate(date.getDate() - 1)
-
-    const holidaySkips = {
-        '2025-04-01': 2,
-        '2024-04-10': 1, 
-        // '2024-04-14': 1, 
-        // '2024-04-18': 3, 
-        // '2024-05-01': 1, 
-        // '2024-08-15': 3, 
-        // '2024-08-27': 1, 
-        // '2024-10-02': 1, 
-        // '2024-10-02': 1, 
-        // '2024-10-21': 1, 
-        // '2024-10-21': 1, 
-    }
-
-    const dateString = date.toISOString().split('T')[0]
-
-    if (holidaySkips[dateString]) {
-        date.setDate(date.getDate() - holidaySkips[dateString])
-    }
-    if ([0, 6].includes(date.getDay())) {
-        date.setDate(date.getDate() - (date.getDay() == 0 ? 2 : date.getDay() == 6 ? 1 : 0));
-        skipBackDateHolidays(date)
-    }
-
-    return 0
-}
 
 async function skipForwardDateHolidays(date) {
 

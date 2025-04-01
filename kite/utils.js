@@ -347,8 +347,19 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
         if (interval.includes('m')) interval = parseInt(interval.split('m')[0])
         else if (interval.includes('h')) interval = parseInt(interval.split('h')[0]) * 60
         else if (interval.includes('d')) interval = parseInt(interval.split('d')[0]) * 24 * 60
-        
         let roundedTimeForReqCandle = Math.floor(data[data.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
+        
+        // If requested time is before market open at 3:45 AM UTC, adjust to prev day
+        const reqCandleDate = new Date(roundedTimeForReqCandle);
+        if (reqCandleDate.getUTCHours() < 3 || 
+            (reqCandleDate.getUTCHours() === 3 && reqCandleDate.getUTCMinutes() < 45)) {
+                // Go back 1 day and set the time to end of trading day
+            skipBackDateHolidays(reqCandleDate)
+            reqCandleDate.setUTCHours(10, 0, 20, 0);
+            reqCandleDate = Math.floor(+reqCandleDate / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
+            reqCandleDate = new Date(roundedTimeForReqCandle)
+            roundedTimeForReqCandle = reqCandleDate.getTime();
+        }
         data = data.filter(d => d.time <= roundedTimeForReqCandle)
 
         if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low || !data[data.length - 1].volume) {
@@ -363,6 +374,37 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
     }
     
     return data
+}
+
+
+async function skipBackDateHolidays(date) {
+    date.setDate(date.getDate() - 1)
+
+    const holidaySkips = {
+        '2025-03-31': 2,
+        '2024-04-10': 1, 
+        '2024-04-14': 2, 
+        '2024-04-18': 1, 
+        // '2024-05-01': 1, 
+        // '2024-08-15': 3, 
+        // '2024-08-27': 1, 
+        // '2024-10-02': 1, 
+        // '2024-10-02': 1, 
+        // '2024-10-21': 1, 
+        // '2024-10-21': 1, 
+    }
+
+    const dateString = date.toISOString().split('T')[0]
+
+    if (holidaySkips[dateString]) {
+        date.setDate(date.getDate() - holidaySkips[dateString])
+    }
+    if ([0, 6].includes(date.getDay())) {
+        date.setDate(date.getDate() - (date.getDay() == 0 ? 2 : date.getDay() == 6 ? 1 : 0));
+        skipBackDateHolidays(date)
+    }
+
+    return 0
 }
 
 /**
@@ -714,5 +756,13 @@ module.exports = {
     processGrowwData,
     getMoneycontrolData,
     processMoneycontrolData,
-    memoize
+    memoize,
+    skipBackDateHolidays
 };
+
+
+
+getDataFromYahoo('TCS', new Date('2025-03-28'), new Date('2025-03-29T03:45:20Z'), '15m')
+.catch(e => console.error(e?.response || e.message))
+    .then(d => processYahooData(d, '15m'))
+    .then(console.log)

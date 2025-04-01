@@ -48,12 +48,10 @@ async function setupLightyearOrders() {
         let sheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
         sheetData = processSheetWithHeaders(sheetData)
 
+        
         await kiteSession.authenticate();
         
         let selectedStocks = await scanLightyearStocks(niftyList)
-
-        const orders = await kiteSession.kc.getOrders();
-        const positions = await kiteSession.kc.getPositions();
 
         sendMessageToChannel(`🔔 Lightyear MIS Stocks: `, selectedStocks);
 
