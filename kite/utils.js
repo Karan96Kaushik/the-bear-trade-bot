@@ -759,10 +759,3 @@ module.exports = {
     memoize,
     skipBackDateHolidays
 };
-
-
-
-getDataFromYahoo('TCS', new Date('2025-03-28'), new Date('2025-03-29T03:45:20Z'), '15m')
-.catch(e => console.error(e?.response || e.message))
-    .then(d => processYahooData(d, '15m'))
-    .then(console.log)
