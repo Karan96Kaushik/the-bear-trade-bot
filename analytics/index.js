@@ -777,8 +777,8 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	if (
 		current.close / candleMid > BASE_CONDITIONS_SLOPE_TOLERANCE &&
 		baseConditionsMet &&
-		t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
-		t3.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
+		// t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
+		// t3.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
 		result5min === 'BULLISH'
 	)
 	return 'BULLISH'
