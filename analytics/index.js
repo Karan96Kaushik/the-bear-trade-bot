@@ -693,9 +693,9 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 		
 		if (
 			t1.sma44 / current.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE &&
-			// t1.sma44 < t2.sma44 //&&
-			// t2.sma44 < t3.sma44 //&&
-			// (candleDur === 75 || t3.sma44 < t4.sma44)   // Only check for 15m and 5m
+			// t1.sma44 < t2.sma44 &&
+			// t2.sma44 < t3.sma44 &&
+			// (candleDur === 75 || t3.sma44 < t4.sma44) &&   // Only check for 15m and 5m
 			t4.sma44 / t3.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE
 		)
 		return 'BEARISH'
@@ -703,8 +703,8 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 		if (
 			current.sma44 / t1.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE &&
 			// t1.sma44 > t2.sma44 &&
-			// t2.sma44 > t3.sma44 //&&
-			// (candleDur === 75 || t3.sma44 > t4.sma44)   // Only check for 15m and 5m
+			// t2.sma44 > t3.sma44 &&
+			// (candleDur === 75 || t3.sma44 > t4.sma44) &&  // Only check for 15m and 5m
 			t3.sma44 / t4.sma44 > CANDLE_CONDITIONS_SLOPE_TOLERANCE
 		)
 		return 'BULLISH'
@@ -747,13 +747,17 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	
 	const narrowRange = isNarrowRange(current, NARROW_RANGE_TOLERANCE)
 	const wideRange = isWideRange(current, WIDE_RANGE_TOLERANCE)
+
+	const baseConditionsMet = narrowRange 
+								&& wideRange 
+								&& touchingSma 
+								&& touchingSma15
+	
+	const bearishConditionsMet = candleMid / current.close > BASE_CONDITIONS_SLOPE_TOLERANCE
 	
 	if (
 		candleMid / current.close > BASE_CONDITIONS_SLOPE_TOLERANCE &&
-		narrowRange &&
-		wideRange &&
-		touchingSma &&
-		touchingSma15 &&
+		baseConditionsMet &&
 		// t2.high < current.high &&
 		// t3.high < current.high &&
 		result5min === 'BEARISH'
@@ -772,9 +776,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	
 	if (
 		current.close / candleMid > BASE_CONDITIONS_SLOPE_TOLERANCE &&
-		narrowRange &&
-		touchingSma &&
-		touchingSma15 &&
+		baseConditionsMet &&
 		t2.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
 		t3.low / current.low > BASE_CONDITIONS_SLOPE_TOLERANCE &&
 		result5min === 'BULLISH'
@@ -882,6 +884,39 @@ function calculateBollingerBands(df, period = 20, stdDev = 2) {
 	}));
 }
 
+function calculateATR(df, period = 14) {
+    let tr = [];
+    for (let i = 0; i < df.length; i++) {
+        if (i === 0) {
+            tr.push(df[i].high - df[i].low);
+            continue;
+        }
+        
+        const trueHigh = Math.max(df[i].high, df[i-1].close);
+        const trueLow = Math.min(df[i].low, df[i-1].close);
+        tr.push(trueHigh - trueLow);
+    }
+
+    // Calculate ATR using Simple Moving Average of TR
+    let atr = [];
+    for (let i = 0; i < df.length; i++) {
+        if (i < period - 1) {
+            atr.push(null);
+            continue;
+        }
+        
+        const slice = tr.slice(i - period + 1, i + 1);
+        const avg = slice.reduce((a, b) => a + b, 0) / period;
+        atr.push(avg);
+    }
+
+    // Add ATR to dataframe
+    return df.map((candle, i) => ({
+        ...candle,
+        atr: atr[i]
+    }));
+}
+
 module.exports = { 
 	analyzeDataForTrends,
 	calculateMovingAverage,
@@ -906,6 +941,7 @@ module.exports = {
 	calculateBollingerBands,
 	getDateRange,
 	removeIncompleteCandles,
+	calculateATR
 };
 
 
