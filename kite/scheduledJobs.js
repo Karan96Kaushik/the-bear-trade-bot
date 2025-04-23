@@ -169,6 +169,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             order.tag?.includes('zaire') &&
             !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
         );
+        const completed_zaire_orders_symbols = completed_zaire_orders.map(o => o.tradingsymbol);
 
         sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, selectedStocks);
 
@@ -184,11 +185,11 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         // }
 
         if (
-            positions.net.filter(p => p.quantity !== 0).length >= 5
+            positions.net.filter(p => p.quantity !== 0).filter(p => !completed_zaire_orders_symbols.includes(p.tradingsymbol)).length >= 5
             // || 
             // orders.find(o => o.tradingsymbol === stock.sym)
         ) {
-            await sendMessageToChannel('🔔 Active positions are more than 5')
+            await sendMessageToChannel('🔔 Zaire Active positions are more than 5')
             return
         }
 
