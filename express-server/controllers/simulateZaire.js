@@ -88,6 +88,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         }
 
         console.log(niftyList)
+        console.log(startdate, enddate)
 
         // Convert start and end dates to Date objects
         let currentDate = new Date(startdate)
@@ -107,13 +108,21 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             
             // Update current date in job status
 
-            if (currentDate.getDate() == 26 && currentDate.getMonth()+1 == 2) {
+            // In case of nse holiday, move to next day
+            if (checkIfMarketClosed(currentDate)) {
                 currentDate.setDate(currentDate.getDate() + 1)
             }
 
+            // In case of weekend, move to next day
             if (currentDate.getDay() == 0 || currentDate.getDay() == 6) {
                 currentDate.setDate(currentDate.getDate() + (currentDate.getDay() == 0 ? 1 : 2))
             }
+
+            // In case of nse holiday on a monday, move to next day
+            if (checkIfMarketClosed(currentDate)) {
+                currentDate.setDate(currentDate.getDate() + 1)
+            }
+
 
             let dayStartTime = new Date(currentDate)
             let dayEndTime = new Date(currentDate)
@@ -309,6 +318,24 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
       console.error('Error fetching orders data:', error);
       return null;
     }
+}
+
+const checkIfMarketClosed = (date) => {
+    const day = date.getDay();
+    const month = date.getMonth()+1;
+    const year = date.getFullYear();
+
+    const marketClosed = [
+        {day: 18, month: 4}, // April 18, 2025
+        {day: 14, month: 4}, // April 14, 2025
+        {day: 10, month: 4}, // April 10, 2025
+        {day: 1, month: 5}, // May 01, 2025
+        {day: 15, month: 8}, // August 15, 2025 
+        {day: 27, month: 8}, // August 27, 2025 
+    ]
+    
+    return marketClosed.find(m => m.day == day && m.month == month);
+    
 }
 
 module.exports = {
