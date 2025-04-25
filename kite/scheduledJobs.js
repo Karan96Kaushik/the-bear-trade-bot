@@ -790,6 +790,7 @@ const scheduleMISJobs = () => {
 
     const zaireJobV3CB = () => {
         sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2, zaireJobV3_3)));
+        // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2, zaireJobV3_3)));
         // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
         setupZaireOrders(false, true);
     };
