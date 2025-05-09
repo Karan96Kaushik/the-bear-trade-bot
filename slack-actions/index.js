@@ -323,10 +323,11 @@ const slack_channel_ids = {
 	'notif-wide-search-details': 'C07GDA3LC7J',
 	'notifications': 'C01SF61B0MC',
 	'bot-status-updates': 'C07Q8C2TZPA',
-    'bot-status-updates-2': 'C07SP6HL50B'
+    'bot-status-updates-2': 'C07SP6HL50B',
+    'bot-status-updates-3': 'C08RQ6UFA91'
 }
 
-async function sendMessageToChannel(channel_name='bot-status-updates', ...message) {
+async function sendMessageToChannel(channel_name='bot-status-updates-3', ...message) {
 	try {
 
         if (!slack_app || process.env.NODE_ENV !== 'production')
@@ -335,7 +336,7 @@ async function sendMessageToChannel(channel_name='bot-status-updates', ...messag
         let channelId = slack_channel_ids[channel_name]
 
         if (!channelId) {
-            channelId = slack_channel_ids['bot-status-updates-2']
+            channelId = slack_channel_ids['bot-status-updates-3']
             message.unshift(channel_name)
         }
 
