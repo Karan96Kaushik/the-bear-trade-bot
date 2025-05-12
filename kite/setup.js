@@ -64,15 +64,15 @@ class KiteSetup {
             // let holdings = await this.kc.getHoldings()
             // console.log(holdings)
 
-            console.log(response.access_token)
+            console.log('response.access_token', response.access_token)
             
             this.state.accessToken = response.access_token;
             this.state.tokenDateString = new Date().toDateString();
             this.saveState()
 
-            console.log(this.state.accessToken)
+            console.log('this.state.accessToken', this.state.accessToken)
 
-            this.kc.setAccessToken(this.accessToken);
+            this.kc.setAccessToken(this.state.accessToken);
 
             let profile = await this.kc.getProfile()
             await sendMessageToChannel('🪪 Authenticated for', profile.user_name)
