@@ -29,11 +29,11 @@ const setupWs = (apiKey, accessToken) => {
 	}
 	
 	function onDisconnect(error){
-		console.log("Closed connection on disconnect", error);
+		console.log("Closed connection on disconnect", error?.response?.data || error?.message || error);
 	}
 	
 	function onError(error){
-		console.log("Closed connection on error", error);
+		console.log("Closed connection on error", error?.response?.data || error?.message || error);
 	}
 	
 	function onClose(reason){
