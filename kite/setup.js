@@ -56,15 +56,21 @@ class KiteSetup {
                 return true
             }
 
+            this.clearState()
+
             const generated_request_token = await runRequests()
             // console.log(generated_request_token, apiSecret)
             const response = await this.kc.generateSession(generated_request_token, apiSecret);
             // let holdings = await this.kc.getHoldings()
             // console.log(holdings)
+
+            console.log(response.access_token)
             
             this.state.accessToken = response.access_token;
             this.state.tokenDateString = new Date().toDateString();
             this.saveState()
+
+            console.log(this.state.accessToken)
 
             this.kc.setAccessToken(this.accessToken);
 

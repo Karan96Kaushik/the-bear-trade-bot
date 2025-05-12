@@ -38,9 +38,8 @@ const run = async () => {
 	console.log("Connecting to database...")
 	await connectToDatabase();
 
-
 	kiteSession.clearState()
-	await kiteSession.authenticate()
+	await kiteSession.authenticate(true)
 
 	// await kiteSession.authenticate()
 
