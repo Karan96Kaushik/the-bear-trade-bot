@@ -38,7 +38,7 @@ const run = async () => {
 	console.log("Connecting to database...")
 	await connectToDatabase();
 
-	await kiteSession.authenticate()
+	await kiteSession.authenticate(true)
 
 	// tradeManagerWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 
