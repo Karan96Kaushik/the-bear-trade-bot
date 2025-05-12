@@ -64,7 +64,7 @@ class KiteSetup {
             this.kc.setAccessToken(this.accessToken);
 
             let profile = await this.kc.getProfile()
-            // await sendMessageToChannel('🪪 Authenticated for', profile.user_name)
+            await sendMessageToChannel('🪪 Authenticated for', profile.user_name)
 
             return true
 
