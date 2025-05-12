@@ -67,6 +67,7 @@ class KiteSetup {
             console.log('response.access_token', response.access_token)
             
             this.state.accessToken = response.access_token;
+            this.state.apiKey = apiKey
             this.state.tokenDateString = new Date().toDateString();
             this.saveState()
 
