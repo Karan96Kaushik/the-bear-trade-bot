@@ -46,7 +46,7 @@ const run = async () => {
 	// tradeManagerWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 
 	if (process.env.NODE_ENV === 'production') {
-		setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
+		// setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 		scheduleMISJobs()
 	}
 
