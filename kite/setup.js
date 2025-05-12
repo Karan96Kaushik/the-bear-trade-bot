@@ -29,6 +29,11 @@ class KiteSetup {
         return {};
     }
 
+    clearState() {
+        this.state = {}
+        this.saveState()
+    }
+
     saveState() {
         // Save the current state to the JSON file
         fs.writeFileSync(STATE_FILE, JSON.stringify(this.state));

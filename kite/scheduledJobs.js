@@ -355,6 +355,7 @@ async function validateOrdersFromSheet() {
         let stockData = await readSheetData('MIS-ALPHA!A2:W1000')
         stockData = processMISSheetData(stockData)
     
+        kiteSession.clearState()
         await kiteSession.authenticate(true)
     
         for (const stock of stockData) {
