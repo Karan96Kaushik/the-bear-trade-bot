@@ -40,7 +40,7 @@ const run = async () => {
 
 
 	kiteSession.clearState()
-	await kiteSession.authenticate(true)
+	await kiteSession.authenticate()
 
 	// await kiteSession.authenticate()
 
