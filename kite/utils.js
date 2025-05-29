@@ -163,13 +163,13 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
         };
         
         const headers = {
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0',
-            'Accept': '*/*',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
-            'Referer': 'https://finance.yahoo.com/quote/TATAMOTORS.NS/chart/?guccounter=1',
-            'Origin': 'https://finance.yahoo.com',
-            'Connection': 'keep-alive'
+            // 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:127.0) Gecko/20100101 Firefox/127.0',
+            // 'Accept': '*/*',
+            // 'Accept-Language': 'en-US,en;q=0.5',
+            // 'Accept-Encoding': 'gzip, deflate, br, zstd',
+            // 'Referer': 'https://finance.yahoo.com/quote/TATAMOTORS.NS/chart/?guccounter=1',
+            // 'Origin': 'https://finance.yahoo.com',
+            // 'Connection': 'keep-alive'
         };
 
         let response

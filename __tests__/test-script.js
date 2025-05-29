@@ -19,6 +19,17 @@ const run = async () => {
     try {
 
 
+        let startDate = new Date('2025-05-28T09:00:00Z')
+        let endDate = new Date('2025-05-28T15:30:00Z')
+
+        let df = await getDataFromYahoo('BEL', 5, '1m', startDate, endDate, false);
+        df = processYahooData(df, '1m', false);
+
+        console.log(df)
+
+        return
+
+
         let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
         stockData = processMISSheetData(stockData);
 
