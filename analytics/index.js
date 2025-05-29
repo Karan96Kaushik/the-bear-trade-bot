@@ -509,7 +509,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					
 					// 75 Mins candles needs more data
 					let earlierStart = new Date(startDate)
-					earlierStart.setDate(earlierStart.getDate() - 10)
+					earlierStart.setDate(earlierStart.getDate() - 5)
 					
 					let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
 					df15min = processYahooData(df15min, '15m', useCached);
