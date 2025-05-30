@@ -681,6 +681,13 @@ async function generateDailyReportF() {
 
 async function setupMissingOrders() {
     try {
+
+        /*
+          This is currently disabled as in some cases of conflict (where zaire order was just executed, it creates a 
+          conflicting duplicate order)
+          possible fix is only check for missing orders if the position has been active for more than 5 mins
+        */
+
         await sendMessageToChannel('⌛️ Executing Setup Missing Orders Job');
 
         await kiteSession.authenticate();
@@ -807,10 +814,10 @@ const scheduleMISJobs = () => {
         // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(missingOrders.nextInvocation()));
         setupMissingOrders();
     };
-    const missingOrders = schedule.scheduleJob('21 2,7,12,17,22,27,32,37,42,47,52,57 4,5,6,7,8 * * 1-5', missingOrdersCB);
-    const missingOrders_2 = schedule.scheduleJob('21 52,57 3 * * 1-5', missingOrdersCB);
-    const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
-    sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
+    // const missingOrders = schedule.scheduleJob('21 2,7,12,17,22,27,32,37,42,47,52,57 4,5,6,7,8 * * 1-5', missingOrdersCB);
+    // const missingOrders_2 = schedule.scheduleJob('21 52,57 3 * * 1-5', missingOrdersCB);
+    // const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
+    // sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
 
     const baileyJobCB = () => {
         sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
