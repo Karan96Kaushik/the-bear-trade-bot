@@ -50,7 +50,7 @@ router.get('/selected-stocks', async (req, res) => {
         console.log(niftyList)
     }
 
-    let selectedStocks = await scanZaireStocks(niftyList, date, interval);
+    let {selectedStocks} = await scanZaireStocks(niftyList, date, interval);
     selectedStocks = selectedStocks.map(a => ({...a, qty: Math.ceil(RISK_AMOUNT/(a.high - a.low))}))
 
     res.json({stocks: selectedStocks})

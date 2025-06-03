@@ -447,6 +447,9 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 	for (let i = 0; i < stockList.length; i += BATCH_SIZE) {
 		batches.push(stockList.slice(i, i + BATCH_SIZE));
 	}
+	const no_data_stocks = [];
+	const too_high_stocks = [];
+	const too_many_incomplete_candles_stocks = [];
 	
 	// Process each batch in parallel
 	for (const batch of batches) {
@@ -472,17 +475,20 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 				
 				if (!df || df.length === 0) {
 					if (DEBUG) console.debug('No data')
-						return null;
+					no_data_stocks.push(sym)
+					return null;
 				}
 				
 				if (df[df.length - 1].high > MAX_STOCK_PRICE)  {
 					if (DEBUG) console.debug('Too high')
-						return null;
+					too_high_stocks.push(sym)
+					return null;
 				}
 				
 				if (df.slice(-44).filter(r => !r.close).length > 4) {
 					if (DEBUG) console.debug('Too many incomplete candles', sym)
-						return null;
+					too_many_incomplete_candles_stocks.push(sym)
+					return null;
 				}
 				
 				df = addMovingAverage(df, 'close', params.MA_WINDOW || 44, 'sma44');
@@ -604,8 +610,13 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 		const batchResults = await Promise.all(batchPromises);
 		selectedStocks.push(...batchResults.filter(result => result !== null));
 	}
-	
-	return selectedStocks;
+
+	return {
+		selectedStocks,
+		no_data_stocks,
+		too_high_stocks,
+		too_many_incomplete_candles_stocks
+	};
 }
 
 function checkV2Conditions(df) {
@@ -950,6 +961,6 @@ module.exports = {
 
 
 // getDhanNIFTY50Data().then(async (stocks) => {
-	//   const selectedStocks = await scanZaireStocks(stocks.map(s => s.Sym))
+	//   const {selectedStocks} = await scanZaireStocks(stocks.map(s => s.Sym))
 //   console.log(selectedStocks)
 // })

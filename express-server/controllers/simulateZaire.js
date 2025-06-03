@@ -154,7 +154,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 const candleDate = new Date(dayStartTime)
                 // candleDate.setUTCMinutes(candleDate.getUTCMinutes() - parseInt(interval))
-                let selectedStocks = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
+                let {selectedStocks} = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
 
                 if (selectedStocks.length > 0) {
                     const BATCH_SIZE = 2;

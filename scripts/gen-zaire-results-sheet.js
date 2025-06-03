@@ -29,7 +29,7 @@ async function genZaireReport() {
                     let niftyList = await readSheetData('HIGHBETA!B2:B150')
                     niftyList = niftyList.map(stock => stock[0]).filter(a => a !== 'NOT FOUND')
                     const timestamp = getDateStringIND(new Date(`${date}T${time}:00Z`))
-                    const selectedStocks = await scanZaireStocks(niftyList, new Date(`${date}T${time}:00Z`));
+                    const {selectedStocks} = await scanZaireStocks(niftyList, new Date(`${date}T${time}:00Z`));
                     console.log(timestamp)
                     results.push(
                         ...selectedStocks.map(a => [timestamp, a.sym, a.high, a.low, a.open, a.close, a.sma44, a.direction])

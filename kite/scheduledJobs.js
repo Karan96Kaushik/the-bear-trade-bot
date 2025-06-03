@@ -144,7 +144,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
 
         await kiteSession.authenticate();
         
-        let selectedStocks = await scanZaireStocks(
+        let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks} = await scanZaireStocks(
             niftyList,
             null,
             (checkV2 || checkV3) ? '5m' : '15m',
@@ -154,6 +154,14 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             zaireV3Params
         )
 
+        try {
+            await sendMessageToChannel('errors', `Zaire - No data stocks ${getDateStringIND(new Date())}: ${no_data_stocks.join(', ')}`)
+            await sendMessageToChannel('errors', `Zaire - Too high stocks ${getDateStringIND(new Date())}: ${too_high_stocks.join(', ')}`)
+            await sendMessageToChannel('errors', `Zaire - Too many incomplete candles stocks ${getDateStringIND(new Date())}: ${too_many_incomplete_candles_stocks.join(', ')}`)
+        } catch (e) {
+            console.error(e)
+        }
+	
         await sendMessageToChannel('🔔 Cancelling Zaire Orders')
         await cancelZaireOrders()
 
