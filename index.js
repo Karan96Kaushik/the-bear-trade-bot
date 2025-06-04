@@ -38,8 +38,13 @@ const run = async () => {
 	console.log("Connecting to database...")
 	await connectToDatabase();
 
-	kiteSession.clearState()
-	await kiteSession.authenticate(true)
+	if (process.env.NODE_ENV === 'production') {
+		kiteSession.clearState()
+		await kiteSession.authenticate(true)
+	}
+	else {
+		await kiteSession.authenticate()
+	}
 
 	// await kiteSession.authenticate()
 

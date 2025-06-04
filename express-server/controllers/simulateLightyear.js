@@ -117,6 +117,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 currentDate.setDate(currentDate.getDate() + (currentDate.getDay() == 0 ? 1 : 2))
             }
 
+            console.log('currentDate -------->', currentDate)
+
             let dayStartTime = new Date(currentDate)
 
             dayStartTime.setUTCHours(11, 0, 20, 0)
@@ -133,7 +135,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             const candleDate = new Date(dayStartTime)
 
-            console.log(candleDate)
+            // console.log('candleDate -------->', candleDate)
 
             let selectedStocks = await scanLightyearStocks(niftyList, candleDate, interval, useCached);
 
@@ -192,24 +194,34 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         const startDate = new Date(endDate);
                         startDate.setUTCHours(3, 0, 0, 0);
 
-                        endDate.setDate(endDate.getDate() - 1)
-                        startDate.setDate(startDate.getDate() - 1)
+                        // endDate.setDate(endDate.getDate() - 1)
+                        // startDate.setDate(startDate.getDate() - 1)
 
                         orderStartTime = (new Date(startDate)).setDate(startDate.getDate() + 1);
 
+                        console.log('endDate -------->', getDateStringIND(endDate))
+                        console.log('orderStartTime -------->', getDateStringIND(orderStartTime))
+
                         // Skip weekends and 26th Feb
-                        if ( [0, 6].includes(startDate.getDay()) ) {
+                        if ( [0, 6].includes(startDate.getDay()) ||
+                            (startDate.getDate() == 10 && startDate.getMonth()+1 == 4) ||
+                            (startDate.getDate() == 14 && startDate.getMonth()+1 == 4) ||
+                            (startDate.getDate() == 18 && startDate.getMonth()+1 == 4) ||
+                            (startDate.getDate() == 1 && startDate.getMonth()+1 == 5)
+                        ) {
                             startDate.setDate(startDate.getDate() - (startDate.getDay() == 0 ? 2 : 1))
                             endDate.setDate(endDate.getDate() - (endDate.getDay() == 0 ? 2 : 1))
                         }
-                        if ((startDate.getDate() == 26 && startDate.getMonth()+1 == 2) || (startDate.getDate() == 14 && startDate.getMonth()+1 == 3)) {
-                            startDate.setDate(startDate.getDate() - 1)
-                            endDate.setDate(endDate.getDate() - 1)
-                        }
+
+                        console.log('startDate -------->', startDate)
+                        console.log('endDate -------->', endDate)
 
                         let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                         yahooData = processGrowwData(yahooData);
                         last45mins = yahooData.slice(-45);
+
+                        // startDate.setDate(startDate.getDate() + 1)
+                        // endDate.setDate(endDate.getDate() + 1)
 
                         while (exit == null) {
                             startDate.setDate(startDate.getDate() + 1)
@@ -218,8 +230,11 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             // Skip weekends and 26th Feb
                             if (
                                 [0, 6].includes(startDate.getDay()) || 
-                                (startDate.getDate() == 26 && startDate.getMonth()+1 == 2) || 
-                                (startDate.getDate() == 14 && startDate.getMonth()+1 == 3)) {
+                                (startDate.getDate() == 10 && startDate.getMonth()+1 == 4) ||
+                                (startDate.getDate() == 14 && startDate.getMonth()+1 == 4) ||
+                                (startDate.getDate() == 18 && startDate.getMonth()+1 == 4) ||
+                                (startDate.getDate() == 1 && startDate.getMonth()+1 == 6)
+                            ) {
                                 continue;
                             }
                             currentDay++;
@@ -278,7 +293,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 orderTime: new Date(startDate).setUTCHours(3, 45, 0, 0),
                                 // cancelInMins: simulation.cancelInMins,
                                 updateSL: simulation.updateSL,
-                                updateSLInterval: simulation.updateSLInterval,
+                                updateSLInterval: simulation.updateSLInterval, // Candle Bucket size
                                 updateSLFrequency: simulation.updateSLFrequency,
                                 // marketOrder: true // simulation.marketOrder
                             });
@@ -398,7 +413,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 traded.push(...results);
             }
 
-            // console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: getDateStringIND(t.placedAt), placedAtUk: t.placedAt, startedAt: t.startedAt})))
+            // console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: t.placedAt, placedAtUk: t.placedAt, startedAt: t.startedAt})))
 
             allTraded.push(...traded);
 

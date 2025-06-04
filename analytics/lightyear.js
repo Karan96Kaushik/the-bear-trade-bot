@@ -32,8 +32,13 @@ async function scanLightyearStocks(stockList, endDateNew, interval = '1d', useCa
 					return null;
 				}
 				
-				if (!df || df.length === 0 || df[df.length - 1].high > MAX_STOCK_PRICE) {
-					console.log('No data for or high price > MAX_STOCK_PRICE', sym);
+				if (!df || df.length === 0) {
+					console.log('No data for', sym);
+					return null;
+				}
+					
+				if (df[df.length - 1].high > MAX_STOCK_PRICE) {
+					console.log('Too high price > MAX_STOCK_PRICE', sym);
 					return null;
 				}
 				
@@ -63,7 +68,10 @@ async function scanLightyearStocks(stockList, endDateNew, interval = '1d', useCa
 						sma7_vol: currentCandle.sma7_vol,
 						sma44: currentCandle.sma44,
 						direction: 'BULLISH',
-						prev: df[df.length - 2], // Previous candle data
+						prev: {
+							...df[df.length - 2],
+							time: getDateStringIND(df[df.length - 2].time)
+						}, // Previous candle data
 					};
 				}
 				
@@ -130,8 +138,14 @@ function analyseLightyearDataUpward(df, sym, tolerance = 0.01) {
 		const bullishCandle = 
 			currentCandle.close > currentCandle.open || 
 			(currentCandle.high - currentCandle.close) < (currentCandle.close - currentCandle.low);
+
+		const candleMid = (currentCandle.high + currentCandle.low) / 2;
+
+		const midpointPlacement = currentCandle.close > candleMid;
+
+		// console.log('bullishCandle -------->', currentCandle.close , currentCandle.open, midpointPlacement)
 		
-		return risingMA && touchingMA && bullishCandle;
+		return risingMA && touchingMA && bullishCandle && midpointPlacement;
 	} catch (e) {
 		console.error(e, sym);
 		return false;
@@ -170,7 +184,13 @@ function analyseLightyearDataDownward(df, sym, tolerance = 0.01) {
 			currentCandle.close < currentCandle.open || 
 			(currentCandle.high - currentCandle.close) > (currentCandle.close - currentCandle.low);
 		
-		return fallingMA && touchingMA && bearishCandle;
+		const candleMid = (currentCandle.high + currentCandle.low) / 2;
+
+		const midpointPlacement = currentCandle.close < candleMid;
+
+		// console.log('bearishCandle -------->', currentCandle.close , currentCandle.open, midpointPlacement)
+		
+		return fallingMA && touchingMA && bearishCandle && midpointPlacement;
 	} catch (e) {
 		console.error(e, sym);
 		return false;
