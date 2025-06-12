@@ -16,14 +16,12 @@ const setupWs = (apiKey, accessToken) => {
 	ticker.on("close", onClose);
 	ticker.on("order_update", onTrade);
 	
-	
-	
 	function onTicks(ticks){
 		console.log("Ticks", ticks);
 	}
 	
-	function subscribe(){
-		const tokens = [738561, 256265];
+	async function subscribe(stock_list){
+		const tokens = await Promise.all(stock_list.map((sym) => getInstrumentToken(sym)));
 		ticker.subscribe(tokens);
 		ticker.setMode(ticker.modeFull, tokens);
 	}

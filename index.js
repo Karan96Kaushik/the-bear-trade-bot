@@ -5,6 +5,7 @@ const { kiteSession } = require('./kite/setup');
 const { initialize_server } = require('./express-server');
 const { scheduleMISJobs } = require('./kite/scheduledJobs');
 const { setupWs } = require('./kite/trader-ws');
+const { setupLightyearMonitor } = require('./kite/lightyear-monitor');
 // const { tradeManagerWs } = require('./kite/orderManagerws');
 const { connectToDatabase } = require('./modules/db');
 
@@ -53,6 +54,7 @@ const run = async () => {
 	if (process.env.NODE_ENV === 'production') {
 		setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
 		scheduleMISJobs()
+		await setupLightyearMonitor()
 	}
 
 }

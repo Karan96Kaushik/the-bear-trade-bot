@@ -23,11 +23,8 @@ const tradeManagerWs = (apiKey, accessToken) => {
 		console.log("Ticks", ticks);
 	}
 	
-	 async function subscribe(){
-        const jp = await getInstrumentToken('JPPOWER')
-        const rel = await getInstrumentToken('RELIANCE')
-        console.log(jp, rel)
-		const tokens = [jp, rel];
+	 async function subscribe(stock_list){
+		const tokens = await Promise.all(stock_list.map(async (sym) => await getInstrumentToken(sym)));
 		ticker.subscribe(tokens);
 		ticker.setMode(ticker.modeFull, tokens);
 	}

@@ -17,6 +17,7 @@ const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet } = require('./lightyear');
+const { setupLightyearMonitor } = require('./lightyear-monitor');
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -769,7 +770,16 @@ const getEarliestTime = (a, b, c={nextInvocation: () => 9999999999999}) => {
 }
 
 const scheduleMISJobs = () => {
-
+    // Schedule Lightyear monitor reload at 3:45 AM
+    schedule.scheduleJob('45 3 * * *', async function() {
+        try {
+            await sendMessageToChannel('🕒 Reloading Lightyear Monitor at 3:45 AM');
+            await setupLightyearMonitor();
+        } catch (error) {
+            console.error('Error reloading Lightyear monitor:', error);
+            await sendMessageToChannel('❌ Error reloading Lightyear monitor:', error.message);
+        }
+    });
 
     const sheetSetupJobCB = () => {
         setupOrdersFromSheet()

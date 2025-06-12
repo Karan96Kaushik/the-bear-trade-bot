@@ -4,7 +4,7 @@ const { scanZaireStocks, getDateRange, addMovingAverage } = require("../../analy
 const { readSheetData } = require("../../gsheets")
 const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
-const RISK_AMOUNT = 400;
+const RISK_AMOUNT = 200;
 
 // Store ongoing simulations
 const simulationJobs = new Map();
@@ -153,6 +153,11 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 const interval = '5m'
 
                 const candleDate = new Date(dayStartTime)
+
+                if (candleDate.getUTCHours() >= 8) {
+                    break
+                }
+
                 // candleDate.setUTCMinutes(candleDate.getUTCMinutes() - parseInt(interval))
                 let {selectedStocks} = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
 
@@ -183,6 +188,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                             yahooData = processGrowwData(yahooData);
 
+                            // Selected candle + 5 mins for 5 min candle
+                            const futureData = yahooData.filter(data => +data.time >= (+candleDate + 5*60*1000));
+
                             let triggerPadding = 1;
                             if (stock.high < 20)
                                 triggerPadding = 0.1;
@@ -199,29 +207,50 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             let [targetMultiplier, stopLossMultiplier] = simulation.targetStopLossRatio.split(':').map(Number);
                             let candleLength = stock.high - stock.low;
 
+                            let isFutureTriggerTime = false;
+
                             if (direction == 'BULLISH') {
                                 triggerPrice = stock.high + triggerPadding;
                                 stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) - triggerPadding;
-                                // targetPrice = stock.high + ((triggerPrice - stopLossPrice) * targetMultiplier);
-                                targetPrice = stock.high + (candleLength  * (targetMultiplier - 1)) + triggerPadding;
-                                // targetPrice = stock.high + ((triggerPrice - (stock.low - triggerPadding)) * targetMultiplier);
+                                targetPrice = stock.high + ((triggerPrice - stopLossPrice) * targetMultiplier);
+
+                                // Future trigger price should be at 5 min interval
+                                const futureTriggerPriceIndex = futureData.findIndex(data => data.high >= triggerPrice && (new Date(data.time)).getMinutes() % 5 == 0);
+
+                                // console.log(futureTriggerPriceIndex)
+                                // console.log(futureData)
+                                if (futureTriggerPriceIndex != -1) {
+                                    // Trigger + 5 mins maintains trigger
+                                    const futureTriggerPrice = futureData.slice(futureTriggerPriceIndex+5).find(data => data.high >= triggerPrice && (new Date(data.time)).getMinutes() % 5 == 0);
+                                    if (futureTriggerPrice) {
+                                        isFutureTriggerTime = futureTriggerPrice.time;
+                                    }
+                                }
+
                             }
                             else {
                                 triggerPrice = stock.low - triggerPadding;
                                 stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
-                                // targetPrice = stock.low - ((stopLossPrice - triggerPrice) * targetMultiplier);
-                                targetPrice = stock.low - (candleLength  * (targetMultiplier - 1)) - triggerPadding;
-                                // targetPrice = stock.low - ((stopLossPrice - triggerPrice));
+                                targetPrice = stock.low - ((stopLossPrice - triggerPrice) * targetMultiplier);
+
+                                // Future trigger price should be at 5 min interval
+                                const futureTriggerPriceIndex = futureData.findIndex(data => data.low <= triggerPrice && (new Date(data.time)).getMinutes() % 5 == 0);
+                                // console.log(futureTriggerPriceIndex)
+                                // console.log(futureData)
+
+                                if (futureTriggerPriceIndex != -1) {
+                                    // Trigger + 5 mins maintains trigger
+                                    const futureTriggerPrice = futureData.slice(futureTriggerPriceIndex+5).find(data => data.low <= triggerPrice && (new Date(data.time)).getMinutes() % 5 == 0);
+                                    if (futureTriggerPrice) {
+                                        isFutureTriggerTime = futureTriggerPrice.time;
+                                    }
+                                }
                             }
 
-                            console.log({
-                                sym: stock.sym, 
-                                h: stock.high, 
-                                l: stock.low, 
-                                stopLossPrice, 
-                                triggerPrice, 
-                                targetPrice}
-                            )
+                            if (!isFutureTriggerTime) {
+                                console.log('No future trigger found for', stock.sym)
+                                return null
+                            }
                             
                             triggerPrice = Math.round(triggerPrice * 10) / 10;
                             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
@@ -240,7 +269,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 quantity,
                                 direction,
                                 yahooData,
-                                orderTime: dayStartTime,
+                                orderTime: isFutureTriggerTime,
                                 cancelInMins: simulation.cancelInMins,
                                 updateSL: simulation.updateSL,
                                 updateSLInterval: simulation.updateSLInterval,
@@ -256,6 +285,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 return {
                                     startedAt: sim.startedAt,
                                     placedAt: sim.orderTime,
+                                    scannedCandleAt: candleDate,
                                     pnl: sim.pnl || 0,
                                     quantity: sim.quantity,
                                     direction: sim.direction,
@@ -303,12 +333,16 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             // console.log(traded.map(t => [t.placedAt, t.exitTime]))
     
             if (simulation.reEnterPosition) {
-                filTraded = traded.filter(t => (singleDate && !t.pnl) ||    // Show cancelled trades if it's a single day simulation
+                filTraded = traded.filter((t, i) => // (singleDate && !t.pnl) ||    // Show cancelled trades if it's a single day simulation
                                                 // Remove trades that were started before an active trade
-                                                !traded.find(t1 => (
-                                                    (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && 
-                                                    (t.sym == t1.sym) && 
-                                                    (+t1.placedAt < +t.exitTime)
+                                                !traded.find((t_prev, j) => (
+                                                    (i > j) &&
+                                                    // (t_prev.startedAt < t.startedAt || +t_prev.placedAtUk < +t.placedAtUk) && 
+                                                    (t.sym == t_prev.sym) 
+
+                                                    // Reenter position
+                                                    // && 
+                                                    // (+t1.placedAtUk < +t.exitTime)
                                                 ))
                                         )
             }
