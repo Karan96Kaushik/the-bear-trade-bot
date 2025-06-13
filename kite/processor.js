@@ -321,7 +321,7 @@ async function createZaireOrders(stock, tag='zaire') {
 
         const sheetEntry = {
             stockSymbol: stock.sym,
-            reviseSL: true,
+            reviseSL: '',
             ignore: true,    // '' = false
             sma44_0: stock.sma44_0,
             sma44_1: stock.sma44_1,
