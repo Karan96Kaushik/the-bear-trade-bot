@@ -199,15 +199,17 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             let [targetMultiplier, stopLossMultiplier] = simulation.targetStopLossRatio.split(':').map(Number);
                             let candleLength = stock.high - stock.low;
 
+                            // triggerPadding = 0
+
                             if (direction == 'BULLISH') {
                                 triggerPrice = stock.high + triggerPadding;
-                                stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) - triggerPadding;
-                                targetPrice = stock.high + ((triggerPrice - stopLossPrice) * targetMultiplier);
+                                stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
+                                targetPrice = stock.high + (candleLength * targetMultiplier) + triggerPadding;
                             }
                             else {
                                 triggerPrice = stock.low - triggerPadding;
-                                stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
-                                targetPrice = stock.low - ((stopLossPrice - triggerPrice) * targetMultiplier);
+                                stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) - triggerPadding;
+                                targetPrice = stock.low - (candleLength * targetMultiplier) - triggerPadding;
                             }
                             
                             triggerPrice = Math.round(triggerPrice * 10) / 10;
