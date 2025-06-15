@@ -204,7 +204,7 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
 
         return response.data;
     } catch (error) {
-        console.error(`Error fetching data from Yahoo Finance for ${sym}:`, error?.response?.data?.chart?.error?.description);
+        console.error(`Error fetching data from Yahoo Finance for ${sym}:`, error?.response?.data);
         throw new Error(error?.response?.data?.chart?.error?.description || error.message);
     }
 }

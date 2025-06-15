@@ -19,64 +19,6 @@ const run = async () => {
     try {
 
 
-        let startDate = new Date('2025-05-28T09:00:00Z')
-        let endDate = new Date('2025-05-28T15:30:00Z')
-
-        let df = await getDataFromYahoo('BEL', 5, '1m', startDate, endDate, false);
-        df = processYahooData(df, '1m', false);
-
-        console.log(df)
-
-        return
-
-
-        let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
-        stockData = processMISSheetData(stockData);
-
-        // console.log(orders)
-        // console.log(stockData)
-
-        for (const stock of stockData) {
-            let newPrice, shouldUpdate, ltp, type
-            try {
-
-                if (!stock.reviseSL) continue;
-
-                // Only revise SL for stocks that have already been traded
-                if (!stock.lastAction) continue;
-
-                if (stock.stockSymbol[0] == '*' || stock.stockSymbol[0] == '-') continue;
-
-                let reviseSLInterval = parseInt(stock.reviseSL)
-                if (isNaN(reviseSLInterval)) reviseSLInterval = 15
-
-                console.log(stock.stockSymbol, reviseSLInterval)
-            }
-            catch (error) {
-                console.trace(error)
-            }
-        }
-
-        return
-
-        niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
-        niftyList = niftyList.map(stock => stock[0])
-        // niftyList = ['HONASA']
-
-        let useCached = true
-
-        let date = new Date('2025-02-21T11:00:00Z')
-        for (let i = 0; i < 100; i++) {
-            const selectedStocks = await scanLightyearStocks(niftyList, date, '1d', useCached)
-            console.log(selectedStocks)
-            if (selectedStocks.length > 0) break
-            date = new Date(date.getTime() + 1 * 24 * 60 * 60 * 1000)
-            if (date > new Date('2025-03-21T11:00:00Z'))
-                break
-        }
-
-        return
-
 
         // await kiteSession.authenticate()
 
@@ -103,6 +45,8 @@ const run = async () => {
 
         // return
 
+        let niftyList
+
         niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
         // niftyList = ['BEL']
@@ -118,27 +62,39 @@ const run = async () => {
 
         // let date = new Date('2025-01-28T03:51:10Z')
 
+
+
+        const zaireV3Params = {
+            TOUCHING_SMA_TOLERANCE: 0.0003,
+            TOUCHING_SMA_15_TOLERANCE: 0.0003,
+            NARROW_RANGE_TOLERANCE: 0.0046,
+            WIDE_RANGE_TOLERANCE: 0.00055,
+            CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
+            BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
+            MA_WINDOW: 22,
+            CHECK_75MIN: 1
+        }
+
+        niftyList = ['JSWSTEEL']
+
+        let date = new Date('2025-06-09T04:16:10Z')
+
+        console.log(date)
+
+        // const selectedStocks = await (niftyList, date, '5m')
+        console.time('scanZaireStocks')
+        let {selectedStocks} = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
+        console.timeEnd('scanZaireStocks')
+        if (selectedStocks.length > 0) 
+        console.log(selectedStocks)
+
+        return 
+
         let traded = []
 
         for (let i = 0; i < 100; i++) {
-            console.log(getDateStringIND(date), '---------')
+            // console.log(getDateStringIND(date), '---------')
 
-            const zaireV3Params = {
-                TOUCHING_SMA_TOLERANCE: 0.0003,
-                TOUCHING_SMA_15_TOLERANCE: 0.00028,
-                NARROW_RANGE_TOLERANCE: 0.004,
-                CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
-                BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
-                MA_WINDOW: 22,
-                CHECK_75MIN: 1
-            }
-
-            // const selectedStocks = await (niftyList, date, '5m')
-            console.time('scanZaireStocks')
-            let selectedStocks = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
-            console.timeEnd('scanZaireStocks')
-            if (selectedStocks.length > 0) 
-            console.log(selectedStocks)
 
             if (selectedStocks.length > 0 && false) {
 
