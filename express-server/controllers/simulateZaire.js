@@ -203,12 +203,12 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                             if (direction == 'BULLISH') {
                                 triggerPrice = stock.high + triggerPadding;
-                                stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
+                                stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) - triggerPadding;
                                 targetPrice = stock.high + (candleLength * targetMultiplier) + triggerPadding;
                             }
                             else {
                                 triggerPrice = stock.low - triggerPadding;
-                                stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) - triggerPadding;
+                                stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
                                 targetPrice = stock.low - (candleLength * targetMultiplier) - triggerPadding;
                             }
                             
