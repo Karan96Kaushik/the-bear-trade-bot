@@ -350,19 +350,20 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
         let roundedTimeForReqCandle = Math.floor(data[data.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
         
         // If requested time is before market open at 3:45 AM UTC, adjust to prev day
-        const reqCandleDate = new Date(roundedTimeForReqCandle);
+        let reqCandleDate = new Date(roundedTimeForReqCandle);
         if (reqCandleDate.getUTCHours() < 3 || 
             (reqCandleDate.getUTCHours() === 3 && reqCandleDate.getUTCMinutes() < 45)) {
                 // Go back 1 day and set the time to end of trading day
             skipBackDateHolidays(reqCandleDate)
+
             reqCandleDate.setUTCHours(10, 0, 20, 0);
             reqCandleDate = Math.floor(+reqCandleDate / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
-            reqCandleDate = new Date(roundedTimeForReqCandle)
+            reqCandleDate = new Date(reqCandleDate)
             roundedTimeForReqCandle = reqCandleDate.getTime();
         }
         data = data.filter(d => d.time <= roundedTimeForReqCandle)
 
-        if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low || !data[data.length - 1].volume) {
+        if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low) {
             throw new Error(`No data found in the given time range`)
         }
         if (data[data.length - 1].time < roundedTimeForReqCandle) {

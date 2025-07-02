@@ -75,18 +75,24 @@ const run = async () => {
             CHECK_75MIN: 1
         }
 
-        niftyList = ['JSWSTEEL']
+        niftyList = ['GODREJPROP', 'LT']
 
-        let date = new Date('2025-06-09T04:16:10Z')
+        let date = new Date('2025-06-16T03:45:10Z')
+        date = new Date('2025-06-25T07:10:10Z')
 
         console.log(date)
 
-        // const selectedStocks = await (niftyList, date, '5m')
-        console.time('scanZaireStocks')
-        let {selectedStocks} = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
-        console.timeEnd('scanZaireStocks')
-        if (selectedStocks.length > 0) 
-        console.log(selectedStocks)
+        for (let i = 0; i < 65; i++) {
+            console.log('--------------------------------')
+            console.log(getDateStringIND(date))
+            date = new Date(+date + 5 * 60 * 1000)
+            // const selectedStocks = await (niftyList, date, '5m')
+            console.time('scanZaireStocks')
+            let { selectedStocks } = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
+            console.timeEnd('scanZaireStocks')
+            if (selectedStocks.length > 0) 
+            console.log(selectedStocks)
+        }
 
         return 
 

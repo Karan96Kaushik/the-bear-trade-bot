@@ -431,14 +431,17 @@ async function getLastCandle(sym, endDateNew, interval = '15m') {
 }
 
 const DEFAULT_PARAMS = {
-	TOUCHING_SMA_TOLERANCE: 0.00045,
-	NARROW_RANGE_TOLERANCE: 0.0046,
-	CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
-	BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
-	MA_WINDOW: 44
+    TOUCHING_SMA_TOLERANCE: 0.0003,
+    TOUCHING_SMA_15_TOLERANCE: 0.0003,
+    NARROW_RANGE_TOLERANCE: 0.0046,
+    WIDE_RANGE_TOLERANCE: 0.00055,
+    CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
+    BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
+    MA_WINDOW: 22,
+    CHECK_75MIN: 1
 }
 
-async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS) {
+async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS, options={}) {
 	const selectedStocks = [];
 	const BATCH_SIZE = 1; // Adjust batch size based on your needs
 	
@@ -567,15 +570,19 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					
 					// console.debug(df75min.map(d => ({...d, time: getDateStringIND(d.time)})))
 					
-					conditionsMet = checkV3Conditions(df5min, df15min, df75min, params)
+					// conditionsMet = checkV3Conditions(df5min, df15min, df75min, params)
+					conditionsMet = checkV3ConditionsNumerical(df5min, df15min, df75min, params)
 				}
 				else if (checkV2) {
 					conditionsMet = checkV2Conditions(df)
 				} else {
 					conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
 				}
+
+				// let result = conditionsMet;
+				result = conditionsMet.result;
 				
-				if (conditionsMet) {
+				if (result) {
 					const t2Candle = df75min[df75min.length - 1]
 					t2Candle.time = getDateStringIND(t2Candle.time)
 					const t3Candle = df75min[df75min.length - 2]
@@ -590,13 +597,42 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 						time: getDateStringIND(firstCandle.time),
 						'sma44': maValue,
 						volume: firstCandle.volume,
-						direction: conditionsMet,
+						direction: result,
 						t75_0: t2Candle,
 						t75_1: t3Candle,
 						sma44_0: df[df.length - 1]?.sma44,
 						sma44_1: df[df.length - 2]?.sma44,
 						sma44_2: df[df.length - 3]?.sma44,
 						sma44_3: df[df.length - 4]?.sma44,
+
+						data: conditionsMet
+					};
+				}
+
+				if (options.all_results) {
+					const t2Candle = df75min[df75min.length - 1]
+					t2Candle.time = getDateStringIND(t2Candle.time)
+					const t3Candle = df75min[df75min.length - 2]
+					t3Candle.time = getDateStringIND(t3Candle.time)
+					
+					return {
+						sym,
+						open: firstCandle.open,
+						close: firstCandle.close,
+						high: firstCandle.high,
+						low: firstCandle.low,
+						time: getDateStringIND(firstCandle.time),
+						'sma44': maValue,
+						volume: firstCandle.volume,
+						direction: result,
+						t75_0: t2Candle,
+						t75_1: t3Candle,
+						sma44_0: df[df.length - 1]?.sma44,
+						sma44_1: df[df.length - 2]?.sma44,
+						sma44_2: df[df.length - 3]?.sma44,
+						sma44_3: df[df.length - 4]?.sma44,
+
+						data: conditionsMet
 					};
 				}
 			} catch (e) {
@@ -800,6 +836,192 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	
 }
 
+function  checkV3ConditionsNumerical(df5min, df15min, df75min, params) {
+	
+	const { 
+		CANDLE_CONDITIONS_SLOPE_TOLERANCE, 
+		BASE_CONDITIONS_SLOPE_TOLERANCE, 
+		TOUCHING_SMA_TOLERANCE, 
+		NARROW_RANGE_TOLERANCE,
+		TOUCHING_SMA_15_TOLERANCE,
+		CHECK_75MIN,
+		WIDE_RANGE_TOLERANCE
+	} = params
+	
+	if (
+		CANDLE_CONDITIONS_SLOPE_TOLERANCE === undefined || 
+		BASE_CONDITIONS_SLOPE_TOLERANCE === undefined || 
+		TOUCHING_SMA_TOLERANCE === undefined || 
+		NARROW_RANGE_TOLERANCE === undefined ||
+		WIDE_RANGE_TOLERANCE === undefined
+	) {
+		throw new Error('Params are not set')
+	}
+	
+	const processConditionsNumerical = (df, candleDur) => {
+		const current = df[df.length - 1];
+		const t1 = df[df.length - 2];
+		const t2 = df[df.length - 3];
+		const t3 = df[df.length - 4];
+		const t4 = df[df.length - 5];
+		
+		const bearishSlope1 = t1.sma44 / current.sma44;
+		const bearishSlope2 = t4.sma44 / t3.sma44;
+		const bullishSlope1 = current.sma44 / t1.sma44;
+		const bullishSlope2 = t3.sma44 / t4.sma44;
+
+		if (DEBUG) {
+			console.log('CANDLE_CONDITIONS_SLOPE_TOLERANCE', CANDLE_CONDITIONS_SLOPE_TOLERANCE)
+			console.log('bearishSlope1', bearishSlope1, 'bearishSlope2', bearishSlope2)
+			console.log('bullishSlope1', bullishSlope1, 'bullishSlope2', bullishSlope2)
+			console.log(candleDur, 'candleDur', bearishSlope1 > CANDLE_CONDITIONS_SLOPE_TOLERANCE && bearishSlope2 > CANDLE_CONDITIONS_SLOPE_TOLERANCE ? 'BEARISH' : 
+				bullishSlope1 > CANDLE_CONDITIONS_SLOPE_TOLERANCE && bullishSlope2 > CANDLE_CONDITIONS_SLOPE_TOLERANCE ? 'BULLISH' : null)
+		}
+		
+		return {
+			bearishSlope1,
+			bearishSlope2,
+			bullishSlope1,
+			bullishSlope2,
+
+			bearishCondition: bearishSlope1 > CANDLE_CONDITIONS_SLOPE_TOLERANCE && 
+							  	bearishSlope2 > CANDLE_CONDITIONS_SLOPE_TOLERANCE, // &&
+							//   bearishSlope1 > bearishSlope2,
+			bullishCondition: bullishSlope1 > CANDLE_CONDITIONS_SLOPE_TOLERANCE && 
+							  	bullishSlope2 > CANDLE_CONDITIONS_SLOPE_TOLERANCE, // &&
+							//   bullishSlope1 > bullishSlope2,
+
+			direction: bearishSlope1 > CANDLE_CONDITIONS_SLOPE_TOLERANCE && bearishSlope2 > CANDLE_CONDITIONS_SLOPE_TOLERANCE ? 'BEARISH' : 
+					  bullishSlope1 > CANDLE_CONDITIONS_SLOPE_TOLERANCE && bullishSlope2 > CANDLE_CONDITIONS_SLOPE_TOLERANCE ? 'BULLISH' : null
+		};
+	};
+	
+	// Evaluate conditions for each timeframe
+	const result5min = processConditionsNumerical(df5min, 5);
+	const result15min = processConditionsNumerical(df15min, 15);
+	const result75min = processConditionsNumerical(df75min, 75);
+	
+	const current = df5min[df5min.length - 1];
+	const current15 = df15min[df15min.length - 1];
+	const t2 = df5min[df5min.length - 3];
+	const t3 = df5min[df5min.length - 4];
+
+	const candleMid = (current.high + current.low) / 2;
+	
+	// Calculate all numerical values
+	const touchingSmaHigh = current.high * (1 + TOUCHING_SMA_TOLERANCE);
+	const touchingSmaLow = current.low * (1 - TOUCHING_SMA_TOLERANCE);
+	const touchingSma15High = current15.high * (1 + TOUCHING_SMA_15_TOLERANCE);
+	const touchingSma15Low = current15.low * (1 - TOUCHING_SMA_15_TOLERANCE);
+	
+	const range = (current.high - current.low) / ((current.high + current.low) / 2);
+	
+	const candleMidToCloseRatio = candleMid / current.close;
+	const closeToCandleMidRatio = current.close / candleMid;
+	
+	const t2LowToCurrentLowRatio = t2.low / current.low;
+	const t3LowToCurrentLowRatio = t3.low / current.low;
+	const t2HighToCurrentHighRatio = t2.high / current.high;
+	const t3HighToCurrentHighRatio = t3.high / current.high;
+	
+	// Boolean conditions
+	const touchingSma = touchingSmaHigh >= current.sma44 && touchingSmaLow <= current.sma44;
+	const touchingSma15 = touchingSma15High >= current15.sma44 && touchingSma15Low <= current15.sma44;
+	const narrowRange = range < NARROW_RANGE_TOLERANCE;
+	const wideRange = range >= WIDE_RANGE_TOLERANCE;
+	
+	const baseConditionsMet = narrowRange && wideRange && touchingSma && touchingSma15;
+	
+	const directionsMatch = result5min.direction === result15min.direction && 
+						   (!CHECK_75MIN || result15min.direction === result75min.direction);
+	
+	const bearishConditionsMet = candleMidToCloseRatio > BASE_CONDITIONS_SLOPE_TOLERANCE;
+	const bullishConditionsMet = closeToCandleMidRatio > BASE_CONDITIONS_SLOPE_TOLERANCE;
+	
+	const finalBearish = result5min.direction == result15min.direction && result15min.direction == result75min.direction && 
+							bearishConditionsMet && baseConditionsMet && result5min.direction === 'BEARISH';
+	const finalBullish = result5min.direction == result15min.direction && result15min.direction == result75min.direction && 
+							bullishConditionsMet && baseConditionsMet && result5min.direction === 'BULLISH';
+	
+	return {
+		// Slope calculations
+		slopes: {
+			fiveMin: result5min,
+			fifteenMin: result15min,
+			seventyFiveMin: result75min
+		},
+		
+		// Candle properties
+		candle: {
+			high: current.high,
+			low: current.low,
+			open: current.open,
+			close: current.close,
+			mid: candleMid,
+			range: range,
+			volume: current.volume
+		},
+		
+		// SMA values
+		sma: {
+			current: current.sma44,
+			current15: current15.sma44,
+			t2: t2.sma44,
+			t3: t3.sma44
+		},
+		
+		// Tolerance values
+		tolerances: {
+			CANDLE_CONDITIONS_SLOPE_TOLERANCE,
+			BASE_CONDITIONS_SLOPE_TOLERANCE,
+			TOUCHING_SMA_TOLERANCE,
+			NARROW_RANGE_TOLERANCE,
+			TOUCHING_SMA_15_TOLERANCE,
+			WIDE_RANGE_TOLERANCE
+		},
+		
+		// Ratio calculations
+		ratios: {
+			candleMidToClose: candleMidToCloseRatio,
+			closeToCandleMid: closeToCandleMidRatio,
+			t2LowToCurrentLow: t2LowToCurrentLowRatio,
+			t3LowToCurrentLow: t3LowToCurrentLowRatio,
+			t2HighToCurrentHigh: t2HighToCurrentHighRatio,
+			t3HighToCurrentHigh: t3HighToCurrentHighRatio
+		},
+		
+		// SMA touching calculations
+		smaTouching: {
+			touchingSmaHigh,
+			touchingSmaLow,
+			touchingSma15High,
+			touchingSma15Low,
+			touchingSma,
+			touchingSma15
+		},
+		
+		// Range conditions
+		rangeConditions: {
+			range,
+			narrowRange,
+			wideRange
+		},
+		
+		// Final conditions
+		conditions: {
+			baseConditionsMet,
+			bearishConditionsMet,
+			bullishConditionsMet,
+			directionsMatch,
+			finalBearish,
+			finalBullish
+		},
+		
+		// Final result
+		result: finalBearish ? 'BEARISH' : finalBullish ? 'BULLISH' : null
+	};
+}
+
 function isNarrowRange(candle, tolerance = 0.015) {
 	const { high, low } = candle;
 	const range = (high - low) / ((high + low) / 2);
@@ -956,7 +1178,9 @@ module.exports = {
 	calculateBollingerBands,
 	getDateRange,
 	removeIncompleteCandles,
-	calculateATR
+	calculateATR,
+	checkV3ConditionsNumerical,
+	DEFAULT_PARAMS
 };
 
 

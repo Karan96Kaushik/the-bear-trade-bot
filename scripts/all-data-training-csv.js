@@ -3,7 +3,7 @@ const { appendRowsToSheet, readSheetData } = require("../gsheets");
 const { addMovingAverage, scanZaireStocks, countMATrendRising, 
     countMATrendFalling, checkMARising, checkMAFalling, checkUpwardTrend, 
     checkDownwardTrend, printTrendEmojis, isBullishCandle,
-    addRSI, calculateBollingerBands} = require("../analytics");
+    addRSI, calculateBollingerBands, DEFAULT_PARAMS } = require("../analytics");
 // const { sendMessageToChannel } = require("./slack-actions");
 const fs = require('fs');
 const path = require('path');
@@ -206,6 +206,75 @@ async function processStock(stock, startTime, endTime, candleType) {
         // return
         // if (false)
 
+        // --- Call scanZaireStocks for analytics data ---
+        let analyticsData = null;
+        try {
+            const { selectedStocks } = await scanZaireStocks([stock], endTime, '15m', false, true, true, DEFAULT_PARAMS, { all_results: true });
+            if (selectedStocks && selectedStocks.length > 0 && selectedStocks[0].data) {
+                analyticsData = selectedStocks[0].data;
+            }
+        } catch (e) {
+            console.warn('Analytics data fetch failed for', stock, e.message);
+        }
+
+        // Prepare analytics fields for CSV
+        let analyticsFields = [];
+        if (analyticsData) {
+            analyticsFields = [
+                // V3 main result
+                analyticsData.result,
+                // --- Slopes ---
+                analyticsData.slopes?.fiveMin?.bearishSlope1,
+                analyticsData.slopes?.fiveMin?.bearishSlope2,
+                analyticsData.slopes?.fiveMin?.bullishSlope1,
+                analyticsData.slopes?.fiveMin?.bullishSlope2,
+                analyticsData.slopes?.fiveMin?.bearishCondition,
+                analyticsData.slopes?.fiveMin?.bullishCondition,
+                analyticsData.slopes?.fiveMin?.direction,
+                analyticsData.slopes?.fifteenMin?.bearishSlope1,
+                analyticsData.slopes?.fifteenMin?.bearishSlope2,
+                analyticsData.slopes?.fifteenMin?.bullishSlope1,
+                analyticsData.slopes?.fifteenMin?.bullishSlope2,
+                analyticsData.slopes?.fifteenMin?.bearishCondition,
+                analyticsData.slopes?.fifteenMin?.bullishCondition,
+                analyticsData.slopes?.fifteenMin?.direction,
+                analyticsData.slopes?.seventyFiveMin?.bearishSlope1,
+                analyticsData.slopes?.seventyFiveMin?.bearishSlope2,
+                analyticsData.slopes?.seventyFiveMin?.bullishSlope1,
+                analyticsData.slopes?.seventyFiveMin?.bullishSlope2,
+                analyticsData.slopes?.seventyFiveMin?.bearishCondition,
+                analyticsData.slopes?.seventyFiveMin?.bullishCondition,
+                analyticsData.slopes?.seventyFiveMin?.direction,
+                // --- Ratios ---
+                analyticsData.ratios?.candleMidToClose,
+                analyticsData.ratios?.closeToCandleMid,
+                analyticsData.ratios?.t2LowToCurrentLow,
+                analyticsData.ratios?.t3LowToCurrentLow,
+                analyticsData.ratios?.t2HighToCurrentHigh,
+                analyticsData.ratios?.t3HighToCurrentHigh,
+                // --- SMA Touching ---
+                analyticsData.smaTouching?.touchingSmaHigh,
+                analyticsData.smaTouching?.touchingSmaLow,
+                analyticsData.smaTouching?.touchingSma15High,
+                analyticsData.smaTouching?.touchingSma15Low,
+                analyticsData.smaTouching?.touchingSma,
+                analyticsData.smaTouching?.touchingSma15,
+                // --- Range Conditions ---
+                analyticsData.rangeConditions?.range,
+                analyticsData.rangeConditions?.narrowRange,
+                analyticsData.rangeConditions?.wideRange,
+                // --- Final Conditions ---
+                analyticsData.conditions?.baseConditionsMet,
+                analyticsData.conditions?.bearishConditionsMet,
+                analyticsData.conditions?.bullishConditionsMet,
+                analyticsData.conditions?.directionsMatch,
+                analyticsData.conditions?.finalBearish,
+                analyticsData.conditions?.finalBullish
+            ];
+        } else {
+            analyticsFields = Array(36).fill('');
+        }
+
         return [
             getDateStringIND(new Date(time)),
             candleType,
@@ -240,7 +309,8 @@ async function processStock(stock, startTime, endTime, candleType) {
             dayHigh,
             trend,
             count,
-            acheieved
+            acheieved,
+            ...analyticsFields
         ];
     } catch (error) {
         console.trace(`Error processing ${stock}:`, error?.response?.data || error?.message);
@@ -305,50 +375,88 @@ const run = async () => {
         'Timestamp',
         'Candle Type',
         'Sym',
-
         'High',
         'Low',
         'Open',
         'Close',
         'Volume',
-
         'SMA44',
         'RSI14',
         'BB Middle',
         'BB Upper',
         'BB Lower',
-
         'T1H',
         'T1L',
         'T1O',
         'T1C',
-
         'T2H',
         'T2L',
         'T2O',
         'T2C',
-
         'T3H',
         'T3L',
         'T3O',
         'T3C',
-
         'Volume Prev Day Avg',
         'Volume P Last',
         'Volume P 2nd Last',
         'Volume P 3rd Last',
-
         'Low Day',
         'High Day',
-
         'MA Direction',
         'MA Trend Count',
-
-        //  'Candle Selected',
-        //  'Target',
-        //  'SL',
-
-        'Acheieved'
+        'Acheieved',
+        // --- Analytics fields ---
+        'V3 Result',
+        // Slopes 5m
+        'V3 5m BearishSlope1',
+        'V3 5m BearishSlope2',
+        'V3 5m BullishSlope1',
+        'V3 5m BullishSlope2',
+        'V3 5m BearishCondition',
+        'V3 5m BullishCondition',
+        'V3 5m Direction',
+        // Slopes 15m
+        'V3 15m BearishSlope1',
+        'V3 15m BearishSlope2',
+        'V3 15m BullishSlope1',
+        'V3 15m BullishSlope2',
+        'V3 15m BearishCondition',
+        'V3 15m BullishCondition',
+        'V3 15m Direction',
+        // Slopes 75m
+        'V3 75m BearishSlope1',
+        'V3 75m BearishSlope2',
+        'V3 75m BullishSlope1',
+        'V3 75m BullishSlope2',
+        'V3 75m BearishCondition',
+        'V3 75m BullishCondition',
+        'V3 75m Direction',
+        // Ratios
+        'V3 CandleMidToClose',
+        'V3 CloseToCandleMid',
+        'V3 T2LowToCurrentLow',
+        'V3 T3LowToCurrentLow',
+        'V3 T2HighToCurrentHigh',
+        'V3 T3HighToCurrentHigh',
+        // SMA Touching
+        'V3 TouchingSmaHigh',
+        'V3 TouchingSmaLow',
+        'V3 TouchingSma15High',
+        'V3 TouchingSma15Low',
+        'V3 TouchingSma',
+        'V3 TouchingSma15',
+        // Range Conditions
+        'V3 Range',
+        'V3 NarrowRange',
+        'V3 WideRange',
+        // Final Conditions
+        'V3 BaseConditionsMet',
+        'V3 BearishConditionsMet',
+        'V3 BullishConditionsMet',
+        'V3 DirectionsMatch',
+        'V3 FinalBearish',
+        'V3 FinalBullish'
     ]
 
     appendArrayToCSV([headers]);
@@ -362,13 +470,13 @@ const run = async () => {
 
     console.log(niftyList)
 
-    const baseDate = new Date(`2024-12-29`)
+    const baseDate = new Date(`2025-06-09`)
     // const baseDate = new Date(`2024-11-01`)
 
     // const days = 50
     // baseDate.setDate(baseDate.getDate() - days)
 
-    while (baseDate < new Date()) {
+    while (baseDate < new Date('2025-06-09')) {
 
         baseDate.setDate(baseDate.getDate() + 1)
 
@@ -392,65 +500,6 @@ const run = async () => {
         console.log(startTime, endTime)
         await getDailyStats(startTime, endTime, 'F')
 
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 16, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(3, 56, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'S')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 1, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'T')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 31, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 6, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'FT')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(4, 46, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 11, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'FH')
-
-        startTime = new Date(baseDate)
-        startTime.setUTCHours(4, 0, 10, 0);
-        startTime.setDate(startTime.getDate() - 5)
-
-        endTime = new Date(baseDate);
-        endTime.setUTCHours(5, 1, 10, 0);
-        if (interval == '5m') {
-            endTime.setUTCHours(4, 16, 10, 0);
-        }
-
-        await getDailyStats(startTime, endTime, 'SI')
     }
 }
 
