@@ -88,62 +88,62 @@ let headers = {
 
 
 
-    // t150h: 'T15-0H',
-    // t150l: 'T15-0L',
-    // t150o: 'T15-0O',
-    // t150c: 'T15-0C',
+    t150h: 'T15-0H',
+    t150l: 'T15-0L',
+    t150o: 'T15-0O',
+    t150c: 'T15-0C',
 
-    // t151h: 'T15-1H',
-    // t151l: 'T15-1L',
-    // t151o: 'T15-1O',
-    // t151c: 'T15-1C',
+    t151h: 'T15-1H',
+    t151l: 'T15-1L',
+    t151o: 'T15-1O',
+    t151c: 'T15-1C',
 
-    // t152h: 'T15-2H',
-    // t152l: 'T15-2L',
-    // t152o: 'T15-2O',
-    // t152c: 'T15-2C',
+    t152h: 'T15-2H',
+    t152l: 'T15-2L',
+    t152o: 'T15-2O',
+    t152c: 'T15-2C',
 
-    // t153h: 'T15-3H',
-    // t153l: 'T15-3L',
-    // t153o: 'T15-3O',
-    // t153c: 'T15-3C',
+    t153h: 'T15-3H',
+    t153l: 'T15-3L',
+    t153o: 'T15-3O',
+    t153c: 'T15-3C',
 
-    // t154h: 'T15-4H',
-    // t154l: 'T15-4L',
-    // t154o: 'T15-4O',
-    // t154c: 'T15-4C',
+    t154h: 'T15-4H',
+    t154l: 'T15-4L',
+    t154o: 'T15-4O',
+    t154c: 'T15-4C',
 
 
 
-    // t75h: 'T75-0H',
-    // t75l: 'T75-0L',
-    // t75o: 'T75-0O',
-    // t75c: 'T75-0C',
+    t75h: 'T75-0H',
+    t75l: 'T75-0L',
+    t75o: 'T75-0O',
+    t75c: 'T75-0C',
 
-    // t751h: 'T75-1H',
-    // t751l: 'T75-1L',
-    // t751o: 'T75-1O',
-    // t751c: 'T75-1C',
+    t751h: 'T75-1H',
+    t751l: 'T75-1L',
+    t751o: 'T75-1O',
+    t751c: 'T75-1C',
 
-    // t752h: 'T75-2H',
-    // t752l: 'T75-2L',
-    // t752o: 'T75-2O',
-    // t752c: 'T75-2C',
+    t752h: 'T75-2H',
+    t752l: 'T75-2L',
+    t752o: 'T75-2O',
+    t752c: 'T75-2C',
 
-    // t753h: 'T75-3H',
-    // t753l: 'T75-3L',
-    // t753o: 'T75-3O',
-    // t753c: 'T75-3C',
+    t753h: 'T75-3H',
+    t753l: 'T75-3L',
+    t753o: 'T75-3O',
+    t753c: 'T75-3C',
 
-    // t754h: 'T75-4H',
-    // t754l: 'T75-4L',
-    // t754o: 'T75-4O',
-    // t754c: 'T75-4C',
+    t754h: 'T75-4H',
+    t754l: 'T75-4L',
+    t754o: 'T75-4O',
+    t754c: 'T75-4C',
 
-    // t755h: 'T75-5H',
-    // t755l: 'T75-5L',
-    // t755o: 'T75-5O',
-    // t755c: 'T75-5C',
+    t755h: 'T75-5H',
+    t755l: 'T75-5L',
+    t755o: 'T75-5O',
+    t755c: 'T75-5C',
 
     
 
@@ -173,7 +173,7 @@ analyticsHeaders.forEach(header => {
     headers[header] = header;
 });
 
-const RISK_AMOUNT = 100
+const RISK_AMOUNT = 200
 
 const simulation = {
     targetStopLossRatio: '2:2',
@@ -247,7 +247,8 @@ const runSimulation = async (stock, dayStartTime) => {
         quantity,
         direction,
         yahooData,
-        orderTime: new Date(+dayStartTime + (5 * 60 * 1000)),
+        orderTime: new Date(+dayStartTime),
+        // orderTime: new Date(+dayStartTime + (5 * 60 * 1000)),
         cancelInMins: simulation.cancelInMins,
         updateSL: simulation.updateSL,
         updateSLInterval: simulation.updateSLInterval,
@@ -325,6 +326,9 @@ async function processStock(stock, date) {
             // }
             // --- V3 Analytics ---
             let analyticsData = null;
+            let timeStamp = null;
+
+
             let stockData = {
                 sym: stock,
                 high: current5mCandle.high,
@@ -336,9 +340,15 @@ async function processStock(stock, date) {
             };
 
             try {
-                const { selectedStocks } = await scanZaireStocks([stock], intervalTime, '15m', false, true, true, DEFAULT_PARAMS, { all_results: true });
+                const { selectedStocks } = await scanZaireStocks([stock], intervalTime, '5m', false, true, true, DEFAULT_PARAMS, { all_results: true });
                 // if (selectedStocks && selectedStocks.length > 0 && selectedStocks[0].data) {
-                    analyticsData = selectedStocks[0].data;
+                    analyticsData = selectedStocks[0]?.data;
+                    timeStamp = selectedStocks[0]?.time;
+
+                    if (selectedStocks[0]?.direction) {
+                        console.log('selectedStocks', selectedStocks)
+                        console.log('timeStamp', timeStamp)
+                    }
                 // }
             } catch (e) {
                 console.warn('Analytics data fetch failed for', stock, e.message);
@@ -348,7 +358,7 @@ async function processStock(stock, date) {
             const simResultBearish = await runSimulation({...stockData, direction: 'BEARISH'}, intervalTime);
 
             simulationResults.push({
-                candleTimestamp: getDateStringIND(intervalTime),
+                candleTimestamp: timeStamp,
                 orderTimestamp: getDateStringIND(simResultBullish.placedAt),
                 candleNum: index,
                 sym: stock,
@@ -571,12 +581,14 @@ const run = async () => {
 
     console.log('niftyList', niftyList)
 
+    // niftyList = ['GODREJPROP']
+
     
-    const baseDate = new Date(`2025-06-10`)
+    const baseDate = new Date(`2025-06-01`)
     
     baseDate.setUTCHours(3, 45, 10, 0);
 
-    const today = new Date('2025-06-20')
+    const today = new Date('2025-06-27')
     today.setUTCHours(3, 0, 0, 0);
     // const days = 50
     // baseDate.setDate(baseDate.getDate() - days)
