@@ -437,7 +437,8 @@ const DEFAULT_PARAMS = {
     WIDE_RANGE_TOLERANCE: 0.00055,
     CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
     BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
-    MA_WINDOW: 22,
+    MA_WINDOW: 44,
+	MA_WINDOW_5: 22,
     CHECK_75MIN: 1
 }
 
@@ -513,7 +514,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					df5min = processYahooData(df5min, '5m', useCached);
 
 					if (!df5min || df5min.length === 0) return null;
-					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW || 44, 'sma44');
+					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
 					df5min = df5min.filter(r => r.close);
 					
 					// 75 Mins candles needs more data
