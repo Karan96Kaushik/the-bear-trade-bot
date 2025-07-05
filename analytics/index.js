@@ -656,6 +656,179 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 	};
 }
 
+
+async function scanLightyearStocks(stockList, endDateNew, interval='5m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS, options={}) {
+	const selectedStocks = [];
+	const BATCH_SIZE = 1; // Adjust batch size based on your needs
+	
+	// Split stockList into batches
+	const batches = [];
+	for (let i = 0; i < stockList.length; i += BATCH_SIZE) {
+		batches.push(stockList.slice(i, i + BATCH_SIZE));
+	}
+	const no_data_stocks = [];
+	const too_high_stocks = [];
+	const too_many_incomplete_candles_stocks = [];
+	
+	// Process each batch in parallel
+	for (const batch of batches) {
+		const batchPromises = batch.map(async (sym) => {
+			try {
+				const { startDate, endDate } = getDateRange(endDateNew);
+				let df75min = [];
+				
+				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
+				df = processYahooData(df, interval, useCached);
+
+				// let df = await getGrowwChartData(sym, startDate, endDate, Number(interval), useCached);
+				// df = processGrowwData(df, interval, useCached);
+
+				// console.log(df.slice(-3).map(d => ({...d, time: getDateStringIND(d.time)})))
+				
+				// df = removeIncompleteCandles(df, useCached);
+				// console.log(df.slice(-3).map(d => ({...d, time: getDateStringIND(d.time)})))
+				
+				if (DEBUG) {
+					console.log('----')
+				}
+				
+				if (!df || df.length === 0) {
+					if (DEBUG) console.debug('No data')
+					no_data_stocks.push(sym)
+					return null;
+				}
+				
+				if (df[df.length - 1].high > MAX_STOCK_PRICE)  {
+					if (DEBUG) console.debug('Too high')
+					too_high_stocks.push(sym)
+					return null;
+				}
+				
+				if (df.slice(-44).filter(r => !r.close).length > 4) {
+					if (DEBUG) console.debug('Too many incomplete candles', sym)
+					too_many_incomplete_candles_stocks.push(sym)
+					return null;
+				}
+				
+				df = addMovingAverage(df, 'close', params.MA_WINDOW || 44, 'sma44');
+				df = df.filter(r => r.close);
+				
+				// const isRising = checkMARising(df, MA_TREND_WINDOW) ? 'BULLISH' : checkMAFalling(df, MA_TREND_WINDOW) ? 'BEARISH' : null;
+				// if (DEBUG) {
+				//   console.log(sym, isRising)
+				// }
+				// if (!isRising) continue;
+				
+				const firstCandle = df[df.length - 1];
+				const maValue = firstCandle['sma44'];
+				
+				let conditionsMet = null
+				if (checkV3) {
+					
+					let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
+					df5min = processYahooData(df5min, '5m', useCached);
+
+					if (!df5min || df5min.length === 0) return null;
+					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
+					df5min = df5min.filter(r => r.close);
+					
+					// 75 Mins candles needs more data
+					let earlierStart = new Date(startDate)
+					earlierStart.setDate(earlierStart.getDate() - 5)
+					
+					let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
+					df15min = processYahooData(df15min, '15m', useCached);
+
+					let df15min_copy = [...df15min]
+					
+					if (!df15min || df15min.length === 0) return null;
+					df15min = addMovingAverage(df15min, 'close', params.MA_WINDOW || 44, 'sma44');
+					df15min = df15min.filter(r => r.close);
+
+					conditionsMet = checkV3ConditionsNumerical(df5min, df15min, null, params)
+				}
+				else if (checkV2) {
+					conditionsMet = checkV2Conditions(df)
+				} else {
+					conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
+				}
+
+				// let result = conditionsMet;
+				result = conditionsMet.result;
+				
+				if (result) {
+					const t2Candle = df75min[df75min.length - 1]
+					t2Candle.time = getDateStringIND(t2Candle.time)
+					const t3Candle = df75min[df75min.length - 2]
+					t3Candle.time = getDateStringIND(t3Candle.time)
+					
+					return {
+						sym,
+						open: firstCandle.open,
+						close: firstCandle.close,
+						high: firstCandle.high,
+						low: firstCandle.low,
+						time: getDateStringIND(firstCandle.time),
+						'sma44': maValue,
+						volume: firstCandle.volume,
+						direction: result,
+						t75_0: t2Candle,
+						t75_1: t3Candle,
+						sma44_0: df[df.length - 1]?.sma44,
+						sma44_1: df[df.length - 2]?.sma44,
+						sma44_2: df[df.length - 3]?.sma44,
+						sma44_3: df[df.length - 4]?.sma44,
+
+						data: conditionsMet
+					};
+				}
+
+				if (options.all_results) {
+					const t2Candle = df75min[df75min.length - 1]
+					t2Candle.time = getDateStringIND(t2Candle.time)
+					const t3Candle = df75min[df75min.length - 2]
+					t3Candle.time = getDateStringIND(t3Candle.time)
+					
+					return {
+						sym,
+						open: firstCandle.open,
+						close: firstCandle.close,
+						high: firstCandle.high,
+						low: firstCandle.low,
+						time: getDateStringIND(firstCandle.time),
+						'sma44': maValue,
+						volume: firstCandle.volume,
+						direction: result,
+						t75_0: t2Candle,
+						t75_1: t3Candle,
+						sma44_0: df[df.length - 1]?.sma44,
+						sma44_1: df[df.length - 2]?.sma44,
+						sma44_2: df[df.length - 3]?.sma44,
+						sma44_3: df[df.length - 4]?.sma44,
+
+						data: conditionsMet
+					};
+				}
+			} catch (e) {
+				console.log(e?.response?.data || e.message || e, sym);
+				console.trace(e);
+			}
+			return null;
+		});
+		
+		// Wait for all promises in the batch to resolve
+		const batchResults = await Promise.all(batchPromises);
+		selectedStocks.push(...batchResults.filter(result => result !== null));
+	}
+
+	return {
+		selectedStocks,
+		no_data_stocks,
+		too_high_stocks,
+		too_many_incomplete_candles_stocks
+	};
+}
+
 function checkV2Conditions(df) {
 	const currentCandle = df[df.length - 1]
 	const t1Candle = df[df.length - 2]
@@ -900,7 +1073,10 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min, params) {
 	// Evaluate conditions for each timeframe
 	const result5min = processConditionsNumerical(df5min, 5);
 	const result15min = processConditionsNumerical(df15min, 15);
-	const result75min = processConditionsNumerical(df75min, 75);
+	let result75min = null;
+	if (df75min) {
+		result75min = processConditionsNumerical(df75min, 75);
+	}
 	
 	const current = df5min[df5min.length - 1];
 	const current15 = df15min[df15min.length - 1];
@@ -934,14 +1110,16 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min, params) {
 	const baseConditionsMet = narrowRange && wideRange && touchingSma && touchingSma15;
 	
 	const directionsMatch = result5min.direction === result15min.direction && 
-						   (!CHECK_75MIN || result15min.direction === result75min.direction);
+						   (!CHECK_75MIN || !result75min || result15min.direction === result75min.direction);
 	
 	const bearishConditionsMet = candleMidToCloseRatio > BASE_CONDITIONS_SLOPE_TOLERANCE;
 	const bullishConditionsMet = closeToCandleMidRatio > BASE_CONDITIONS_SLOPE_TOLERANCE;
+
+	const allDirectionsMatch = result5min.direction === result15min.direction && (!result75min || result15min.direction === result75min.direction);
 	
-	const finalBearish = result5min.direction == result15min.direction && result15min.direction == result75min.direction && 
+	const finalBearish = allDirectionsMatch && 
 							bearishConditionsMet && baseConditionsMet && result5min.direction === 'BEARISH';
-	const finalBullish = result5min.direction == result15min.direction && result15min.direction == result75min.direction && 
+	const finalBullish = allDirectionsMatch && 
 							bullishConditionsMet && baseConditionsMet && result5min.direction === 'BULLISH';
 	
 	return {
