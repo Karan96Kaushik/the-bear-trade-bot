@@ -913,7 +913,7 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
 
-    const lightyearJob = schedule.scheduleJob('32 11,21 * * 1-5,7', () => {
+    const lightyearJob = schedule.scheduleJob('33 11,21 * * 1-5,7', () => {
         setupLightyearOrders()
         sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
     });
