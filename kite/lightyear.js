@@ -300,7 +300,9 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
 
         await bulkUpdateCells(updates)
         await bulkUpdateCells(alphaUpdates)
-        await appendRowsToMISD(newOrders, 'Lightyear')
+
+        // Commented because no longer adding d2 orders
+        // await appendRowsToMISD(newOrders, 'Lightyear')
 
     }
     catch (error) {

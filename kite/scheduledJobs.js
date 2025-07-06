@@ -9,7 +9,7 @@ const { kiteSession } = require('./setup');
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
 const { 
-    scanZaireStocks, isBullishCandle, 
+    scanZaireStocks, isBullishCandle, scanLightyearD2Stocks,
     getLastCandle, isBearishCandle 
 } = require('../analytics');
 const { scanBaileyStocks } = require('../analytics/bailey');
@@ -36,6 +36,7 @@ const zaireV3Params = {
     CHECK_75MIN: 1
 }
 
+// Scans for NEW lightyear orders
 async function setupLightyearOrders() {
     try {
         await sendMessageToChannel(`⌛️ Executing Lightyear MIS Jobs`);
@@ -79,6 +80,7 @@ async function setupLightyearOrders() {
         if (sheetEntries.length > 0) {
             await appendRowsToSheet('MIS-LIGHTYEAR!A2:W1000', sheetEntries)
 
+            // 
             let dayOneOrders = await setupLightyearDayOneOrders(sheetEntries)
 
             if (dayOneOrders.length > 0) {
@@ -93,6 +95,10 @@ async function setupLightyearOrders() {
     }
 }
 
+
+// Updates data to Lightyear sheet
+// - only for d2 and onwards orders
+// - Disabled d1 orders
 async function updateLightyearOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Lightyear Update Job');
@@ -155,10 +161,40 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             zaireV3Params
         )
 
+        let lightyearSelectedStocks = []
+        let lightyearNoDataStocks = []
+        let lightyearTooHighStocks = []
+        let lightyearTooManyIncompleteCandlesStocks = []
+
         try {
-            await sendMessageToChannel('errors', `Zaire - No data stocks ${getDateStringIND(new Date())}: ${no_data_stocks.join(', ')}`)
-            await sendMessageToChannel('errors', `Zaire - Too high stocks ${getDateStringIND(new Date())}: ${too_high_stocks.join(', ')}`)
-            await sendMessageToChannel('errors', `Zaire - Too many incomplete candles stocks ${getDateStringIND(new Date())}: ${too_many_incomplete_candles_stocks.join(', ')}`)
+            let lightyearStockList = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
+            lightyearStockList = processSheetWithHeaders(lightyearStockList)
+
+            let scannedStocks = await scanLightyearD2Stocks(
+                lightyearStockList.filter(s => s.status?.toLowerCase() === 'active').map(s => s.symbol), // Only active stocks
+                null,
+                '5m',
+                false,
+                zaireV3Params
+            )
+
+            lightyearSelectedStocks = scannedStocks.selectedStocks
+            lightyearNoDataStocks = scannedStocks.no_data_stocks
+            lightyearTooHighStocks = scannedStocks.too_high_stocks
+            lightyearTooManyIncompleteCandlesStocks = scannedStocks.too_many_incomplete_candles_stocks
+
+        } catch (e) {
+            console.error(e)
+            await sendMessageToChannel('🚨 Error running Lightyear D2 MIS Jobs', e?.message)
+        }
+
+        // Filter out stocks that have different direction in MIS-LIGHTYEAR sheet
+        lightyearSelectedStocks = lightyearSelectedStocks.filter(s => s.direction === (lightyearStockList.find(s2 => s2.symbol === s.sym)?.direction))
+
+        try {
+            await sendMessageToChannel('errors', `Zaire & Lightyear D2 - No data stocks ${getDateStringIND(new Date())}: ${[...no_data_stocks, ...lightyearNoDataStocks].join(', ')}`)
+            await sendMessageToChannel('errors', `Zaire & Lightyear D2 - Too high stocks ${getDateStringIND(new Date())}: ${[...too_high_stocks, ...lightyearTooHighStocks].join(', ')}`)
+            await sendMessageToChannel('errors', `Zaire & Lightyear D2 - Too many incomplete candles stocks ${getDateStringIND(new Date())}: ${[...too_many_incomplete_candles_stocks, ...lightyearTooManyIncompleteCandlesStocks].join(', ')}`)
         } catch (e) {
             console.error(e)
         }
@@ -181,6 +217,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         const completed_zaire_orders_symbols = completed_zaire_orders.map(o => o.tradingsymbol);
 
         sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, selectedStocks);
+        sendMessageToChannel(`🔔 Lightyear D2 MIS Stocks: `, lightyearSelectedStocks);
 
         // if (checkV3) {
         //     selectedStocks = selectedStocks.filter(s => s.direction !== 'BULLISH')
@@ -204,7 +241,9 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
 
         const sheetEntries = []
 
-        for (const stock of selectedStocks) {
+        const allStocks = [...selectedStocks, ...lightyearSelectedStocks]
+
+        for (const stock of allStocks) {
             try {
                 // Skip if stock is already in position or open orders
                 if (
@@ -220,7 +259,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
                     continue
                 }
 
-                let sheetEntry = await createZaireOrders(stock, 'zaire');
+                let sheetEntry = await createZaireOrders(stock, stock.source);
                 // sheetEntries.push(sheetEntry)
                 // await appendRowsToMISD([sheetEntry])
             } catch (error) {

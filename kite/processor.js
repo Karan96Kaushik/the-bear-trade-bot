@@ -13,6 +13,7 @@ const RISK_AMOUNT = 200;
 
 const ZAIRE_RISK_AMOUNT = 200;
 const BAILEY_RISK_AMOUNT = 100;
+const LIGHTYEAR_RISK_AMOUNT = 100;
 const DEFAULT_RISK_AMOUNT = 100;
 
 // Add this helper function near the top of the file
@@ -311,6 +312,10 @@ const capitalize = (val) => String(val).charAt(0).toUpperCase() + String(val).sl
 
 async function createZaireOrders(stock, tag='zaire') {
     try {
+
+        if (tag == 'lightyear') {
+            tag = 'lgy'
+        }
 
         const SOURCE_RISK_AMOUNT = tag == 'zaire' ? ZAIRE_RISK_AMOUNT : tag == 'bailey' ? BAILEY_RISK_AMOUNT : DEFAULT_RISK_AMOUNT
         const source = capitalize(tag)

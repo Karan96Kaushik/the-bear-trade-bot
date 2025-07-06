@@ -605,6 +605,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 						sma44_1: df[df.length - 2]?.sma44,
 						sma44_2: df[df.length - 3]?.sma44,
 						sma44_3: df[df.length - 4]?.sma44,
+						source: 'zaire',
 
 						data: conditionsMet
 					};
@@ -657,7 +658,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 }
 
 
-async function scanLightyearStocks(stockList, endDateNew, interval='5m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS, options={}) {
+async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCached=false, params=DEFAULT_PARAMS, options={}) {
 	const selectedStocks = [];
 	const BATCH_SIZE = 1; // Adjust batch size based on your needs
 	
@@ -675,7 +676,6 @@ async function scanLightyearStocks(stockList, endDateNew, interval='5m', checkV2
 		const batchPromises = batch.map(async (sym) => {
 			try {
 				const { startDate, endDate } = getDateRange(endDateNew);
-				let df75min = [];
 				
 				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
 				df = processYahooData(df, interval, useCached);
@@ -723,43 +723,35 @@ async function scanLightyearStocks(stockList, endDateNew, interval='5m', checkV2
 				const maValue = firstCandle['sma44'];
 				
 				let conditionsMet = null
-				if (checkV3) {
-					
-					let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
-					df5min = processYahooData(df5min, '5m', useCached);
+				
+				let df5min = await getDataFromYahoo(sym, 5, '5m', startDate, endDate, useCached);
+				df5min = processYahooData(df5min, '5m', useCached);
 
-					if (!df5min || df5min.length === 0) return null;
-					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
-					df5min = df5min.filter(r => r.close);
-					
-					// 75 Mins candles needs more data
-					let earlierStart = new Date(startDate)
-					earlierStart.setDate(earlierStart.getDate() - 5)
-					
-					let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
-					df15min = processYahooData(df15min, '15m', useCached);
+				if (!df5min || df5min.length === 0) return null;
+				df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
+				df5min = df5min.filter(r => r.close);
+				
+				// 75 Mins candles needs more data
+				let earlierStart = new Date(startDate)
+				earlierStart.setDate(earlierStart.getDate() - 5)
+				
+				let df15min = await getDataFromYahoo(sym, 5, '15m', earlierStart, endDate, useCached);
+				df15min = processYahooData(df15min, '15m', useCached);
 
-					let df15min_copy = [...df15min]
-					
-					if (!df15min || df15min.length === 0) return null;
-					df15min = addMovingAverage(df15min, 'close', params.MA_WINDOW || 44, 'sma44');
-					df15min = df15min.filter(r => r.close);
+				if (!df15min || df15min.length === 0) return null;
 
-					conditionsMet = checkV3ConditionsNumerical(df5min, df15min, null, params)
-				}
-				else if (checkV2) {
-					conditionsMet = checkV2Conditions(df)
-				} else {
-					conditionsMet = checkUpwardTrend(df, df.length - 1) ? 'BULLISH' : checkDownwardTrend(df, df.length - 1) ? 'BEARISH' : null;
-				}
+				df15min = addMovingAverage(df15min, 'close', params.MA_WINDOW || 44, 'sma44');
+				df15min = df15min.filter(r => r.close);
+
+				conditionsMet = checkV3ConditionsNumerical(df5min, df15min, null, params)
 
 				// let result = conditionsMet;
 				result = conditionsMet.result;
 				
 				if (result) {
-					const t2Candle = df75min[df75min.length - 1]
+					const t2Candle = df15min[df15min.length - 1]
 					t2Candle.time = getDateStringIND(t2Candle.time)
-					const t3Candle = df75min[df75min.length - 2]
+					const t3Candle = df15min[df15min.length - 2]
 					t3Candle.time = getDateStringIND(t3Candle.time)
 					
 					return {
@@ -772,21 +764,22 @@ async function scanLightyearStocks(stockList, endDateNew, interval='5m', checkV2
 						'sma44': maValue,
 						volume: firstCandle.volume,
 						direction: result,
-						t75_0: t2Candle,
-						t75_1: t3Candle,
+						t15_0: t2Candle,
+						t15_1: t3Candle,
 						sma44_0: df[df.length - 1]?.sma44,
 						sma44_1: df[df.length - 2]?.sma44,
 						sma44_2: df[df.length - 3]?.sma44,
 						sma44_3: df[df.length - 4]?.sma44,
+						source: 'lgy',
 
 						data: conditionsMet
 					};
 				}
 
 				if (options.all_results) {
-					const t2Candle = df75min[df75min.length - 1]
+					const t2Candle = df15min[df15min.length - 1]
 					t2Candle.time = getDateStringIND(t2Candle.time)
-					const t3Candle = df75min[df75min.length - 2]
+					const t3Candle = df15min[df15min.length - 2]
 					t3Candle.time = getDateStringIND(t3Candle.time)
 					
 					return {
@@ -799,8 +792,8 @@ async function scanLightyearStocks(stockList, endDateNew, interval='5m', checkV2
 						'sma44': maValue,
 						volume: firstCandle.volume,
 						direction: result,
-						t75_0: t2Candle,
-						t75_1: t3Candle,
+						t15_0: t2Candle,
+						t15_1: t3Candle,
 						sma44_0: df[df.length - 1]?.sma44,
 						sma44_1: df[df.length - 2]?.sma44,
 						sma44_2: df[df.length - 3]?.sma44,
@@ -885,6 +878,8 @@ function checkV2Conditions(df) {
 	return 'BULLISH'
 }
 
+
+// NO LONGER USED
 function checkV3Conditions(df5min, df15min, df75min, params) {
 	
 	const { 
@@ -1010,7 +1005,18 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
 	
 }
 
-function  checkV3ConditionsNumerical(df5min, df15min, df75min, params) {
+/**
+ * 
+ * @param {*} df5min 
+ * @param {*} df15min 
+ * @param {*} df75min 
+ * @param {*} params 
+ * 
+ * 		d75 is nullable if it does not need to be checked
+ * 
+ * @returns {}
+ */
+function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, params) {
 	
 	const { 
 		CANDLE_CONDITIONS_SLOPE_TOLERANCE, 
@@ -1343,7 +1349,10 @@ module.exports = {
 	checkCandleConditions,
 	checkMAFalling,
 	checkReverseCandleConditions,
+
 	scanZaireStocks,
+	scanLightyearD2Stocks,
+
 	isBullishCandle,
 	isBearishCandle,
 	isDojiCandle,
