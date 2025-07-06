@@ -317,7 +317,7 @@ async function createZaireOrders(stock, tag='zaire') {
             tag = 'lgy'
         }
 
-        const SOURCE_RISK_AMOUNT = tag == 'zaire' ? ZAIRE_RISK_AMOUNT : tag == 'bailey' ? BAILEY_RISK_AMOUNT : DEFAULT_RISK_AMOUNT
+        const SOURCE_RISK_AMOUNT = tag == 'zaire' ? ZAIRE_RISK_AMOUNT : tag == 'bailey' ? BAILEY_RISK_AMOUNT : tag == 'lgy' ? LIGHTYEAR_RISK_AMOUNT : DEFAULT_RISK_AMOUNT
         const source = capitalize(tag)
 
         await kiteSession.authenticate();
