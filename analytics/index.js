@@ -517,6 +517,13 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
 					df5min = df5min.filter(r => r.close);
 					
+					let dfNifty50 = await getDataFromYahoo('^NSEI', 5, '5m', startDate, endDate, useCached);
+					dfNifty50 = processYahooData(dfNifty50, '5m', useCached);
+
+					if (!dfNifty50 || dfNifty50.length === 0) return null;
+					dfNifty50 = addMovingAverage(dfNifty50, 'close', params.MA_WINDOW_5 || 22, 'sma44');
+					dfNifty50 = dfNifty50.filter(r => r.close);
+					
 					// 75 Mins candles needs more data
 					let earlierStart = new Date(startDate)
 					earlierStart.setDate(earlierStart.getDate() - 5)
@@ -572,7 +579,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					// console.debug(df75min.map(d => ({...d, time: getDateStringIND(d.time)})))
 					
 					// conditionsMet = checkV3Conditions(df5min, df15min, df75min, params)
-					conditionsMet = checkV3ConditionsNumerical(df5min, df15min, df75min, params)
+					conditionsMet = checkV3ConditionsNumerical(df5min, df15min, df75min, dfNifty50, params)
 				}
 				else if (checkV2) {
 					conditionsMet = checkV2Conditions(df)
@@ -607,6 +614,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 						sma44_3: df[df.length - 4]?.sma44,
 						source: 'zaire',
 
+						niftyDirection: conditionsMet.conditions.niftyDirection,
+
 						data: conditionsMet
 					};
 				}
@@ -633,6 +642,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 						sma44_1: df[df.length - 2]?.sma44,
 						sma44_2: df[df.length - 3]?.sma44,
 						sma44_3: df[df.length - 4]?.sma44,
+
+						niftyDirection: conditionsMet.conditions.niftyDirection,
 
 						data: conditionsMet
 					};
@@ -730,6 +741,13 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 				if (!df5min || df5min.length === 0) return null;
 				df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
 				df5min = df5min.filter(r => r.close);
+								
+				let dfNifty50 = await getDataFromYahoo('^NSEI', 5, '5m', startDate, endDate, useCached);
+				dfNifty50 = processYahooData(dfNifty50, '5m', useCached);
+
+				if (!dfNifty50 || dfNifty50.length === 0) return null;
+				dfNifty50 = addMovingAverage(dfNifty50, 'close', params.MA_WINDOW_5 || 22, 'sma44');
+				dfNifty50 = dfNifty50.filter(r => r.close);
 				
 				// 75 Mins candles needs more data
 				let earlierStart = new Date(startDate)
@@ -743,7 +761,7 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 				df15min = addMovingAverage(df15min, 'close', params.MA_WINDOW || 44, 'sma44');
 				df15min = df15min.filter(r => r.close);
 
-				conditionsMet = checkV3ConditionsNumerical(df5min, df15min, null, params)
+				conditionsMet = checkV3ConditionsNumerical(df5min, df15min, null, dfNifty50, params)
 
 				// let result = conditionsMet;
 				result = conditionsMet.result;
@@ -772,6 +790,8 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 						sma44_3: df[df.length - 4]?.sma44,
 						source: 'lgy',
 
+						niftyDirection: conditionsMet.conditions.niftyDirection,
+
 						data: conditionsMet
 					};
 				}
@@ -798,6 +818,8 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 						sma44_1: df[df.length - 2]?.sma44,
 						sma44_2: df[df.length - 3]?.sma44,
 						sma44_3: df[df.length - 4]?.sma44,
+						
+						niftyDirection: conditionsMet.conditions.niftyDirection,
 
 						data: conditionsMet
 					};
@@ -880,7 +902,7 @@ function checkV2Conditions(df) {
 
 
 // NO LONGER USED
-function checkV3Conditions(df5min, df15min, df75min, params) {
+function checkV3Conditions(df5min, df15min, df75min, dfNifty50, params) {
 	
 	const { 
 		CANDLE_CONDITIONS_SLOPE_TOLERANCE, 
@@ -1016,7 +1038,7 @@ function checkV3Conditions(df5min, df15min, df75min, params) {
  * 
  * @returns {}
  */
-function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, params) {
+function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, dfNifty50, params) {
 	
 	const { 
 		CANDLE_CONDITIONS_SLOPE_TOLERANCE, 
@@ -1077,6 +1099,7 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, params) {
 	};
 	
 	// Evaluate conditions for each timeframe
+	const resultNifty50 = processConditionsNumerical(dfNifty50, 5);
 	const result5min = processConditionsNumerical(df5min, 5);
 	const result15min = processConditionsNumerical(df15min, 15);
 	let result75min = null;
@@ -1115,17 +1138,16 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, params) {
 	
 	const baseConditionsMet = narrowRange && wideRange && touchingSma && touchingSma15;
 	
-	const directionsMatch = result5min.direction === result15min.direction && 
+	const directionsMatch = resultNifty50.direction === result5min.direction && 
+						   result5min.direction === result15min.direction && 
 						   (!CHECK_75MIN || !result75min || result15min.direction === result75min.direction);
 	
 	const bearishConditionsMet = candleMidToCloseRatio > BASE_CONDITIONS_SLOPE_TOLERANCE;
 	const bullishConditionsMet = closeToCandleMidRatio > BASE_CONDITIONS_SLOPE_TOLERANCE;
 
-	const allDirectionsMatch = result5min.direction === result15min.direction && (!result75min || result15min.direction === result75min.direction);
-	
-	const finalBearish = allDirectionsMatch && 
+	const finalBearish = directionsMatch && 
 							bearishConditionsMet && baseConditionsMet && result5min.direction === 'BEARISH';
-	const finalBullish = allDirectionsMatch && 
+	const finalBullish = directionsMatch && 
 							bullishConditionsMet && baseConditionsMet && result5min.direction === 'BULLISH';
 	
 	return {
@@ -1194,6 +1216,7 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, params) {
 		
 		// Final conditions
 		conditions: {
+			niftyDirection: resultNifty50.direction,
 			baseConditionsMet,
 			bearishConditionsMet,
 			bullishConditionsMet,
