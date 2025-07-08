@@ -139,7 +139,7 @@ async function setupLightyearDayOneOrders(stocks) {
                     quantity,
                     lastAction: '',
                     ignore: '',
-                    reviseSL: '75',
+                    reviseSL: '' // '75',
                 })
             }
             catch (error) {
@@ -265,7 +265,7 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                             quantity,
                             lastAction: '',
                             ignore: '',
-                            reviseSL: '75',
+                            reviseSL: '' // '75',
                         })
 
                     }
