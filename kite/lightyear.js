@@ -165,6 +165,7 @@ async function setupLightyearDayOneOrders(stocks) {
 async function checkTriggerHit(lightyearSheetData) {
 
     let updates = []
+    let triggerHits = []
 
     let row = 1
     for (const stock of lightyearSheetData) {
@@ -204,6 +205,13 @@ async function checkTriggerHit(lightyearSheetData) {
                 if (last5mins.high > entry_trigger_price) {
                     if (last3hours.some(d => d.high > entry_trigger_price)) {
                         status = 'Active'
+                        triggerHits.push({
+                            threeHour: last3hours.reverse().find(d => d.high > entry_trigger_price),
+                            fiveMin: last5mins,
+                            stock: stock.symbol,
+                            triggerPrice: entry_trigger_price,
+                            direction,
+                        })
                     }
                 }
             }
@@ -211,6 +219,13 @@ async function checkTriggerHit(lightyearSheetData) {
                 if (last5mins.low < entry_trigger_price) {
                     if (last3hours.some(d => d.low < entry_trigger_price)) {
                         status = 'Active'
+                        triggerHits.push({
+                            threeHour: last3hours.reverse().find(d => d.low < entry_trigger_price),
+                            fiveMin: last5mins,
+                            stock: stock.symbol,
+                            triggerPrice: entry_trigger_price,
+                            direction,
+                        })
                     }
                 }
             }
@@ -221,6 +236,8 @@ async function checkTriggerHit(lightyearSheetData) {
                     values: [[status]], 
                 })
             }
+
+            return triggerHits
         }
         catch (error) {
             await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);

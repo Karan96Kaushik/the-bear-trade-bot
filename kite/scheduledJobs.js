@@ -130,7 +130,11 @@ async function checkLightyearTriggerHit() {
         let lightyearSheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
         lightyearSheetData = processSheetWithHeaders(lightyearSheetData)
 
-        await checkTriggerHit(lightyearSheetData)
+        let triggerHits = await checkTriggerHit(lightyearSheetData)
+
+        if (triggerHits.length > 0) {
+            await sendMessageToChannel('🔔 Lightyear Trigger Hit', triggerHits)
+        }
 
     } catch (error) {
         await sendMessageToChannel(`🚨 Error running Lightyear Trigger Hit Check`, error?.message);
