@@ -16,7 +16,7 @@ const { scanBaileyStocks } = require('../analytics/bailey');
 const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
-const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet } = require('./lightyear');
+const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet, checkTriggerHit } = require('./lightyear');
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -120,6 +120,23 @@ async function updateLightyearOrders() {
         await sendMessageToChannel(`🚨 Error running Lightyear Update Job`, error?.message);
     }
 }
+
+// Checks trigger hits for D1 orders every 5 mins - one hit and then another atleast 5 mins apart
+async function checkLightyearTriggerHit() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Lightyear Trigger Hit Check');
+        await kiteSession.authenticate();
+
+        let lightyearSheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
+        lightyearSheetData = processSheetWithHeaders(lightyearSheetData)
+
+        await checkTriggerHit(lightyearSheetData)
+
+    } catch (error) {
+        await sendMessageToChannel(`🚨 Error running Lightyear Trigger Hit Check`, error?.message);
+    }
+}
+
 
 async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
@@ -849,11 +866,23 @@ const scheduleMISJobs = () => {
         // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
         setupZaireOrders(false, true);
     };
-    const zaireJobV3 = schedule.scheduleJob('30 */5 4,5,6,7 * * 1-5', zaireJobV3CB);
+    const zaireJobV3 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
     const zaireJobV3_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV3CB);
     // const zaireJobV3_3 = schedule.scheduleJob('30 0 9 * * 1-5', zaireJobV3CB);
     // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
     sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2))); //, zaireJobV3_3)));
+    // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+
+
+    const lightyearTriggerHitCB = () => {
+        sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2))); //, zaireJobV3_3)));
+        // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
+        checkLightyearTriggerHit();
+    };
+    const lightyearTriggerHit_2 = schedule.scheduleJob('10 50,55 3 * * 1-5', lightyearTriggerHitCB);
+    const lightyearTriggerHit = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', lightyearTriggerHitCB);
+    const lightyearTriggerHit_3 = schedule.scheduleJob('10 0,5,10,15,20,25 9 * * 1-5', lightyearTriggerHitCB);
+    sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2, lightyearTriggerHit_3))); //, zaireJobV3_3)));
     // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
 
 

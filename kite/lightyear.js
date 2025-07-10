@@ -158,85 +158,88 @@ async function setupLightyearDayOneOrders(stocks) {
     }
 }
 
-// Checks trigger hits for D1 orders every 5 mins - one hit and then another atleast 5 mins apart
+/**
+ * Checks trigger hits for D1 orders every 5 mins - one hit and then another atleast 5 mins apart
+ * @param {Array} lightyearSheetData 
+ */
 async function checkTriggerHit(lightyearSheetData) {
-    try {
 
-        let updates = []
+    let updates = []
 
-        let row = 1
-        for (const stock of lightyearSheetData) {
-            try {
-                row += 1
-                let status = ''
+    let row = 1
+    for (const stock of lightyearSheetData) {
+        try {
+            row += 1
+            let status = ''
 
-                let col = Object.keys(stock).findIndex(key => key === 'status')
+            let col = Object.keys(stock).findIndex(key => key === 'status')
 
-                let { entry_trigger_price, final_stop_loss, target, direction } = stock
+            let { entry_trigger_price, final_stop_loss, target, direction } = stock
 
-                entry_trigger_price = Number(entry_trigger_price)
-                final_stop_loss = Number(final_stop_loss)
-                target = Number(target)
+            entry_trigger_price = Number(entry_trigger_price)
+            final_stop_loss = Number(final_stop_loss)
+            target = Number(target)
 
-                direction = direction.trim().toUpperCase()
+            direction = direction.trim().toUpperCase()
 
-                let from = new Date();
-                from.setHours(from.getHours() - 6)
-                let to = new Date();
-                
-                let pastData = await getMoneycontrolData(stock.symbol, from, to, 5, false);
-                pastData = processMoneycontrolData(pastData);
+            let from = new Date();
+            from.setHours(from.getHours() - 6)
+            let to = new Date();
+            
+            let pastData = await getMoneycontrolData(stock.symbol, from, to, 5, false);
+            pastData = processMoneycontrolData(pastData);
 
-                // Filter out data after 3:30 PM - not sure why this is happening
-                pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
-                pastData = pastData.filter(d => d.time > +from)
+            // Filter out data after 3:30 PM - not sure why this is happening
+            pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
+            pastData = pastData.filter(d => d.time > +from)
 
-                const last5mins = pastData.pop()
-                // excludes past 5 mins
-                const last3hours = pastData.slice(-(12*3))
+            const last5mins = pastData.pop()
+            // excludes past 5 mins
+            const last3hours = pastData.slice(-(12*3))
 
 
-                // Check for double trigger hit
-                if (direction == 'BULLISH') {
-                    if (last5mins.high > entry_trigger_price) {
-                        if (last3hours.some(d => d.high > entry_trigger_price)) {
-                            status = 'Active'
-                        }
+            // Check for double trigger hit
+            if (direction == 'BULLISH') {
+                if (last5mins.high > entry_trigger_price) {
+                    if (last3hours.some(d => d.high > entry_trigger_price)) {
+                        status = 'Active'
                     }
                 }
-                else if (direction == 'BEARISH') {
-                    if (last5mins.low < entry_trigger_price) {
-                        if (last3hours.some(d => d.low < entry_trigger_price)) {
-                            status = 'Active'
-                        }
+            }
+            else if (direction == 'BEARISH') {
+                if (last5mins.low < entry_trigger_price) {
+                    if (last3hours.some(d => d.low < entry_trigger_price)) {
+                        status = 'Active'
                     }
                 }
-
-                if (status) {
-                    updates.push({
-                        range: 'MIS-LIGHTYEAR!' + numberToExcelColumn(col) + String(row), 
-                        values: [[status]], 
-                    })
-                }
-            }
-            catch (error) {
-                await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);
-                console.error("🚨 Error running Lightyear Trigger Hit Check: ", stock[0], error?.message);
-                throw error;
             }
 
+            if (status) {
+                updates.push({
+                    range: 'MIS-LIGHTYEAR!' + numberToExcelColumn(col) + String(row), 
+                    values: [[status]], 
+                })
+            }
+        }
+        catch (error) {
+            await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);
+            console.error("🚨 Error running Lightyear Trigger Hit Check: ", stock[0], error?.message);
+            throw error;
         }
 
-        await bulkUpdateCells(updates)
-        return
     }
-    catch (error) {
-        await sendMessageToChannel('🚨 Error running Lightyear Day One Orders', error?.message);
-        console.error("🚨 Error running Lightyear Day One Orders: ", error?.message);
-        throw error;
-    }
+
+    await bulkUpdateCells(updates)
+    return
+
 }
 
+/**
+ * Updates the Lightyear Sheet post market close to check for cancelled, stoploss and target
+ * @param {Array} lightyearSheetData 
+ * @param {Array} alphaSheetData 
+ * @param {Array} lightyearCompleteOrders 
+ */
 async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyearCompleteOrders) {
     try {
 
@@ -427,5 +430,6 @@ module.exports = {
     createLightyearOrders,
     setupLightyearDayOneOrders,
     updateLightyearSheet,
-    skipBackDateHolidays
+    skipBackDateHolidays,
+    checkTriggerHit
 }
