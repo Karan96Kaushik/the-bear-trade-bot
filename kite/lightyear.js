@@ -185,9 +185,10 @@ async function checkTriggerHit(lightyearSheetData) {
             let from = new Date();
             from.setHours(from.getHours() - 6)
             let to = new Date();
-            
-            let pastData = await getMoneycontrolData(stock.symbol, from, to, 5, false);
-            pastData = processMoneycontrolData(pastData);
+            const interval = 5
+
+            let pastData = await getMoneycontrolData(stock.symbol, from, to, interval, false);
+            pastData = processMoneycontrolData(pastData, interval);
 
             // Filter out data after 3:30 PM - not sure why this is happening
             pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)

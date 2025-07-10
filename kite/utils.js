@@ -476,8 +476,8 @@ async function getMoneycontrolData(sym, from, to, resolution = 1, useCached = fa
  * @param {Object} data - The raw data from Moneycontrol
  * @returns {Array} An array of OHLCV objects
  */
-function processMoneycontrolData(data) {
-    return data.t.map((t, index) => ({
+function processMoneycontrolData(data, interval) {
+    let newData = data.t.map((t, index) => ({
         time: t * 1000,
         open: data.o[index],
         high: data.h[index],
@@ -485,6 +485,33 @@ function processMoneycontrolData(data) {
         close: data.c[index],
         volume: data.v[index]
     }))
+
+    if (interval && typeof interval == 'number') {
+        let roundedTimeForReqCandle = Math.floor(newData[newData.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
+        console.log('roundedTimeForReqCandle', getDateStringIND(new Date(roundedTimeForReqCandle)))
+        // If requested time is before market open at 3:45 AM UTC, adjust to prev day
+        let reqCandleDate = new Date(roundedTimeForReqCandle);
+        if (reqCandleDate.getUTCHours() < 3 || 
+            (reqCandleDate.getUTCHours() === 3 && reqCandleDate.getUTCMinutes() < 45)) {
+                // Go back 1 day and set the time to end of trading day
+            skipBackDateHolidays(reqCandleDate)
+
+            reqCandleDate.setUTCHours(10, 0, 20, 0);
+            reqCandleDate = Math.floor(+reqCandleDate / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
+            reqCandleDate = new Date(reqCandleDate)
+            roundedTimeForReqCandle = reqCandleDate.getTime();
+        }
+        newData = newData.filter(d => d.time <= roundedTimeForReqCandle)
+
+        if (newData.length == 0 || !newData[newData.length - 1].close || !newData[newData.length - 1].open || !newData[newData.length - 1].high || !newData[newData.length - 1].low) {
+            throw new Error(`No data found in the given time range`)
+        }
+        if (newData[newData.length - 1].time < roundedTimeForReqCandle) {
+            throw new Error(`Last candle is not found`)
+        }
+    }
+
+    return newData
 }
 
 
