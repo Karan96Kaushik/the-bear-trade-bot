@@ -173,6 +173,11 @@ async function checkTriggerHit(lightyearSheetData) {
             row += 1
             let status = ''
 
+            // Only check for trigger hits for orders that are not active and D1
+            if (stock.status) {
+                continue
+            }
+
             let col = Object.keys(stock).findIndex(key => key === 'status')
 
             let { entry_trigger_price, final_stop_loss, target, direction } = stock
