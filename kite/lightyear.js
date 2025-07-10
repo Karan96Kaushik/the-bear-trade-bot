@@ -223,10 +223,16 @@ async function checkTriggerHit(lightyearSheetData) {
             else if (direction == 'BEARISH') {
                 if (last5mins.low < entry_trigger_price) {
                     if (last3hours.some(d => d.low < entry_trigger_price)) {
+
+                        let threeHour = last3hours.reverse().find(d => d.low < entry_trigger_price)
+                        threeHour = {...threeHour, time: getDateStringIND(threeHour.time)}
+                        let fiveMin = {...last5mins, time: getDateStringIND(last5mins.time)}
+
                         status = 'Active'
+                        
                         triggerHits.push({
-                            threeHour: last3hours.reverse().find(d => d.low < entry_trigger_price),
-                            fiveMin: last5mins,
+                            threeHour,
+                            fiveMin,
                             stock: stock.symbol,
                             triggerPrice: entry_trigger_price,
                             direction,
