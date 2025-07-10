@@ -1,7 +1,8 @@
-const { scanZaireStocks, getDateRange, scanLightyearStocks } = require("../analytics")
-const { readSheetData, processMISSheetData, getStockLoc, appendRowsToMISD } = require("../gsheets")
+const { scanZaireStocks, getDateRange, scanLightyearD2Stocks, checkV3ConditionsNumerical } = require("../analytics")
+const { readSheetData, processMISSheetData, getStockLoc, appendRowsToMISD, processSheetWithHeaders } = require("../gsheets")
 const { updateNameInSheetForClosedOrder, processSuccessfulOrder } = require("../kite/processor")
 const { setupZaireOrders } = require("../kite/scheduledJobs")
+const { processMoneycontrolData, getMoneycontrolData } = require("../kite/utils");
 
 const { kiteSession } = require("../kite/setup")
 // const { placeOrder } = require("../kite/processor")
@@ -18,8 +19,48 @@ const run = async () => {
 
     try {
 
+        let lightyearSheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
+        lightyearSheetData = processSheetWithHeaders(lightyearSheetData)
 
+        for (const stock of lightyearSheetData) {
+                let status = ''
 
+                let col = Object.keys(stock).findIndex(key => key === 'status')
+
+                let { entry_trigger_price, final_stop_loss, target, direction } = stock
+
+                entry_trigger_price = Number(entry_trigger_price)
+                final_stop_loss = Number(final_stop_loss)
+                target = Number(target)
+
+                direction = direction.trim().toUpperCase()
+
+                let from = new Date();
+                from.setUTCHours(6,0,10,0)
+                from.setHours(from.getHours() - 1)
+                let to = new Date();
+                to.setUTCHours(6,0,10,0)
+
+                console.log(stock.symbol, from, to)
+                
+                const interval = 5
+                let pastData = await getMoneycontrolData(stock.symbol, from, to, interval, false);
+                pastData = processMoneycontrolData(pastData, interval);
+
+                // Filter out data after 3:30 PM - not sure why this is happening
+                pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
+                pastData = pastData.filter(d => d.time > +from)
+
+                pastData = pastData.map(d => ({...d, time: getDateStringIND(new Date(d.time))}))
+
+                const last5mins = pastData.pop()
+                // excludes past 5 mins
+                const last3hours = pastData.slice(-(12*3))
+
+                console.log(last5mins, last3hours)
+            }
+
+        return
         // await kiteSession.authenticate()
 
         // let res1  = await placeOrder('SELL', 'SL', 31, 1, {stockSymbol: 'TRIDENT', quantity: 1, triggerPrice: 100}, 'stoploss-test')
@@ -88,7 +129,8 @@ const run = async () => {
             date = new Date(+date + 5 * 60 * 1000)
             // const selectedStocks = await (niftyList, date, '5m')
             console.time('scanZaireStocks')
-            let { selectedStocks } = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
+            let { selectedStocks } = await scanLightyearD2Stocks(niftyList, date, '5m', false, zaireV3Params);
+            // let { selectedStocks } = await scanZaireStocks(niftyList, date, '5m', false, true, false, zaireV3Params);
             console.timeEnd('scanZaireStocks')
             if (selectedStocks.length > 0) 
             console.log(selectedStocks)
