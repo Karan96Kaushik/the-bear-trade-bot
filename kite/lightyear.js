@@ -44,9 +44,9 @@ async function createLightyearOrders(stock) {
                 finalStopLossPrice,
                 targetPrice,
                 direction,
-                '',      // Status
-                '',      // ignore
-                '75',    // reviseSL
+                '',            // Status
+                '',            // ignore
+                '' // '75',    // reviseSL
             ]
 
         // const sym = `NSE:${stock.sym}`
@@ -158,6 +158,85 @@ async function setupLightyearDayOneOrders(stocks) {
     }
 }
 
+// Checks trigger hits for D1 orders every 5 mins - one hit and then another atleast 5 mins apart
+async function checkTriggerHit(lightyearSheetData) {
+    try {
+
+        let updates = []
+
+        let row = 1
+        for (const stock of lightyearSheetData) {
+            try {
+                row += 1
+                let status = ''
+
+                let col = Object.keys(stock).findIndex(key => key === 'status')
+
+                let { entry_trigger_price, final_stop_loss, target, direction } = stock
+
+                entry_trigger_price = Number(entry_trigger_price)
+                final_stop_loss = Number(final_stop_loss)
+                target = Number(target)
+
+                direction = direction.trim().toUpperCase()
+
+                let from = new Date();
+                from.setHours(from.getHours() - 6)
+                let to = new Date();
+                
+                let pastData = await getMoneycontrolData(stock.symbol, from, to, 5, false);
+                pastData = processMoneycontrolData(pastData);
+
+                // Filter out data after 3:30 PM - not sure why this is happening
+                pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
+                pastData = pastData.filter(d => d.time > +from)
+
+                const last5mins = pastData.pop()
+                // excludes past 5 mins
+                const last3hours = pastData.slice(-(12*3))
+
+
+                // Check for double trigger hit
+                if (direction == 'BULLISH') {
+                    if (last5mins.high > entry_trigger_price) {
+                        if (last3hours.some(d => d.high > entry_trigger_price)) {
+                            status = 'Active'
+                        }
+                    }
+                }
+                else if (direction == 'BEARISH') {
+                    if (last5mins.low < entry_trigger_price) {
+                        if (last3hours.some(d => d.low < entry_trigger_price)) {
+                            status = 'Active'
+                        }
+                    }
+                }
+
+                if (status) {
+                    updates.push({
+                        range: 'MIS-LIGHTYEAR!' + numberToExcelColumn(col) + String(row), 
+                        values: [[status]], 
+                    })
+                }
+            }
+            catch (error) {
+                await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);
+                console.error("🚨 Error running Lightyear Trigger Hit Check: ", stock[0], error?.message);
+                throw error;
+            }
+
+        }
+
+        await bulkUpdateCells(updates)
+        return
+    }
+    catch (error) {
+        await sendMessageToChannel('🚨 Error running Lightyear Day One Orders', error?.message);
+        console.error("🚨 Error running Lightyear Day One Orders: ", error?.message);
+        throw error;
+    }
+}
+
 async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyearCompleteOrders) {
     try {
 
@@ -185,20 +264,22 @@ async function updateLightyearSheet(lightyearSheetData, alphaSheetData, lightyea
                 let status = ''
                 let alphaIgnore = ''
 
-                let triggerOrder = lightyearTriggerOrders.find(o => o.tradingsymbol === stock.symbol)
+                // let triggerOrder = lightyearTriggerOrders.find(o => o.tradingsymbol === stock.symbol)
                 let targetOrder = lightyearTargetOrders.find(o => o.tradingsymbol === stock.symbol)
 
-                // No status and no trigger order
-                if (!stock.status && !triggerOrder) {
+                // No status - it means that the order didnt reach trigger price
+                if (!stock.status) {
                     status = 'Cancelled'
                     alphaIgnore = 'Cancelled'
                 }
                 // Active order
                 else {
-                    // No status and found trigger order
-                    if (!stock.status) {
-                        status = 'Active'
-                    }
+
+                    /* Following is commented because we are not changing to active at end of day, but 
+                    during the day, if the stock reaches trigger price */
+                    // if (!stock.status) {
+                    //     status = 'Active'
+                    // }
 
                     let { entry_trigger_price, final_stop_loss, target, direction } = stock
                     entry_trigger_price = Number(entry_trigger_price)
