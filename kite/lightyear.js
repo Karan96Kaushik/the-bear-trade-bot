@@ -263,8 +263,6 @@ async function checkTriggerHit(lightyearSheetData) {
 
     }
 
-    console.log('lgy updates', updates)
-    
     if (updates.length > 0) {
         await bulkUpdateCells(updates)
     }
