@@ -254,10 +254,6 @@ async function checkTriggerHit(lightyearSheetData) {
                 })
             }
             
-
-
-
-            return triggerHits
         }
         catch (error) {
             await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);
@@ -268,7 +264,7 @@ async function checkTriggerHit(lightyearSheetData) {
     }
 
     console.log('lgy updates', updates)
-
+    
     if (updates.length > 0) {
         await bulkUpdateCells(updates)
     }
