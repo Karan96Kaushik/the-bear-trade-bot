@@ -245,13 +245,16 @@ async function checkTriggerHit(lightyearSheetData) {
                     }
                 }
             }
-
+            
             if (status) {
                 updates.push({
                     range: 'MIS-LIGHTYEAR!' + numberToExcelColumn(col) + String(row), 
                     values: [[status]], 
                 })
             }
+            
+
+
 
             return triggerHits
         }
@@ -263,8 +266,13 @@ async function checkTriggerHit(lightyearSheetData) {
 
     }
 
-    await bulkUpdateCells(updates)
-    return
+    console.log('lgy updates', updates)
+
+    if (updates.length > 0) {
+        await bulkUpdateCells(updates)
+    }
+
+    return triggerHits
 
 }
 

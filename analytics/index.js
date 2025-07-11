@@ -668,6 +668,72 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 	};
 }
 
+async function checkZaireDoubleTrigger(stock, direction, triggerPrice) {
+	try {
+
+		direction = direction.trim().toUpperCase()
+
+		let from = new Date();
+		from.setHours(from.getHours() - 6)
+		let to = new Date();
+		const interval = 5
+
+		let pastData = await getMoneycontrolData(stock.symbol, from, to, interval, false);
+		pastData = processMoneycontrolData(pastData, interval);
+
+		// Filter out data after 3:30 PM - not sure why this is happening
+		pastData = pastData.filter(d => new Date(d.time).getUTCHours() < 10)
+		pastData = pastData.filter(d => d.time > +from)
+
+		const last5mins = pastData.pop()
+		// excludes past 5 mins
+		const last3hours = pastData.slice(-(12*3))
+
+
+		// Check for double trigger hit
+		if (direction == 'BULLISH') {
+			if (last5mins.high > triggerPrice) {
+				if (last3hours.some(d => d.high > triggerPrice)) {
+					let threeHour = last3hours.reverse().find(d => d.high > triggerPrice)
+					threeHour = {...threeHour, time: getDateStringIND(threeHour.time)}
+					let fiveMin = {...last5mins, time: getDateStringIND(last5mins.time)}
+
+					return {
+						threeHour,
+						fiveMin,
+						stock: stock.symbol,
+						triggerPrice,
+						direction,
+					}
+				}
+			}
+		}
+		else if (direction == 'BEARISH') {
+			if (last5mins.low < triggerPrice) {
+				if (last3hours.some(d => d.low < triggerPrice)) {
+
+					let threeHour = last3hours.reverse().find(d => d.low < triggerPrice)
+					threeHour = {...threeHour, time: getDateStringIND(threeHour.time)}
+					let fiveMin = {...last5mins, time: getDateStringIND(last5mins.time)}
+
+					return {
+						threeHour,
+						fiveMin,
+						stock: stock.symbol,
+						triggerPrice,
+						direction,
+					}
+				}
+			}
+		}
+	} catch (error) {
+		console.log(error, stock.symbol)
+		throw error;
+	}
+	
+}
+
+
 
 async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCached=false, params=DEFAULT_PARAMS, options={}) {
 	const selectedStocks = [];
@@ -1391,6 +1457,7 @@ module.exports = {
 	removeIncompleteCandles,
 	calculateATR,
 	checkV3ConditionsNumerical,
+	checkZaireDoubleTrigger,
 	DEFAULT_PARAMS
 };
 
