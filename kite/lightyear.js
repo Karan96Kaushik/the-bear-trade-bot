@@ -6,6 +6,7 @@ const { sendMessageToChannel } = require("../slack-actions")
 const { kiteSession } = require("./setup")
 const { processMoneycontrolData, getMoneycontrolData, skipBackDateHolidays } = require("./utils");
 const { placeOrder, logOrder } = require("./processor");
+const { getDateStringIND } = require("./utils");
 
 const RISK_AMOUNT = 100;
 
