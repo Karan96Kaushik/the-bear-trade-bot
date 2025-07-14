@@ -541,7 +541,7 @@ async function closePositions() {
         await kiteSession.authenticate();
 
         const positions = await kiteSession.kc.getPositions();
-        const allPositions = positions.net.filter(position => (position.quantity || 0) != 0);
+        const allPositions = positions.net.filter(p => p.product == 'MIS').filter(position => (position.quantity || 0) != 0);
 
         for (const position of allPositions) {
             try {
@@ -677,7 +677,7 @@ async function updateStopLossOrders() {
                 const sym = stock.stockSymbol;
                 const isBearish = stock.type === 'BEARISH';
 
-                const position = positions.net.find(p => p.tradingsymbol === sym);
+                const position = positions.net.filter(p => p.product == 'MIS').find(p => p.tradingsymbol === sym);
                 if (!position) continue;
 
                 const existingOrder = orders.find(order => 
@@ -764,7 +764,7 @@ async function setupMissingOrders() {
         // Get current positions and orders
         const positions = await kiteSession.kc.getPositions();
         const orders = await kiteSession.kc.getOrders();
-        const openPositions = positions.net.filter(position => (position.quantity || 0) != 0);
+        const openPositions = positions.net.filter(p => p.product == 'MIS').filter(position => (position.quantity || 0) != 0);
 
         // Get sheet data for reference
         let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
