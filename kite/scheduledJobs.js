@@ -81,7 +81,7 @@ async function setupLightyearOrders() {
             await appendRowsToSheet('MIS-LIGHTYEAR!A2:W1000', sheetEntries)
 
             // 
-            let dayOneOrders = await setupLightyearDayOneOrders(sheetEntries)
+            // let dayOneOrders = await setupLightyearDayOneOrders(sheetEntries)
 
             // if (dayOneOrders.length > 0) {
             //     await appendRowsToMISD(dayOneOrders, 'Lightyear-D1')
