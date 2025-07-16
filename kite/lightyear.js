@@ -163,7 +163,9 @@ async function setupLightyearDayOneOrders(stocks) {
  * Checks trigger hits for D1 orders every 5 mins - one hit and then another atleast 5 mins apart
  * @param {Array} lightyearSheetData 
  */
-async function checkTriggerHit(lightyearSheetData) {
+async function checkTriggerHit(lightyearSheetData, endDateNew) {
+
+    const isSimulation = !endDateNew;
 
     let updates = []
     let triggerHits = []
@@ -175,7 +177,7 @@ async function checkTriggerHit(lightyearSheetData) {
             let status = ''
 
             // Only check for trigger hits for orders that are not active and D1
-            if (stock.status) {
+            if (stock.status && !isSimulation) {
                 continue
             }
 
@@ -184,17 +186,27 @@ async function checkTriggerHit(lightyearSheetData) {
             let { entry_trigger_price, final_stop_loss, target, direction } = stock
 
             entry_trigger_price = Number(entry_trigger_price)
-            final_stop_loss = Number(final_stop_loss)
-            target = Number(target)
+            // final_stop_loss = Number(final_stop_loss)
+            // target = Number(target)
 
             direction = direction.trim().toUpperCase()
 
             let from = new Date();
             from.setHours(from.getHours() - 6)
             let to = new Date();
+
+            let useCached = false;
+
+            if (endDateNew) {
+                to = new Date(endDateNew)
+                from = new Date(to)
+                from.setHours(from.getHours() - 6)
+                useCached = true;
+            }
+
             const interval = 5
 
-            let pastData = await getMoneycontrolData(stock.symbol, from, to, interval, false);
+            let pastData = await getMoneycontrolData(stock.symbol, from, to, interval, useCached);
             pastData = processMoneycontrolData(pastData, interval);
 
             // Filter out data after 3:30 PM - not sure why this is happening
@@ -263,7 +275,7 @@ async function checkTriggerHit(lightyearSheetData) {
 
     }
 
-    if (updates.length > 0) {
+    if (updates.length > 0 && !isSimulation) {
         await bulkUpdateCells(updates)
     }
 

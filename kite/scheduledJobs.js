@@ -83,9 +83,9 @@ async function setupLightyearOrders() {
             // 
             let dayOneOrders = await setupLightyearDayOneOrders(sheetEntries)
 
-            if (dayOneOrders.length > 0) {
-                await appendRowsToMISD(dayOneOrders, 'Lightyear-D1')
-            }
+            // if (dayOneOrders.length > 0) {
+            //     await appendRowsToMISD(dayOneOrders, 'Lightyear-D1')
+            // }
 
         }
 
