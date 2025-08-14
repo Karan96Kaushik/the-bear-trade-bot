@@ -22,7 +22,11 @@ const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
-    region: process.env.AWS_REGION || 'us-east-1'
+    region: process.env.AWS_REGION || 'us-east-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
 });
 
 const MAX_ORDER_VALUE = 200000
@@ -930,7 +934,7 @@ const scheduleMISJobs = () => {
     };
     const zaireJobV3 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
     const zaireJobV3_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV3CB);
-    const zaireJobV3_3 = schedule.scheduleJob('45,50,55 12 * * 1-5', zaireJobV3CB);
+    const zaireJobV3_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45,50,55 12,13 * * 1-5', zaireJobV3CB);
 
     // const zaireJobV3_3 = schedule.scheduleJob('30 0 9 * * 1-5', zaireJobV3CB);
     // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
