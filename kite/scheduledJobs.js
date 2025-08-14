@@ -169,7 +169,7 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
         return result
 
     } catch (error) {
-        await sendMessageToChannel(`🚨 Error running Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`, error?.message);
+        await sendMessageToChannel(`🚨 Error running Zaire ${checkV2 ? 'V2' : ''} Lambda - `, error?.message);
     }
 }
 
@@ -231,7 +231,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             })
         }
         else {
-            let result = await scanZaireStocks(
+            result = await scanZaireStocks(
                 niftyList,
                 null,
                 (checkV2 || checkV3) ? '5m' : '15m',
