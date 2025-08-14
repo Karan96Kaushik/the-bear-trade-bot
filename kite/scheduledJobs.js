@@ -22,7 +22,7 @@ const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
-    region: process.env.AWS_REGION || 'us-east-1',
+    region: process.env.AWS_REGION || 'ap-south-1',
     credentials: {
         accessKeyId: process.env.AWS_ACCESS_KEY_ID,
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
