@@ -4,9 +4,9 @@
   "main": "index.js",
   "scripts": {
     "start": "nodemon --ext js index.js",
-    "deployprod": "ssh the-bear -t \"cd the-bear-trade-bot-2 && git stash && git pull && pm2 restart trade-bot-2 && pm2 log trade-bot-2\"",
-    "logprod": "ssh the-bear -t \"pm2 log trade-bot-2\"",
-    "clearstate": "ssh the-bear -t \"cd the-bear-trade-bot-2 && rm -rf kite/traderState.json && pm2 restart trade-bot-2\"",
+    "deployprod": "ssh the-bear-2 -t \"cd the-bear-trade-bot-2 && git stash && git pull && pm2 restart trade-bot-2 && pm2 log trade-bot-2\"",
+    "logprod": "ssh the-bear-2 -t \"pm2 log trade-bot-2\"",
+    "clearstate": "ssh the-bear-2 -t \"cd the-bear-trade-bot-2 && rm -rf kite/traderState.json && pm2 restart trade-bot-2\"",
     "test": "jest --no-watchman",
     "test:kite-successful-order": "jest --no-watchman __tests__/kite-successful-order.js",
     "test:close-negative": "jest --no-watchman __tests__/close-negative.js",
@@ -20,6 +20,7 @@
   "description": "",
   "dependencies": {
     "@slack/bolt": "^3.22.0",
+    "aws-sdk": "^2.1692.0",
     "axios": "^1.7.7",
     "axios-cookiejar-support": "^5.0.3",
     "bcrypt": "^5.1.1",
