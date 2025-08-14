@@ -1,0 +1,23 @@
+{
+  "name": "the-bear-trade-bot-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda function for scanZaireStocks analysis",
+  "main": "handler.js",
+  "scripts": {
+    "test": "node handler.js",
+    "package": "zip -r lambda-deployment.zip .",
+    "deploy": "aws lambda update-function-code --function-name scanZaireStocks --zip-file fileb://lambda-deployment.zip"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "axios-cookiejar-support": "^5.0.3",
+    "lodash": "^4.17.21",
+    "tough-cookie": "^5.0.0"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": ">=18.x"
+  },
+  "author": "The Bear Trade Bot",
+  "license": "ISC"
+} 

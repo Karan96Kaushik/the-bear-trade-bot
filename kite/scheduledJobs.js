@@ -17,6 +17,7 @@ const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet, checkTriggerHit } = require('./lightyear');
+const aws = require('aws-sdk');
 // const OrderLog = require('../models/OrderLog');
 
 const MAX_ORDER_VALUE = 200000
@@ -35,6 +36,8 @@ const zaireV3Params = {
     MA_WINDOW: 44,
     CHECK_75MIN: 1
 }
+
+const USE_LAMBDA = true
 
 // Scans for NEW lightyear orders
 async function setupLightyearOrders() {
@@ -121,6 +124,45 @@ async function updateLightyearOrders() {
     }
 }
 
+async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, params, options) {
+    try {
+
+        // Call lambda function for each batch of 20 stocks
+        const batches = [];
+        for (let i = 0; i < stockList.length; i += 20) {
+            batches.push(stockList.slice(i, i + 20));
+        }
+
+        let resultsArray = await Promise.all(batches.map(async (batch) => {
+            let result = await aws.lambda.invoke({
+                FunctionName: 'scanZaireStocks',
+                Payload: JSON.stringify({
+                    stockList: batch,
+                    checkV2,
+                    checkV3,
+                    interval,
+                    params,
+                    options: {
+                        timeout: 10000
+                    }
+                })
+            })
+            return JSON.parse(result.Payload)
+        }))
+
+        // Combine all keys of resultsArray
+        let result = {}
+        for (const key of Object.keys(resultsArray[0])) {
+            result[key] = resultsArray.map(r => r[key]).flat()
+        }
+
+        return result
+
+    } catch (error) {
+        await sendMessageToChannel(`🚨 Error running Zaire ${checkV2 ? 'V2' : ''} MIS Jobs`, error?.message);
+    }
+}
+
 // Checks trigger hits for D1 orders every 5 mins - one hit and then another atleast 5 mins apart
 async function checkLightyearTriggerHit() {
     try {
@@ -171,16 +213,26 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         sheetData = processMISSheetData(sheetData)
 
         await kiteSession.authenticate();
-        
-        let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks} = await scanZaireStocks(
-            niftyList,
-            null,
-            (checkV2 || checkV3) ? '5m' : '15m',
-            checkV2,
-            checkV3,
-            false,
-            zaireV3Params
-        )
+
+        let result = null
+        if (USE_LAMBDA) {
+            result = await scanZaireStocksLambda(niftyList, checkV2, checkV3, (checkV2 || checkV3) ? '5m' : '15m', zaireV3Params, {
+                timeout: 10000
+            })
+        }
+        else {
+            let result = await scanZaireStocks(
+                niftyList,
+                null,
+                (checkV2 || checkV3) ? '5m' : '15m',
+                checkV2,
+                checkV3,
+                false,
+                zaireV3Params
+            )
+        }
+
+        let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks} = result
 
         let lightyearSelectedStocks = []
         let lightyearNoDataStocks = []

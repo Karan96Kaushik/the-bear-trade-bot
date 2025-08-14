@@ -1,5 +1,3 @@
-const { kiteSession } = require('./setup');
-const fs = require('fs').promises;
 const path = require('path');
 const axios = require('axios');
 const _ = require('lodash');
@@ -18,6 +16,13 @@ const getDateStringIND = (date) => {
 }
 
 let redis = null
+
+let kiteSession = null
+
+if (process.env.IS_LAMBDA != 'true') {
+    const { kiteSession: _kiteSession } = require('./setup');
+    kiteSession = _kiteSession
+}
 
 if (process.env.NODE_ENV != 'production') {
     console.log('Using Redis in development')

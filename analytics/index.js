@@ -1,5 +1,4 @@
-const { processYahooData, getDataFromYahoo, getDhanNIFTY50Data, getMcIndicators, getGrowwChartData, processGrowwData } = require("../kite/utils");
-const { getDateStringIND } = require("../kite/utils");
+const { processYahooData, getDataFromYahoo, getDateStringIND } = require("../kite/utils");
 
 const _ = require('lodash')
 
@@ -444,7 +443,7 @@ const DEFAULT_PARAMS = {
 
 async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS, options={}) {
 	const selectedStocks = [];
-	const BATCH_SIZE = 1; // Adjust batch size based on your needs
+	const BATCH_SIZE = 5; // Adjust batch size based on your needs
 	
 	// Split stockList into batches
 	const batches = [];
