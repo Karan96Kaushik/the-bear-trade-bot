@@ -17,8 +17,13 @@ const { scanLightyearStocks } = require('../analytics/lightyear');
 const { generateDailyReport } = require('../analytics/reports');
 const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet, checkTriggerHit } = require('./lightyear');
-const aws = require('aws-sdk');
+const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 // const OrderLog = require('../models/OrderLog');
+
+// Initialize Lambda client
+const lambdaClient = new Lambda({
+    region: process.env.AWS_REGION || 'us-east-1'
+});
 
 const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
@@ -134,7 +139,7 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
         }
 
         let resultsArray = await Promise.all(batches.map(async (batch) => {
-            let result = await aws.lambda.invoke({
+            const command = new InvokeCommand({
                 FunctionName: 'scanZaireStocks',
                 Payload: JSON.stringify({
                     stockList: batch,
@@ -146,8 +151,9 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
                         timeout: 10000
                     }
                 })
-            })
-            return JSON.parse(result.Payload)
+            });
+            let result = await lambdaClient.send(command);
+            return JSON.parse(new TextDecoder().decode(result.Payload));
         }))
 
         // Combine all keys of resultsArray
@@ -924,7 +930,7 @@ const scheduleMISJobs = () => {
     };
     const zaireJobV3 = schedule.scheduleJob('30 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
     const zaireJobV3_2 = schedule.scheduleJob('30 50,55 3 * * 1-5', zaireJobV3CB);
-    const zaireJobV3_3 = schedule.scheduleJob('30,35,40 10 * * 1-5', zaireJobV3CB);
+    const zaireJobV3_3 = schedule.scheduleJob('30,35,40,45 10 * * 1-5', zaireJobV3CB);
 
     // const zaireJobV3_3 = schedule.scheduleJob('30 0 9 * * 1-5', zaireJobV3CB);
     // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
