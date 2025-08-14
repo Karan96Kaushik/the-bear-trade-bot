@@ -157,6 +157,7 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
                 })
             });
             let result = await lambdaClient.send(command);
+            await sendMessageToChannel('🔔 Zaire Lambda - ', result);
             return JSON.parse(new TextDecoder().decode(result.Payload));
         }))
 
