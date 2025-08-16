@@ -37,7 +37,7 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
             batches.push(stockList.slice(i, i + 20));
         }
 
-        let resultsArray = await Promise.all(batches.map(async (batch) => {
+        let resultsArray = await Promise.allSettled(batches.map(async (batch) => {
             const command = new InvokeCommand({
                 FunctionName: 'scanZaireStocks',
                 Payload: JSON.stringify({
@@ -58,6 +58,8 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
             return result.data;
 
         }))
+
+        resultsArray = resultsArray.filter(r => r.status === 'fulfilled').map(r => r.value)
 
         // Combine all keys of resultsArray
         let result = {}
