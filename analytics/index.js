@@ -453,7 +453,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 	const no_data_stocks = [];
 	const too_high_stocks = [];
 	const too_many_incomplete_candles_stocks = [];
-	
+	const errored_stocks = [];
+
 	// Process each batch in parallel
 	for (const batch of batches) {
 		const batchPromises = batch.map(async (sym) => {
@@ -650,6 +651,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 			} catch (e) {
 				console.log(e?.response?.data || e.message || e, sym);
 				console.trace(e);
+				errored_stocks.push(sym);
 			}
 			return null;
 		});
@@ -663,7 +665,8 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 		selectedStocks,
 		no_data_stocks,
 		too_high_stocks,
-		too_many_incomplete_candles_stocks
+		too_many_incomplete_candles_stocks,
+		errored_stocks
 	};
 }
 

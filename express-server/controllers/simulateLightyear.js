@@ -3,9 +3,10 @@ const {
     getGrowwChartData, processGrowwData
 } = require("../../kite/utils")
 const { Simulator } = require("../../simulator/SimulatorV3")
-const { getDateRange, addMovingAverage } = require("../../analytics")
+const { scanLightyearD2Stocks, getDateRange, addMovingAverage } = require("../../analytics")
 const { scanLightyearStocks } = require("../../analytics/lightyear")
 const { readSheetData } = require("../../gsheets")
+const { checkTriggerHit } = require("../../kite/lightyear")
 
 const RISK_AMOUNT = 100;
 
@@ -135,7 +136,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             const candleDate = new Date(dayStartTime)
 
-            // console.log('candleDate -------->', candleDate)
+            console.log('candleDate -------->', candleDate, interval)
 
             let selectedStocks = await scanLightyearStocks(niftyList, candleDate, interval, useCached);
 
@@ -239,6 +240,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             }
                             currentDay++;
                             
+                            console.log('day start', getDateStringIND(startDate), '---------')
+
                             const today = new Date()
 
                             //Only check todays data after markets closed
@@ -253,96 +256,159 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                             yahooData = processGrowwData(yahooData);
 
-                            if (currentDay == 1) {
-                                if (stock.direction == 'BULLISH') {
-                                    triggerPrice = entryTriggerPrice;
-                                    stopLossPrice = last45mins.reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
+
+                            let dayStartTime = new Date(startDate)
+                            let dayEndTime = new Date(startDate)
+
+
+                            dayStartTime.setUTCHours(3, 50, 20, 0)
+
+                            // 12:00 PM IST
+                            // dayEndTime.setUTCHours(6, 30, 10, 0)
+                
+                            // 2:00 PM IST
+                            // dayEndTime.setUTCHours(8, 30, 10, 0)
+                
+                            // 2:35 PM IST
+                            dayEndTime.setUTCHours(9, 5, 10, 0)
+                
+                            let traded = []
+                
+                            let day1TriggerHitTime = null;
+                
+                            // Inner loop for each 5-minute interval within the day
+                            while (dayStartTime < dayEndTime) {
+                                console.log('5min start', getDateStringIND(dayStartTime), '---------')
+                                // console.log(dayStartTime, '---------')
+
+                                simulationJobs.get(jobId).currentDate = dayStartTime;
+                
+                                const interval = '5m'
+
+                                console.log('dayStartTime', getDateStringIND(dayStartTime))
+                                console.log(yahooData.map(d => getDateStringIND(d.time)))
+                
+                                const candleDate = new Date(dayStartTime)
+                                // candleDate.setUTCMinutes(candleDate.getUTCMinutes() - parseInt(interval))
+                                let {selectedStocks} = await scanLightyearD2Stocks(niftyList, candleDate, interval, false, selectionParams);
+                
+
+                                if (currentDay == 1) {
+                                    if (stock.direction == 'BULLISH') {
+                                        triggerPrice = entryTriggerPrice;
+                                        stopLossPrice = last45mins.reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
+
+                                        const firstTriggerTouchTime = yahooData.find(d => d.high >= entryTriggerPrice)?.time;
+
+                                        if (firstTriggerTouchTime) {
+                                            const secTouchBeginTime = firstTriggerTouchTime + 5*60*1000
+                                            const secondTriggerTouchTime = yahooData.find(d => d.high >= entryTriggerPrice && d.time > secTouchBeginTime)?.time;
+                                            if (secondTriggerTouchTime) {
+                                                day1TriggerHitTime = secondTriggerTouchTime;
+                                            }
+                                        }
+                                    }
+                                    else if (stock.direction == 'BEARISH') {
+                                        triggerPrice = entryTriggerPrice;
+                                        stopLossPrice = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
+
+                                        const firstTriggerTouchTime = yahooData.find(d => d.low <= entryTriggerPrice)?.time;
+
+                                        if (firstTriggerTouchTime) {
+                                            const secTouchBeginTime = firstTriggerTouchTime + 5*60*1000
+                                            const secondTriggerTouchTime = yahooData.find(d => d.low <= entryTriggerPrice && d.time > secTouchBeginTime)?.time;
+                                            if (secondTriggerTouchTime) {
+                                                day1TriggerHitTime = secondTriggerTouchTime;
+                                            }
+                                        }
+                                    }
+
+
                                 }
-                                else if (stock.direction == 'BEARISH') {
-                                    triggerPrice = entryTriggerPrice;
-                                    stopLossPrice = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
+                                else {
+                                    if (stock.direction == 'BULLISH') {
+                                        let last15minsHigh = last45mins.slice(-15).reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
+                                        let last45minsLow = last45mins.reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
+                                        triggerPrice = last15minsHigh;
+                                        stopLossPrice = last45minsLow;
+                                    }
+                                    else if (stock.direction == 'BEARISH') {
+                                        let last15minsLow = last45mins.slice(-15).reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
+                                        let last45minsHigh = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
+                                        triggerPrice = last15minsLow;
+                                        stopLossPrice = last45minsHigh;
+                                    }
                                 }
-                            }
-                            else {
-                                if (stock.direction == 'BULLISH') {
-                                    let last15minsHigh = last45mins.slice(-15).reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
-                                    let last45minsLow = last45mins.reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
-                                    triggerPrice = last15minsHigh;
-                                    stopLossPrice = last45minsLow;
-                                }
-                                else if (stock.direction == 'BEARISH') {
-                                    let last15minsLow = last45mins.slice(-15).reduce((min, curr) => Math.min(min, curr.low), 1000000) - triggerPadding;
-                                    let last45minsHigh = last45mins.reduce((max, curr) => Math.max(max, curr.high), 0) + triggerPadding;
-                                    triggerPrice = last15minsLow;
-                                    stopLossPrice = last45minsHigh;
-                                }
-                            }
 
-                            let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
-                            quantity = Math.abs(quantity);
-    
+                                let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
+                                quantity = Math.abs(quantity);
+        
 
-                            const sim = new Simulator({
-                                stockSymbol: stock.sym,
-                                triggerPrice,
-                                targetPrice,
-                                stopLossPrice,
-                                quantity,
-                                direction,
-                                yahooData,
-                                orderTime: new Date(startDate).setUTCHours(3, 45, 0, 0),
-                                // cancelInMins: simulation.cancelInMins,
-                                updateSL: simulation.updateSL,
-                                updateSLInterval: simulation.updateSLInterval, // Candle Bucket size
-                                updateSLFrequency: simulation.updateSLFrequency,
-                                // marketOrder: true // simulation.marketOrder
-                            });
-
-                            sim.run();
-
-                            if (sim.exitReason == 'target') {
-                                exit = 'target';
-                            }
-                            else {
-                                let dayLow = yahooData.reduce((min, curr) => Math.min(min, curr.low), 1000000)
-                                let dayHigh = yahooData.reduce((max, curr) => Math.max(max, curr.high), 0)
-                                
-                                if (dayLow < finalStopLossPrice && sim.direction == 'BULLISH') exit = 'finalstoploss';
-                                else if (dayHigh > finalStopLossPrice && sim.direction == 'BEARISH') exit = 'finalstoploss';
-                            }
-
-                            if (currentDay == 1 && !sim.startedAt) {
-                                exit = 'cancelled'
-                            }
-
-                            if (sim.exitReason == 'below-target') {
-                                exit = 'below-target'
-                            }
-
-                            // if (sim.startedAt) {
-                                perDayResults.push({
-                                    startedAt: sim.startedAt,
-                                    placedAt: sim.orderTime,
-                                    pnl: sim.pnl || 0,
-                                    quantity: sim.quantity,
-                                    direction: sim.direction,
-                                    sym: sim.stockSymbol,
-                                    data: yahooData,
-                                    tradeActions: sim.tradeActions,
-                                    exitTime: sim.exitTime || null,
-                                    exitReason: sim.exitReason,
-                                    triggerPrice: triggerPrice,
-                                    targetPrice: targetPrice,
-                                    stopLossPrice: stopLossPrice,
-                                    exit,
-                                    currentDay
+                                const sim = new Simulator({
+                                    stockSymbol: stock.sym,
+                                    triggerPrice,
+                                    targetPrice,
+                                    stopLossPrice,
+                                    quantity,
+                                    direction,
+                                    yahooData,
+                                    orderTime: new Date(startDate).setUTCHours(3, 45, 0, 0),
+                                    // cancelInMins: simulation.cancelInMins,
+                                    updateSL: simulation.updateSL,
+                                    updateSLInterval: simulation.updateSLInterval, // Candle Bucket size
+                                    updateSLFrequency: simulation.updateSLFrequency,
+                                    // marketOrder: true // simulation.marketOrder
                                 });
-                            // }
 
-                            // console.log(stock.sym, currentDay, exit)
+                                sim.run();
 
-                            if (!exit) {
-                                last45mins = yahooData.slice(-45);
+                                if (sim.exitReason == 'target') {
+                                    exit = 'target';
+                                }
+                                else {
+                                    let dayLow = yahooData.reduce((min, curr) => Math.min(min, curr.low), 1000000)
+                                    let dayHigh = yahooData.reduce((max, curr) => Math.max(max, curr.high), 0)
+                                    
+                                    if (dayLow < finalStopLossPrice && sim.direction == 'BULLISH') exit = 'finalstoploss';
+                                    else if (dayHigh > finalStopLossPrice && sim.direction == 'BEARISH') exit = 'finalstoploss';
+                                }
+
+                                if (currentDay == 1 && !sim.startedAt) {
+                                    exit = 'cancelled'
+                                }
+
+                                if (sim.exitReason == 'below-target') {
+                                    exit = 'below-target'
+                                }
+
+                                // if (sim.startedAt) {
+                                    perDayResults.push({
+                                        startedAt: sim.startedAt,
+                                        placedAt: sim.orderTime,
+                                        pnl: sim.pnl || 0,
+                                        quantity: sim.quantity,
+                                        direction: sim.direction,
+                                        sym: sim.stockSymbol,
+                                        data: yahooData,
+                                        tradeActions: sim.tradeActions,
+                                        exitTime: sim.exitTime || null,
+                                        exitReason: sim.exitReason,
+                                        triggerPrice: triggerPrice,
+                                        targetPrice: targetPrice,
+                                        stopLossPrice: stopLossPrice,
+                                        exit,
+                                        currentDay
+                                    });
+                                // }
+
+                                // console.log(stock.sym, currentDay, exit)
+
+                                if (!exit) {
+                                    last45mins = yahooData.slice(-45);
+                                }
+
+                                console.log(stock.sym, currentDay, exit)
+                                console.log('--------------5min End------------------')
                             }
 
                         }

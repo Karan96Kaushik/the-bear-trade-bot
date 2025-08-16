@@ -157,8 +157,10 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
                 })
             });
             let result = await lambdaClient.send(command);
-            await sendMessageToChannel('🔔 Zaire Lambda - ', result);
-            return JSON.parse(new TextDecoder().decode(result.Payload));
+            result = JSON.parse(new TextDecoder().decode(result.Payload));
+            result = JSON.parse(result.body);
+            console.log('🔔 Zaire Lambda - ', result.data);
+            return result.data;
         }))
 
         // Combine all keys of resultsArray
@@ -243,13 +245,13 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             )
         }
 
-        let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks} = result
+        let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks, errored_stocks} = result
 
         let lightyearSelectedStocks = []
         let lightyearNoDataStocks = []
         let lightyearTooHighStocks = []
         let lightyearTooManyIncompleteCandlesStocks = []
-
+        let lightyearErroredStocks = []
         try {
             let lightyearStockList = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
             lightyearStockList = processSheetWithHeaders(lightyearStockList)
@@ -266,7 +268,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             lightyearNoDataStocks = scannedStocks.no_data_stocks
             lightyearTooHighStocks = scannedStocks.too_high_stocks
             lightyearTooManyIncompleteCandlesStocks = scannedStocks.too_many_incomplete_candles_stocks
-
+            lightyearErroredStocks = scannedStocks.errored_stocks
         } catch (e) {
             console.error(e)
             await sendMessageToChannel('🚨 Error running Lightyear D2 MIS Jobs', e?.message)
@@ -279,6 +281,7 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
             await sendMessageToChannel('errors', `Zaire & Lightyear D2 - No data stocks ${getDateStringIND(new Date())}: ${[...no_data_stocks, ...lightyearNoDataStocks].join(', ')}`)
             await sendMessageToChannel('errors', `Zaire & Lightyear D2 - Too high stocks ${getDateStringIND(new Date())}: ${[...too_high_stocks, ...lightyearTooHighStocks].join(', ')}`)
             await sendMessageToChannel('errors', `Zaire & Lightyear D2 - Too many incomplete candles stocks ${getDateStringIND(new Date())}: ${[...too_many_incomplete_candles_stocks, ...lightyearTooManyIncompleteCandlesStocks].join(', ')}`)
+            await sendMessageToChannel('errors', `Zaire & Lightyear D2 - Errored stocks ${getDateStringIND(new Date())}: ${[...errored_stocks, ...lightyearErroredStocks].join(', ')}`)
         } catch (e) {
             console.error(e)
         }

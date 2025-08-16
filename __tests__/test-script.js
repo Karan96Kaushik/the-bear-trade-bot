@@ -15,9 +15,99 @@ const MAX_ORDER_VALUE = 200000
 const MIN_ORDER_VALUE = 0
 const RISK_AMOUNT = 100;
 
+
+const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
+// const OrderLog = require('../models/OrderLog');
+
+// Initialize Lambda client
+const lambdaClient = new Lambda({
+    region: process.env.AWS_REGION || 'ap-south-1',
+    credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+    }
+});
+
+async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, params, options) {
+    try {
+
+        // Call lambda function for each batch of 20 stocks
+        const batches = [];
+        for (let i = 0; i < stockList.length; i += 20) {
+            batches.push(stockList.slice(i, i + 20));
+        }
+
+        let resultsArray = await Promise.all(batches.map(async (batch) => {
+            const command = new InvokeCommand({
+                FunctionName: 'scanZaireStocks',
+                Payload: JSON.stringify({
+                    stockList: batch,
+                    checkV2,
+                    checkV3,
+                    interval,
+                    params,
+                    options: {
+                        timeout: 10000
+                    }
+                })
+            });
+            let result = await lambdaClient.send(command);
+            result = JSON.parse(new TextDecoder().decode(result.Payload));
+            result = JSON.parse(result.body);
+            console.log('🔔 Zaire Lambda - ', result.data);
+            return result.data;
+
+        }))
+
+        // Combine all keys of resultsArray
+        let result = {}
+        for (const key of Object.keys(resultsArray[0])) {
+            result[key] = resultsArray.map(r => r[key]).flat()
+        }
+
+        return result
+
+    } catch (error) {
+        console.trace(error)
+    }
+}
+
+const zaireV3Params = {
+    TOUCHING_SMA_TOLERANCE: 0.0003,
+    TOUCHING_SMA_15_TOLERANCE: 0.0003,
+    NARROW_RANGE_TOLERANCE: 0.0046,
+    WIDE_RANGE_TOLERANCE: 0.0015,
+    CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
+    BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
+    MA_WINDOW_5: 22,
+    MA_WINDOW: 44,
+    CHECK_75MIN: 1
+}
+
 const run = async () => {
 
     try {
+
+        let niftyList = await readSheetData('HIGHBETA!J2:J550')  // await getDhanNIFTY50Data();
+        niftyList = niftyList.map(stock => stock[0])
+
+        console.time('scanZaireStocksLambda')
+        let result = await scanZaireStocksLambda(niftyList, false, true, '5m', zaireV3Params, {
+            timeout: 10000
+        })
+        console.timeEnd('scanZaireStocksLambda')
+        console.log(result)
+
+        return
+
+
+        await kiteSession.authenticate();
+        const positions = await kiteSession.kc.getPositions();
+
+        console.table(positions.day)
+        console.table(positions.net)
+
+        return
 
         let lightyearSheetData = await readSheetData('MIS-LIGHTYEAR!A1:W1000')
         lightyearSheetData = processSheetWithHeaders(lightyearSheetData)
@@ -86,7 +176,6 @@ const run = async () => {
 
         // return
 
-        let niftyList
 
         niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
         niftyList = niftyList.map(stock => stock[0])
@@ -103,18 +192,6 @@ const run = async () => {
 
         // let date = new Date('2025-01-28T03:51:10Z')
 
-
-
-        const zaireV3Params = {
-            TOUCHING_SMA_TOLERANCE: 0.0003,
-            TOUCHING_SMA_15_TOLERANCE: 0.0003,
-            NARROW_RANGE_TOLERANCE: 0.0046,
-            WIDE_RANGE_TOLERANCE: 0.00055,
-            CANDLE_CONDITIONS_SLOPE_TOLERANCE: 1,
-            BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
-            MA_WINDOW: 22,
-            CHECK_75MIN: 1
-        }
 
         niftyList = ['GODREJPROP', 'LT']
 
