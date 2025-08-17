@@ -211,7 +211,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
                                 targetPrice = stock.low - (candleLength * targetMultiplier) - triggerPadding;
                             }
-                            
+
                             triggerPrice = Math.round(triggerPrice * 10) / 10;
                             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
                             targetPrice = Math.round(targetPrice * 10) / 10;
@@ -219,6 +219,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             let quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
                             quantity = Math.abs(quantity);
 
+                            // console.log(stock.sym, candleLength)
+                            // console.log(stopLossMultiplier, targetMultiplier)
+                            // console.log((triggerPrice-stopLossPrice) * quantity, (targetPrice-triggerPrice) * quantity)
+                            
                             // console.log(simulation)
 
                             const sim = new Simulator({
