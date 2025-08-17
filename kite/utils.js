@@ -29,6 +29,9 @@ if (process.env.NODE_ENV != 'production') {
     const Redis = require('ioredis');
     redis = new Redis()
 }
+else {
+    console.log('Using RAM for caching')
+}
 
 const memoizeRedis = (fn, ttl = 24*60*60) => { // ttl in seconds for Redis
     return async (...args) => {
@@ -52,7 +55,7 @@ const memoizeRedis = (fn, ttl = 24*60*60) => { // ttl in seconds for Redis
             }
             // console.log(result);
             await redis.set(key, JSON.stringify(result));
-            console.log('Cache miss');
+            // console.log('Cache miss');
             
             return result;
         } catch (error) {
@@ -70,14 +73,14 @@ const memoizeRAM = (fn, ttl = 5*60*60*1000) => { // 5 hours in milliseconds
       const key = JSON.stringify(args);
       const cached = cache.get(key);
       if (cached && cached.timestamp > Date.now() - ttl) {
-        console.log('Cache hit');
+        // console.log('Cache hit');
         return  _.merge({}, cached.value) ;
       }
 
     const result = await fn(...args);
 
     cache.set(key, { value: result, timestamp: Date.now() });
-    console.log('Cache miss');
+    // console.log('Cache miss');
     return _.merge({}, result);
   };
 };

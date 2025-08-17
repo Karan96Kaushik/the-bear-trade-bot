@@ -438,7 +438,8 @@ const DEFAULT_PARAMS = {
     BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
     MA_WINDOW: 44,
 	MA_WINDOW_5: 22,
-    CHECK_75MIN: 1
+    CHECK_75MIN: 1,
+	CHECK_NIFTY_50: 1
 }
 
 async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=false, checkV3=false, useCached=false, params=DEFAULT_PARAMS, options={}) {
@@ -455,6 +456,15 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 	const too_many_incomplete_candles_stocks = [];
 	const errored_stocks = [];
 
+	const { startDate, endDate } = getDateRange(endDateNew);
+
+	let dfNifty50 = await getDataFromYahoo('^NSEI', 5, '5m', startDate, endDate, useCached);
+	dfNifty50 = processYahooData(dfNifty50, '5m', useCached);
+
+	if (!dfNifty50 || dfNifty50.length === 0 && Number(params.CHECK_NIFTY_50)) throw new Error('No Nifty 50 data');
+	dfNifty50 = addMovingAverage(dfNifty50, 'close', params.MA_WINDOW_5 || 22, 'sma44');
+	dfNifty50 = dfNifty50.filter(r => r.close);
+	
 	// Process each batch in parallel
 	for (const batch of batches) {
 		const batchPromises = batch.map(async (sym) => {
@@ -516,14 +526,7 @@ async function scanZaireStocks(stockList, endDateNew, interval='15m', checkV2=fa
 					if (!df5min || df5min.length === 0) return null;
 					df5min = addMovingAverage(df5min, 'close', params.MA_WINDOW_5 || 22, 'sma44');
 					df5min = df5min.filter(r => r.close);
-					
-					let dfNifty50 = await getDataFromYahoo('^NSEI', 5, '5m', startDate, endDate, useCached);
-					dfNifty50 = processYahooData(dfNifty50, '5m', useCached);
 
-					if (!dfNifty50 || dfNifty50.length === 0) return null;
-					dfNifty50 = addMovingAverage(dfNifty50, 'close', params.MA_WINDOW_5 || 22, 'sma44');
-					dfNifty50 = dfNifty50.filter(r => r.close);
-					
 					// 75 Mins candles needs more data
 					let earlierStart = new Date(startDate)
 					earlierStart.setDate(earlierStart.getDate() - 5)
@@ -1167,8 +1170,8 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, dfNifty50, p
 	};
 	
 	// Evaluate conditions for each timeframe
-	const resultNifty50 = processConditionsNumerical(dfNifty50, 5);
 	const result5min = processConditionsNumerical(df5min, 5);
+	const resultNifty50 = processConditionsNumerical(dfNifty50, 5);
 	const result15min = processConditionsNumerical(df15min, 15);
 	let result75min = null;
 	if (df75min) {
@@ -1206,7 +1209,7 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, dfNifty50, p
 	
 	const baseConditionsMet = narrowRange && wideRange && touchingSma && touchingSma15;
 	
-	const directionsMatch = resultNifty50.direction === result5min.direction && 
+	const directionsMatch = (Number(params.CHECK_NIFTY_50) ? resultNifty50.direction === result5min.direction : true) && 
 						   result5min.direction === result15min.direction && 
 						   (!CHECK_75MIN || !result75min || result15min.direction === result75min.direction);
 	
@@ -1217,7 +1220,7 @@ function  checkV3ConditionsNumerical(df5min, df15min, df75min=null, dfNifty50, p
 							bearishConditionsMet && baseConditionsMet && result5min.direction === 'BEARISH';
 	const finalBullish = directionsMatch && 
 							bullishConditionsMet && baseConditionsMet && result5min.direction === 'BULLISH';
-	
+
 	return {
 		// Slope calculations
 		slopes: {

@@ -90,8 +90,8 @@ const run = async () => {
 
     try {
 
-        let niftyList = await readSheetData('HIGHBETA!J2:J550')  // await getDhanNIFTY50Data();
-        niftyList = niftyList.map(stock => stock[0])
+        let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
+        niftyList = niftyList.map(stock => stock[0]).filter(d => d !== 'NOT FOUND' && d)
 
         console.time('scanZaireStocksLambda')
         let result = await scanZaireStocksLambda(niftyList, false, true, '5m', zaireV3Params, {

@@ -43,7 +43,9 @@ const zaireV3Params = {
     BASE_CONDITIONS_SLOPE_TOLERANCE: 1,
     MA_WINDOW_5: 22,
     MA_WINDOW: 44,
-    CHECK_75MIN: 1
+    CHECK_75MIN: 1,
+    // Check Nifty 50 direction
+    CHECK_NIFTY_50: 1
 }
 
 const USE_LAMBDA = true
