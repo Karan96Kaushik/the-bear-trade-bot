@@ -752,6 +752,7 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 	const no_data_stocks = [];
 	const too_high_stocks = [];
 	const too_many_incomplete_candles_stocks = [];
+	const errored_stocks = [];
 	
 	// Process each batch in parallel
 	for (const batch of batches) {
@@ -898,6 +899,7 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 			} catch (e) {
 				console.log(e?.response?.data || e.message || e, sym);
 				console.trace(e);
+				errored_stocks.push(sym);
 			}
 			return null;
 		});
@@ -911,7 +913,8 @@ async function scanLightyearD2Stocks(stockList, endDateNew, interval='5m', useCa
 		selectedStocks,
 		no_data_stocks,
 		too_high_stocks,
-		too_many_incomplete_candles_stocks
+		too_many_incomplete_candles_stocks,
+		errored_stocks
 	};
 }
 
