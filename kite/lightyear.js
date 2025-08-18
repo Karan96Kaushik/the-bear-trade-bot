@@ -271,8 +271,8 @@ async function checkTriggerHit(lightyearSheetData, endDateNew) {
             
         }
         catch (error) {
-            await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);
-            console.error("🚨 Error running Lightyear Trigger Hit Check: ", stock[0], error?.message);
+            await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock.symbol, error?.message);
+            console.error("🚨 Error running Lightyear Trigger Hit Check: ", stock.symbol, error?.message);
             // throw error;
         }
 

@@ -358,7 +358,7 @@ async function createZaireOrders(stock, tag='zaire') {
         
         const candleLength = stock.high - stock.low
 
-        const [risk, reward] = RATIO.split(':').map(Number)
+        const [reward, risk] = RATIO.split(':').map(Number)
 
         if (stock.direction === 'BULLISH') {
             // Trigger price is 0.05% above high
