@@ -135,13 +135,14 @@ async function updateLightyearOrders() {
     }
 }
 
+const BATCH_SIZE = 10
 async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, params, options) {
     try {
 
         // Call lambda function for each batch of 20 stocks
         const batches = [];
-        for (let i = 0; i < stockList.length; i += 20) {
-            batches.push(stockList.slice(i, i + 20));
+        for (let i = 0; i < stockList.length; i += BATCH_SIZE) {
+            batches.push(stockList.slice(i, i + BATCH_SIZE));
         }
 
         let resultsArray = await Promise.allSettled(batches.map(async (batch) => {

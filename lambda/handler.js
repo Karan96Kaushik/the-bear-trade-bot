@@ -6,7 +6,7 @@ exports.handler = async (event, context) => {
         // Parse input parameters from the event
         const {
             stockList = null,
-            endDateNew = new Date().toISOString().split('T')[0], // Default to today
+            endDateNew = null, // Default to today
             interval = '15m',
             checkV2 = false,
             checkV3 = true,
