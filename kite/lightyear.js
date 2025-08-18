@@ -165,7 +165,7 @@ async function setupLightyearDayOneOrders(stocks) {
  */
 async function checkTriggerHit(lightyearSheetData, endDateNew) {
 
-    const isSimulation = !endDateNew;
+    const isSimulation = endDateNew ? true : false;
 
     let updates = []
     let triggerHits = []
