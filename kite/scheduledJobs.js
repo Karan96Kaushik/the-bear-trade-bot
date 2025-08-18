@@ -162,7 +162,7 @@ async function scanZaireStocksLambda(stockList, checkV2, checkV3, interval, para
             let result = await lambdaClient.send(command);
             result = JSON.parse(new TextDecoder().decode(result.Payload));
             result = JSON.parse(result.body);
-            console.log('🔔 Zaire Lambda - ', result.data);
+            // console.log('🔔 Zaire Lambda - ', result.data);
             return result.data;
         }))
 

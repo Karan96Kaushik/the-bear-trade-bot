@@ -275,8 +275,8 @@ async function checkTriggerHit(lightyearSheetData, endDateNew) {
 
     }
 
-    console.log('trigger hits', triggerHits.length)
-    if (updates.length > 0 && !isSimulation) {
+    console.log('trigger hits', triggerHits.length, isSimulation, updates.length)
+    if (triggerHits.length > 0 && !isSimulation) {
         console.log('trigger hits updates', updates)
         await bulkUpdateCells(updates)
     }
