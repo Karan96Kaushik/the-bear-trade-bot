@@ -180,6 +180,9 @@ async function checkTriggerHit(lightyearSheetData, endDateNew) {
             if (stock.status && !isSimulation) {
                 continue
             }
+            if (!stock.symbol) {
+                continue
+            }
 
             let col = Object.keys(stock).findIndex(key => key === 'status')
 
@@ -270,7 +273,7 @@ async function checkTriggerHit(lightyearSheetData, endDateNew) {
         catch (error) {
             await sendMessageToChannel('🚨 Error running Lightyear Trigger Hit Check', stock[0], error?.message);
             console.error("🚨 Error running Lightyear Trigger Hit Check: ", stock[0], error?.message);
-            throw error;
+            // throw error;
         }
 
     }
