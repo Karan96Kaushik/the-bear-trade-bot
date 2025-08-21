@@ -45,7 +45,7 @@ const zaireV3Params = {
     MA_WINDOW: 44,
     CHECK_75MIN: 1,
     // Check Nifty 50 direction
-    CHECK_NIFTY_50: 1
+    CHECK_NIFTY_50: 0
 }
 
 const USE_LAMBDA = true
