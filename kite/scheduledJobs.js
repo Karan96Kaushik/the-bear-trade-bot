@@ -308,8 +308,18 @@ async function setupZaireOrders(checkV2 = false, checkV3 = false) {
         );
         const completed_zaire_orders_symbols = completed_zaire_orders.map(o => o.tradingsymbol);
 
-        sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, selectedStocks);
-        sendMessageToChannel(`🔔 Lightyear D2 MIS Stocks: `, lightyearSelectedStocks);
+        let loggingZaireOrders = selectedStocks.map(s => {
+            delete s.data
+            return s
+        })
+
+        let loggingLightyearOrders = lightyearSelectedStocks.map(s => {
+            delete s.data
+            return s
+        })  
+
+        sendMessageToChannel(`🔔 Zaire ${checkV2 ? 'V2' : ''} MIS Stocks: `, loggingZaireOrders);
+        sendMessageToChannel(`🔔 Lightyear D2 MIS Stocks: `, loggingLightyearOrders);
 
         // if (checkV3) {
         //     selectedStocks = selectedStocks.filter(s => s.direction !== 'BULLISH')
