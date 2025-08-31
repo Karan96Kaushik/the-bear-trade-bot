@@ -1046,5 +1046,6 @@ module.exports = {
     setupSpecialOrdersFromSheet,
     setupZaireOrders,
     closeZaireOppositePositions,
-    setupMissingOrders
+    setupMissingOrders,
+    zaireV3Params
 };
