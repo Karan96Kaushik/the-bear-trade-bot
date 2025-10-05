@@ -330,6 +330,7 @@ async function createZaireOrders(stock, tag='zaire') {
             stockSymbol: stock.sym,
             reviseSL: '',
             ignore: true,    // '' = false
+            status: 'new',    // '' = false
             sma44_0: stock.sma44_0,
             sma44_1: stock.sma44_1,
             sma44_2: stock.sma44_2,

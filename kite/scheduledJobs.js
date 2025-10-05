@@ -5,6 +5,8 @@ const {
     numberToExcelColumn, bulkUpdateCells, appendRowsToSheet, processSheetWithHeaders
 } = require('../gsheets');
 const { kiteSession } = require('./setup');
+const { scanBenoitStocks } = require('../analytics/benoit');
+const { createBenoitOrdersEntries, cancelBenoitOrders } = require('./benoit');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
 const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
@@ -201,6 +203,99 @@ async function checkLightyearTriggerHit() {
     }
 }
 
+async function setupBenoitOrders() {
+    try {
+        await sendMessageToChannel(`⌛️ Executing Benoit MIS Jobs`);
+
+        let highBetaData, niftyList;
+
+        highBetaData = await readSheetData('HIGHBETA!D2:D550')
+        niftyList = highBetaData
+                        .map(stock => stock[0])
+                        .filter(d => d !== 'NOT FOUND' && d)
+        highBetaData = highBetaData
+                        .map(d => ({sym: d[0]?.trim()?.toUpperCase(), dir: d[2]?.trim()?.toLowerCase()}))
+                        .filter(d => d.sym)
+ 
+
+        let sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
+        sheetData = processMISSheetData(sheetData)
+
+        await kiteSession.authenticate();
+
+        let result = null
+
+        result = await scanBenoitStocks(
+            niftyList,
+            null,
+            '5m',
+            false,
+        )
+
+        let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks, errored_stocks} = result
+
+
+        await sendMessageToChannel('🔔 Cancelling Benoit Orders')
+        await cancelBenoitOrders()
+
+        const orders = await kiteSession.kc.getOrders();
+        const positions = await kiteSession.kc.getPositions();
+
+        const completed_benoit_orders = orders.filter(order => 
+            order.tag?.includes('benoit') &&
+            !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
+        );
+        const completed_benoit_orders_symbols = completed_benoit_orders.map(o => o.tradingsymbol);
+
+        let loggingBenoitOrders = selectedStocks.map(s => {
+            delete s.data
+            return s
+        })
+
+        sendMessageToChannel(`🔔 Benoit MIS Stocks: `, loggingBenoitOrders);
+
+        if (
+            positions.net.filter(p => p.quantity !== 0).filter(p => !completed_benoit_orders_symbols.includes(p.tradingsymbol)).length >= 5
+            // || 
+            // orders.find(o => o.tradingsymbol === stock.sym)
+        ) {
+            await sendMessageToChannel('🔔 Zaire Active positions are more than 5')
+            return
+        }
+
+        const sheetEntries = []
+
+        const allStocks = [...selectedStocks, ...lightyearSelectedStocks]
+
+        for (const stock of allStocks) {
+            try {
+                // Skip if stock is already in position or open orders
+                if (
+                    positions.net.find(p => p.tradingsymbol === stock.sym)
+                    // (positions.net.find(p => p.tradingsymbol === stock.sym)?.quantity || 0) != 0
+                ) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
+                    continue
+                }
+                
+                if (sheetData.find(s => s.stockSymbol === stock.sym)) {
+                    await sendMessageToChannel('🔔 Ignoring coz already in sheet', stock.sym)
+                    continue
+                }
+
+                let sheetEntry = await createBenoitOrdersEntries(stock);
+                // sheetEntries.push(sheetEntry)
+                // await appendRowsToMISD([sheetEntry])
+            } catch (error) {
+                console.error(error);
+                await sendMessageToChannel(`🚨 Error running Benoit MIS Jobs`, stock, error?.message);
+            }
+        }
+
+    } catch (error) {
+        await sendMessageToChannel(`🚨 Error running Benoit MIS Jobs`, error?.message);
+    }
+}
 
 async function setupZaireOrders(checkV2 = false, checkV3 = false) {
     try {
@@ -726,6 +821,220 @@ async function calculateExtremePrice(sym, type, timeFrame = 15) {
     return type === 'highest' ? Math.max(...lastData) : Math.min(...lastData);
 }
 
+/**
+ * Checks if a price condition is met in both the current candle and at least one more candle
+ * within the lookback period (default 3 hours)
+ * 
+ * @param {number} currentIndex - Index of current candle in data array
+ * @param {number} priceLevel - Price level to check against
+ * @param {string} conditionType - Type of condition: 'trigger_bullish', 'trigger_bearish', 'stoploss_bullish', 'stoploss_bearish'
+ * @param {Array} data - Array of candle data
+ * @param {number} startTime - Earliest time to look back from (orderTime for triggers, trigger execution time for exits)
+ * @param {number} lookbackHours - Number of hours to look back for confirmation (default 3)
+ * @returns {object} - {isConfirmed: boolean, confirmationCount: number, confirmationTimes: array}
+ */
+function checkDoubleConfirmation(currentIndex, priceLevel, conditionType, data, startTime, lookbackHours = 3) {
+    const currentCandle = data[currentIndex];
+    const lookbackPeriodMs = lookbackHours * 60 * 60 * 1000;
+    const lookbackStartTime = Math.max(
+        currentCandle.time - lookbackPeriodMs,
+        startTime  // Don't look back before the order was placed or position opened
+    );
+    
+    // Count how many candles in the lookback period meet the condition
+    let confirmationCount = 0;
+    const confirmationTimes = [];
+
+    // Start from current index and go backwards
+    for (let i = currentIndex; i >= 0; i--) {
+        const candle = data[i];
+        
+        // Stop if we've gone beyond the lookback period
+        if (candle.time < lookbackStartTime) {
+            break;
+        }
+
+        let conditionMet = false;
+
+        switch (conditionType) {
+            case 'trigger_bullish':
+                // For bullish trigger, check if high reached or exceeded trigger price
+                conditionMet = candle.high >= priceLevel;
+                break;
+                
+            case 'trigger_bearish':
+                // For bearish trigger, check if low reached or went below trigger price
+                conditionMet = candle.low <= priceLevel;
+                break;
+                
+            case 'stoploss_bullish':
+                // For bullish stop loss, check if low reached or went below stop loss
+                conditionMet = candle.low <= priceLevel;
+                break;
+                
+            case 'stoploss_bearish':
+                // For bearish stop loss, check if high reached or exceeded stop loss
+                conditionMet = candle.high >= priceLevel;
+                break;
+
+            default:
+                console.warn(`Unknown condition type: ${conditionType}`);
+                return { isConfirmed: false, confirmationCount: 0, confirmationTimes: [] };
+        }
+
+        if (conditionMet) {
+            confirmationCount++;
+            confirmationTimes.push(candle.time);
+        }
+    }
+
+    const isConfirmed = confirmationCount >= 2;
+    return { isConfirmed, confirmationCount, confirmationTimes };
+}
+
+/**
+ * Monitors Zaire scans stored in MIS Alpha sheet with source "zaire" and status "new"
+ * Checks for double confirmation of trigger or stop loss hits
+ */
+async function checkBenoitDoubleConfirmation() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Zaire Double Confirmation Check');
+
+        await kiteSession.authenticate();
+
+        // Read MIS-ALPHA sheet data
+        let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
+        stockData = processMISSheetData(stockData);
+
+        tag = 'benoit'
+
+        // Filter for Zaire entries with status "new"
+        const benoitStocks = stockData.filter(s => 
+            s.source?.toLowerCase() === 'benoit' && 
+            s.status?.toLowerCase() === 'new' &&
+            s.stockSymbol && 
+            s.stockSymbol[0] !== '-' && 
+            s.stockSymbol[0] !== '*'
+        );
+
+        if (benoitStocks.length === 0) {
+            await sendMessageToChannel('ℹ️ No Benoit stocks with status "new" found');
+            return;
+        }
+
+        await sendMessageToChannel(`🔍 Checking ${benoitStocks.length} Benoit stocks for double confirmation`);
+
+        const updates = [];
+
+        for (const stock of benoitStocks) {
+            try {
+                const sym = stock.stockSymbol;
+                const direction = stock.type; // 'BULLISH' or 'BEARISH'
+                
+                // Fetch recent 5-minute data (last 1 day)
+                let data = await getDataFromYahoo(sym, 1, '5m', null, null, true);
+                data = processYahooData(data, '5m', false, false);
+
+                if (!data || data.length === 0) {
+                    await sendMessageToChannel(`⚠️ No data available for ${sym}`);
+                    continue;
+                }
+
+                // Get current LTP
+                const nseSymbol = `NSE:${sym}`;
+                let ltp;
+                try {
+                    const ltpData = await kiteSession.kc.getLTP([nseSymbol]);
+                    ltp = ltpData[nseSymbol]?.last_price;
+                } catch (error) {
+                    await sendMessageToChannel(`⚠️ Could not fetch LTP for ${sym}`);
+                    continue;
+                }
+
+                // Assume order was placed at the beginning of the day or 3 hours ago
+                let startTime = Date.now() - (3 * 60 * 60 * 1000);
+
+                const currentIndex = data.length - 1;
+
+                // Check trigger condition with double confirmation
+                const triggerConditionType = direction === 'BULLISH' ? 'trigger_bullish' : 'trigger_bearish';
+                const triggerConfirmation = checkDoubleConfirmation(
+                    currentIndex,
+                    stock.triggerPrice,
+                    triggerConditionType,
+                    data,
+                    startTime,
+                    3
+                );
+
+                // Check stop loss condition with double confirmation (if applicable)
+                let stopLossConfirmation = { isConfirmed: false, confirmationCount: 0, confirmationTimes: [] };
+                if (stock.stopLossPrice) {
+                    const stopLossConditionType = direction === 'BULLISH' ? 'stoploss_bullish' : 'stoploss_bearish';
+                    stopLossConfirmation = checkDoubleConfirmation(
+                        currentIndex,
+                        stock.stopLossPrice,
+                        stopLossConditionType,
+                        data,
+                        startTime,
+                        3
+                    );
+                }
+
+                // Send notifications based on confirmation results
+                if (triggerConfirmation.isConfirmed) {
+                    await sendMessageToChannel(
+                        `✅ ${stock.stockSymbol} - Trigger CONFIRMED (${triggerConfirmation.confirmationCount} hits)`,
+                        `Direction: ${direction}, Trigger: ${stock.triggerPrice}, LTP: ${ltp}`,
+                        `Confirmation times: ${triggerConfirmation.confirmationTimes.map(t => getDateStringIND(new Date(t))).join(', ')}`
+                    );
+
+                    let targetGain = stock.targetPrice - stock.triggerPrice
+        
+                    // Place SL-M BUY order at price higher than trigger price
+                    if (ltp > stock.triggerPrice) {
+                        if ((stock.targetPrice - ltp) / targetGain > 0.8)
+                            orderResponse = await placeOrder('BUY', 'MARKET', null, stock.quantity, stock.stockSymbol, `trigger-m-${tag}`)
+                        else
+                            return sendMessageToChannel(`🔔 ${tag.toUpperCase()}: BUY order not placed: LTP too close to target price`, stock.stockSymbol, stock.quantity, stock.targetPrice, ltp)
+                    }
+        
+                } 
+                // else if (triggerConfirmation.confirmationCount > 0) {
+                //     await sendMessageToChannel(
+                //         `⚠️ ${sym} - Trigger hit but NOT confirmed (${triggerConfirmation.confirmationCount}/2 hits)`,
+                //         `Direction: ${direction}, Trigger: ${stock.triggerPrice}, LTP: ${ltp}`
+                //     );
+                // }
+
+                if (stopLossConfirmation.isConfirmed) {
+                    await sendMessageToChannel(
+                        `🛑 ${sym} - Stop Loss CONFIRMED (${stopLossConfirmation.confirmationCount} hits)`,
+                        `Direction: ${direction}, Stop Loss: ${stock.stopLossPrice}, LTP: ${ltp}`,
+                        `Confirmation times: ${stopLossConfirmation.confirmationTimes.map(t => getDateStringIND(new Date(t))).join(', ')}`
+                    );
+                } 
+                // else if (stopLossConfirmation.confirmationCount > 0) {
+                //     await sendMessageToChannel(
+                //         `⚠️ ${sym} - Stop Loss hit but NOT confirmed (${stopLossConfirmation.confirmationCount}/2 hits)`,
+                //         `Direction: ${direction}, Stop Loss: ${stock.stopLossPrice}, LTP: ${ltp}`
+                //     );
+                // }
+
+            } catch (error) {
+                console.error(`Error checking double confirmation for ${stock.stockSymbol}:`, error);
+                await sendMessageToChannel(`🚨 Error checking ${stock.stockSymbol}:`, error?.message);
+            }
+        }
+
+        await sendMessageToChannel('✅ Completed Benoit Double Confirmation Check');
+
+    } catch (error) {
+        await sendMessageToChannel('🚨 Error running Benoit Double Confirmation Check', error?.message);
+        console.error("🚨 Error running Benoit Double Confirmation Check: ", error?.message);
+    }
+}
+
 async function updateStopLossOrders() {
     try {
         await sendMessageToChannel('⌛️ Executing Update Stop Loss Orders Job');
@@ -946,19 +1255,31 @@ const scheduleMISJobs = () => {
 
     sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
 
-    const zaireJobV3CB = () => {
-        sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2))); //, zaireJobV3_3)));
-        // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
-        setupZaireOrders(false, true);
-    };
-    const zaireJobV3 = schedule.scheduleJob('10 50,55 3 * * 1-5', zaireJobV3CB);
-    const zaireJobV3_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
-    // const zaireJobV3_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45,50,55 12,13 * * 1-5', zaireJobV3CB);
 
-    // const zaireJobV3_3 = schedule.scheduleJob('30 0 9 * * 1-5', zaireJobV3CB);
-    // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
-    sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2))); //, zaireJobV3_3)));
-    // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+    if (false) {
+        const zaireJobV3CB = () => {
+            sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2))); //, zaireJobV3_3)));
+            // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
+            setupZaireOrders(false, true);
+        };
+        const zaireJobV3 = schedule.scheduleJob('10 50,55 3 * * 1-5', zaireJobV3CB);
+        const zaireJobV3_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', zaireJobV3CB);
+        // const zaireJobV3_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45,50,55 12,13 * * 1-5', zaireJobV3CB);
+
+        // const zaireJobV3_3 = schedule.scheduleJob('30 0 9 * * 1-5', zaireJobV3CB);
+        // const zaireJobV3 = schedule.scheduleJob('30 1,16,31,46 4,5,6,7,8 * * 1-5', zaireJobV3CB);
+        sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2))); //, zaireJobV3_3)));
+        // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+    }
+
+    const benoitJobCB = () => {
+        sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
+        setupBenoitOrders();
+    };
+    const benoitJob = schedule.scheduleJob('10 50,55 3 * * 1-5', benoitJobCB);
+    const benoitJob_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
+    sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
+
 
 
     const lightyearTriggerHitCB = () => {
@@ -1034,6 +1355,14 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
     });
     sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
+
+    const benoitDoubleConfirmationCB = () => {
+        sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
+        checkBenoitDoubleConfirmation();
+    };
+    const benoitDoubleConfirmation = schedule.scheduleJob('25 */10 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
+    const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 0,10,20 9 * * 1-5', benoitDoubleConfirmationCB);
+    sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
 }
 
 module.exports = {
@@ -1047,5 +1376,6 @@ module.exports = {
     setupZaireOrders,
     closeZaireOppositePositions,
     setupMissingOrders,
+    checkBenoitDoubleConfirmation,
     zaireV3Params
 };

@@ -3,6 +3,7 @@ const router = express.Router();
 const { startZaireSimulation, checkZaireSimulationStatus } = require('../controllers/simulateZaire');
 const { startLightyearSimulation, checkLightyearSimulationStatus } = require('../controllers/simulateLightyear');
 const { startBaileySimulation, checkBaileySimulationStatus } = require('../controllers/simulateBailey');
+const { startBenoitSimulation, checkBenoitSimulationStatus } = require('../controllers/simulateBenoit');
 
 router.post('/simulate/v2/start', async (req, res) => {
     try {
@@ -12,6 +13,8 @@ router.post('/simulate/v2/start', async (req, res) => {
             startBaileySimulation(req, res);
         } else if (req.body.simulation.type === 'lightyear') {
             startLightyearSimulation(req, res);
+        } else if (req.body.simulation.type === 'benoit') {
+            startBenoitSimulation(req, res);
         } else {
             throw new Error('Invalid simulation type');
         }
@@ -30,6 +33,8 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
             checkLightyearSimulationStatus(req, res);
         } else if (req.query.type === 'bailey') {
             checkBaileySimulationStatus(req, res);
+        } else if (req.query.type === 'benoit') {
+            checkBenoitSimulationStatus(req, res);
         } else {
             throw new Error('Invalid simulation type');
         }

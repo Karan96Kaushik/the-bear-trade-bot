@@ -1,18 +1,17 @@
 const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../../kite/utils")
 const { Simulator } = require("../../simulator/SimulatorV3")
-const { scanZaireStocks, getDateRange, addMovingAverage } = require("../../analytics")
+const { scanBenoitStocks } = require("../../analytics/benoit")
+const { getDateRange, addMovingAverage } = require("../../analytics")
 const { readSheetData } = require("../../gsheets")
 const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
-const RISK_AMOUNT = 200;
+const RISK_AMOUNT = 100;
 
 // Store ongoing simulations
 const simulationJobs = new Map();
 
-const LIST_CANCELLED = false
-
 // New endpoint to start simulation
-const startZaireSimulation = async (req, res) => {
+const startBenoitSimulation = async (req, res) => {
     try {
         const { startdate, enddate, symbol, simulation, selectionParams } = req.body;
         const jobId = Date.now().toString(); // Simple unique ID
@@ -54,7 +53,7 @@ const startZaireSimulation = async (req, res) => {
 }
 
 // New endpoint to check simulation status
-const checkZaireSimulationStatus = (req, res) => {
+const checkBenoitSimulationStatus = (req, res) => {
     const { jobId } = req.params;
     const job = simulationJobs.get(jobId);
     
@@ -72,7 +71,7 @@ const checkZaireSimulationStatus = (req, res) => {
     }
 }
 
-const simulate = async (startdate, enddate, symbol, simulation, jobId, selectionParams) => { // Add jobId parameter
+const simulate = async (startdate, enddate, symbol, simulation, jobId, selectionParams) => {
     try {
         let niftyList = []
         let allTraded = []
@@ -87,6 +86,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             niftyList = symbol.split(',').map(s => s.trim())
         }
 
+        niftyList = niftyList.filter(stock => stock?.length > 0)
+
         console.log(niftyList)
         console.log(startdate, enddate)
 
@@ -100,8 +101,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         if (currentDate.toISOString() == finalEndDate.toISOString()) {
             singleDate = true;
         }
-
-        singleDate = LIST_CANCELLED
 
         // Iterate through each day
         while (currentDate <= finalEndDate) {
@@ -131,12 +130,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             dayStartTime.setUTCHours(3, 50, 20, 0)
 
-            // 12:00 PM IST
-            // dayEndTime.setUTCHours(6, 30, 10, 0)
-
-            // 2:00 PM IST
-            // dayEndTime.setUTCHours(8, 30, 10, 0)
-
             // 2:35 PM IST
             dayEndTime.setUTCHours(9, 5, 10, 0)
 
@@ -146,15 +139,13 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             // Inner loop for each 5-minute interval within the day
             while (dayStartTime < dayEndTime) {
                 console.log(getDateStringIND(dayStartTime), '---------')
-                // console.log(dayStartTime, '---------')
 
                 simulationJobs.get(jobId).currentDate = dayStartTime;
 
                 const interval = '5m'
 
                 const candleDate = new Date(dayStartTime)
-                // candleDate.setUTCMinutes(candleDate.getUTCMinutes() - parseInt(interval))
-                let {selectedStocks} = await scanZaireStocks(niftyList, candleDate, interval, false, true, true, selectionParams);
+                const {selectedStocks} = await scanBenoitStocks(niftyList, candleDate, interval, true);
 
                 if (selectedStocks.length > 0) {
                     const BATCH_SIZE = 2;
@@ -168,17 +159,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             endDate.setUTCHours(11, 0, 0, 0);
                             const startDate = new Date(endDate);
                             startDate.setUTCHours(3, 0, 0, 0);
-                            // console.log(stock.sym, startDate, endDate)
-
-                            // let yahooData = await getDataFromYahoo(stock.sym, 5, '1m', startDate, endDate, true);
-                            // yahooData = processYahooData(yahooData, '1m', true);
-
-                            // if (stock.sym == 'KPITTECH') {
-                            //     console.log(dayStartTime, getDateStringIND(dayStartTime))
-                            //     console.log(yahooData[yahooData.length - 3].time, getDateStringIND(new Date(yahooData[yahooData.length - 3].time)))
-                            //     console.log(yahooData[yahooData.length - 2].time, getDateStringIND(new Date(yahooData[yahooData.length - 2].time)))
-                            //     console.log(yahooData[yahooData.length - 1].time, getDateStringIND(new Date(yahooData[yahooData.length - 1].time)))
-                            // }
 
                             let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                             yahooData = processGrowwData(yahooData);
@@ -193,37 +173,26 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             else if (stock.high < 300)
                                 triggerPadding = 0.5;
 
-                            let direction = stock.direction;
+                            let direction = stock.direction; // Always BEARISH for Benoit
                             let triggerPrice, targetPrice, stopLossPrice;
 
                             let [targetMultiplier, stopLossMultiplier] = simulation.targetStopLossRatio.split(':').map(Number);
                             let candleLength = stock.high - stock.low;
 
-                            // triggerPadding = 0
+                            // For BEARISH direction
+                            triggerPrice = stock.low - triggerPadding;
+                            stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
+                            targetPrice = stock.low - (candleLength * targetMultiplier) - triggerPadding;
 
-                            if (direction == 'BULLISH') {
-                                triggerPrice = stock.high + triggerPadding;
-                                stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) - triggerPadding;
-                                targetPrice = stock.high + (candleLength * targetMultiplier) + triggerPadding;
-                            }
-                            else {
-                                triggerPrice = stock.low - triggerPadding;
-                                stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
-                                targetPrice = stock.low - (candleLength * targetMultiplier) - triggerPadding;
-                            }
+                            console.log('Multiplying with 5 for testing -------------------')
+                            targetPrice -= (15 * (candleLength * targetMultiplier));
 
                             triggerPrice = Math.round(triggerPrice * 10) / 10;
                             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
                             targetPrice = Math.round(targetPrice * 10) / 10;
 
-                            let quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
+                            let quantity = Math.ceil(RISK_AMOUNT / (stopLossPrice - triggerPrice));
                             quantity = Math.abs(quantity);
-
-                            // console.log(stock.sym, candleLength)
-                            // console.log(stopLossMultiplier, targetMultiplier)
-                            // console.log((triggerPrice-stopLossPrice) * quantity, (targetPrice-triggerPrice) * quantity)
-                            
-                            // console.log(simulation)
 
                             const sim = new Simulator({
                                 stockSymbol: stock.sym,
@@ -244,8 +213,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             });
 
                             sim.run();
-
-                            // console.log(triggerPrice, targetPrice, stopLossPrice)
 
                             if (singleDate || sim.startedAt) {
                                 return {
@@ -294,8 +261,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: getDateStringIND(t.placedAt), placedAtUk: t.placedAt, startedAt: t.startedAt})))
 
             let filTraded = []
-
-            // console.log(traded.map(t => [t.placedAt, t.exitTime]))
     
             if (simulation.reEnterPosition) {
                 filTraded = traded.filter(t => (singleDate && !t.pnl) ||    // Show cancelled trades if it's a single day simulation
@@ -318,8 +283,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1)
         }
-
-        // console.log(filTraded)
         
         return allTraded;
     } catch (error) {
@@ -347,6 +310,7 @@ const checkIfMarketClosed = (date) => {
 }
 
 module.exports = {
-    startZaireSimulation,
-    checkZaireSimulationStatus
+    startBenoitSimulation,
+    checkBenoitSimulationStatus
 }
+

@@ -22,6 +22,8 @@ class Simulator {
             updateSLInterval,
             updateSLFrequency,
             // marketOrder
+            enableDoubleConfirmation,
+            doubleConfirmationLookbackHours
         } = simulationParams;
 
         this.stockSymbol = stockSymbol;
@@ -45,6 +47,8 @@ class Simulator {
         this.updateSLInterval = updateSLInterval;
         this.updateSLFrequency = updateSLFrequency;
         this.placeAverageMarketPrice = true // placeAverageMarketPrice;
+        this.enableDoubleConfirmation = enableDoubleConfirmation || false;
+        this.doubleConfirmationLookbackHours = doubleConfirmationLookbackHours || 3;
 
         // Primarily for Lightyear simulation where trigger is placed at the start of the day (09:15)
         this.isDayStartOrder = new Date(this.orderTime).getUTCHours() == 3 && new Date(this.orderTime).getUTCMinutes() == 45;
@@ -52,6 +56,80 @@ class Simulator {
 
     logAction(time, action, price=0) {
         this.tradeActions.push({ time, action: String(action), price });
+    }
+
+    /**
+     * Checks if a price condition is met in both the current candle and at least one more candle
+     * within the lookback period (default 3 hours)
+     * 
+     * @param {number} currentIndex - Index of current candle in data array
+     * @param {number} priceLevel - Price level to check against
+     * @param {string} conditionType - Type of condition: 'trigger_bullish', 'trigger_bearish', 'stoploss_bullish', 'stoploss_bearish'
+     * @param {Array} data - Array of candle data
+     * @param {number} startTime - Earliest time to look back from (orderTime for triggers, trigger execution time for exits)
+     * @returns {object} - {isConfirmed: boolean, confirmationCount: number, confirmationTimes: array}
+     */
+    checkDoubleConfirmation(currentIndex, priceLevel, conditionType, data, startTime) {
+        if (!this.enableDoubleConfirmation) {
+            return { isConfirmed: true, confirmationCount: 1, confirmationTimes: [] };
+        }
+
+        const currentCandle = data[currentIndex];
+        const lookbackPeriodMs = this.doubleConfirmationLookbackHours * 60 * 60 * 1000;
+        const lookbackStartTime = Math.max(
+            currentCandle.time - lookbackPeriodMs,
+            startTime  // Don't look back before the order was placed or position opened
+        );
+        
+        // Count how many candles in the lookback period meet the condition
+        let confirmationCount = 0;
+        const confirmationTimes = [];
+
+        // Start from current index and go backwards
+        for (let i = currentIndex; i >= 0; i--) {
+            const candle = data[i];
+            
+            // Stop if we've gone beyond the lookback period
+            if (candle.time < lookbackStartTime) {
+                break;
+            }
+
+            let conditionMet = false;
+
+            switch (conditionType) {
+                case 'trigger_bullish':
+                    // For bullish trigger, check if high reached or exceeded trigger price
+                    conditionMet = candle.high >= priceLevel;
+                    break;
+                    
+                case 'trigger_bearish':
+                    // For bearish trigger, check if low reached or went below trigger price
+                    conditionMet = candle.low <= priceLevel;
+                    break;
+                    
+                case 'stoploss_bullish':
+                    // For bullish stop loss, check if low reached or went below stop loss
+                    conditionMet = candle.low <= priceLevel;
+                    break;
+                    
+                case 'stoploss_bearish':
+                    // For bearish stop loss, check if high reached or exceeded stop loss
+                    conditionMet = candle.high >= priceLevel;
+                    break;
+
+                default:
+                    console.warn(`Unknown condition type: ${conditionType}`);
+                    return { isConfirmed: false, confirmationCount: 0, confirmationTimes: [] };
+            }
+
+            if (conditionMet) {
+                confirmationCount++;
+                confirmationTimes.push(candle.time);
+            }
+        }
+
+        const isConfirmed = confirmationCount >= 2;
+        return { isConfirmed, confirmationCount, confirmationTimes };
     }
 
     simulateTrading(data) {
@@ -100,17 +178,58 @@ class Simulator {
                     break;
                 }
                 
-                if (!this.isPositionOpen && time > +this.orderTime && ((direction == 'BULLISH' && high >= triggerPrice) || (direction == 'BEARISH' && low <= triggerPrice))) {
-                    if (i == 1) this.position = data[0].close;
-                    else this.position = this.triggerPrice;
-                    // else this.position = this.placeAverageMarketPrice ? avgMarketOrderPrice : this.triggerPrice;
+                // Check if trigger condition is met
+                const triggerConditionMet = (direction == 'BULLISH' && high >= triggerPrice) || 
+                                            (direction == 'BEARISH' && low <= triggerPrice);
+                
+                if (!this.isPositionOpen && time > +this.orderTime && triggerConditionMet) {
+                    // Log that condition was met on current candle
+                    if (this.enableDoubleConfirmation) {
+                        this.tradeActions.push({ 
+                            time, 
+                            action: `Trigger Condition Met - Checking Confirmation`, 
+                            price: triggerPrice 
+                        });
+                    }
+                    
+                    // Apply double confirmation check for trigger (look back from orderTime)
+                    const conditionType = direction == 'BULLISH' ? 'trigger_bullish' : 'trigger_bearish';
+                    const { isConfirmed, confirmationCount, confirmationTimes } = this.checkDoubleConfirmation(
+                        i, 
+                        triggerPrice, 
+                        conditionType, 
+                        data, 
+                        +this.orderTime  // For triggers, look back from when order was placed
+                    );
+                    
+                    if (isConfirmed) {
+                        // Log successful confirmation
+                        if (this.enableDoubleConfirmation) {
+                            confirmationTimes.forEach(time => this.tradeActions.push({ 
+                                time, 
+                                action: `Trigger Confirmed (${confirmationCount} candles)`, 
+                                price: triggerPrice 
+                            }));
+                        }
+                        
+                        if (i == 1) this.position = data[0].close;
+                        else this.position = this.triggerPrice;
+                        // else this.position = this.placeAverageMarketPrice ? avgMarketOrderPrice : this.triggerPrice;
 
-                    this.startedAt = time
-                    openTriggerOrder = false
-                    this.isPositionOpen = true;
-                    this.tradeActions.push({ time, action: 'Trigger Hit', price: this.position });
-                    this.tradeActions.push({ time, action: 'Target Placed', price: targetPrice });
-                    this.tradeActions.push({ time, action: 'Stop Loss Placed', price: stopLossPrice });
+                        this.startedAt = time
+                        openTriggerOrder = false
+                        this.isPositionOpen = true;
+                        this.tradeActions.push({ time, action: 'Trigger Hit', price: this.position });
+                        this.tradeActions.push({ time, action: 'Target Placed', price: targetPrice });
+                        this.tradeActions.push({ time, action: 'Stop Loss Placed', price: stopLossPrice });
+                    } else {
+                        // Log failed confirmation
+                        this.tradeActions.push({ 
+                            time, 
+                            action: `Trigger Confirmation Failed (${confirmationCount}/2 candles)`, 
+                            price: triggerPrice 
+                        });
+                    }
                 }
             }
             else {
@@ -138,21 +257,66 @@ class Simulator {
                     }
                 }
                 
-                if ((direction == 'BEARISH' && stopLossPrice && high >= stopLossPrice) || (direction == 'BULLISH' && stopLossPrice && low <= stopLossPrice)) {
-                    const exitPrice = stopLossPrice
-                    // const exitPrice = this.placeAverageMarketPrice ? avgMarketOrderPrice : stopLossPrice
-                    this.pnl -= ((direction == 'BULLISH' ? this.position - exitPrice : exitPrice - this.position) * this.quantity)
-                    this.tradeActions.push({ time, action: 'Stop Loss Hit', price: exitPrice });
-                    this.exitTime = time
-                    this.exitReason = 'stoploss'
-                    this.isPositionOpen = false;
-                    if (!this.reEnterPosition) {
-                        break;
+                // Check if stop loss condition is met
+                const stopLossConditionMet = (direction == 'BEARISH' && stopLossPrice && high >= stopLossPrice) || 
+                                             (direction == 'BULLISH' && stopLossPrice && low <= stopLossPrice);
+                
+                if (stopLossConditionMet) {
+                    // Log that condition was met on current candle
+                    if (this.enableDoubleConfirmation) {
+                        this.tradeActions.push({ 
+                            time, 
+                            action: `Stop Loss Condition Met - Checking Confirmation`, 
+                            price: stopLossPrice 
+                        });
+                    }
+                    
+                    // Apply double confirmation check for stop loss (look back from position entry)
+                    const conditionType = direction == 'BULLISH' ? 'stoploss_bullish' : 'stoploss_bearish';
+                    const { isConfirmed, confirmationCount, confirmationTimes } = this.checkDoubleConfirmation(
+                        i, 
+                        stopLossPrice, 
+                        conditionType, 
+                        data,
+                        this.startedAt  // For stop loss, look back from when position was opened
+                    );
+                    
+                    if (isConfirmed) {
+                        // Log successful confirmation
+                        if (this.enableDoubleConfirmation) {
+                            confirmationTimes.forEach(time => this.tradeActions.push({ 
+                                time, 
+                                action: `Stop Loss Confirmed (${confirmationCount} candles)`, 
+                                price: stopLossPrice 
+                            }));
+                        }
+                        
+                        const exitPrice = stopLossPrice
+                        // const exitPrice = this.placeAverageMarketPrice ? avgMarketOrderPrice : stopLossPrice
+                        this.pnl -= ((direction == 'BULLISH' ? this.position - exitPrice : exitPrice - this.position) * this.quantity)
+                        this.tradeActions.push({ time, action: 'Stop Loss Hit', price: exitPrice });
+                        this.exitTime = time
+                        this.exitReason = 'stoploss'
+                        this.isPositionOpen = false;
+                        if (!this.reEnterPosition) {
+                            break;
+                        }
+                    } else {
+                        // Log failed confirmation
+                        this.tradeActions.push({ 
+                            time, 
+                            action: `Stop Loss Confirmation Failed (${confirmationCount}/2 candles)`, 
+                            price: stopLossPrice 
+                        });
                     }
                 }
 
 
-                if ((direction == 'BEARISH' && low <= targetPrice) || (direction == 'BULLISH' && high >= targetPrice) ) {
+                // Check if target condition is met
+                const targetConditionMet = (direction == 'BEARISH' && low <= targetPrice) || 
+                                          (direction == 'BULLISH' && high >= targetPrice);
+                
+                if (targetConditionMet) {
                     const exitPrice = targetPrice
                     // const exitPrice = this.placeAverageMarketPrice ? avgMarketOrderPrice : targetPrice
                     this.pnl += Math.abs((exitPrice - this.position) * this.quantity)
