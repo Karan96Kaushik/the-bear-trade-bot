@@ -44,6 +44,7 @@ function processMISSheetData (stockData) {
         ignore: s[7]?.trim(),
         reviseSL: s[8]?.trim(),
         status: s[9]?.trim(),
+        time: s[10]?.trim(),
     })).filter(s => s.stockSymbol)
     return data.map(d => ({
         ...d,
@@ -141,6 +142,7 @@ async function appendRowsToMISD(stocks, source='Zaire') {
                 stock.ignore,
                 stock.reviseSL,
                 stock.status,
+                stock.time,
                 stock.sma44_0,
                 stock.sma44_1,
                 stock.sma44_2,

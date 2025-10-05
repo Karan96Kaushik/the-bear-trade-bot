@@ -21,6 +21,7 @@ const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet, checkTriggerHit } = require('./lightyear');
 const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 // const OrderLog = require('../models/OrderLog');
+const { updateBenoitStopLoss } = require('./benoit');
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
@@ -234,10 +235,6 @@ async function setupBenoitOrders() {
 
         let {selectedStocks, no_data_stocks, too_high_stocks, too_many_incomplete_candles_stocks, errored_stocks} = result
 
-
-        await sendMessageToChannel('🔔 Cancelling Benoit Orders')
-        await cancelBenoitOrders()
-
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
 
@@ -291,6 +288,7 @@ async function setupBenoitOrders() {
                 await sendMessageToChannel(`🚨 Error running Benoit MIS Jobs`, stock, error?.message);
             }
         }
+
 
     } catch (error) {
         await sendMessageToChannel(`🚨 Error running Benoit MIS Jobs`, error?.message);
@@ -906,19 +904,24 @@ async function checkBenoitDoubleConfirmation() {
         let stockData = await readSheetData('MIS-ALPHA!A2:W1000');
         stockData = processMISSheetData(stockData);
 
+        // Used to update status of the order in the sheet
+        let benoitSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+        const rowHeaders = benoitSheetData.map(a => a[1])
+        const colHeaders = benoitSheetData[0]
+
         tag = 'benoit'
 
         // Filter for Zaire entries with status "new"
         const benoitStocks = stockData.filter(s => 
             s.source?.toLowerCase() === 'benoit' && 
-            s.status?.toLowerCase() === 'new' &&
+            (s.status?.toLowerCase() === 'new' || s.status?.toLowerCase() === 'triggered') &&
             s.stockSymbol && 
             s.stockSymbol[0] !== '-' && 
             s.stockSymbol[0] !== '*'
         );
 
         if (benoitStocks.length === 0) {
-            await sendMessageToChannel('ℹ️ No Benoit stocks with status "new" found');
+            await sendMessageToChannel('ℹ️ No Benoit stocks with status "new" or "triggered" found');
             return;
         }
 
@@ -926,6 +929,8 @@ async function checkBenoitDoubleConfirmation() {
 
         const updates = [];
 
+        let orderResponse = null;
+        
         for (const stock of benoitStocks) {
             try {
                 const sym = stock.stockSymbol;
@@ -989,16 +994,15 @@ async function checkBenoitDoubleConfirmation() {
                         `Confirmation times: ${triggerConfirmation.confirmationTimes.map(t => getDateStringIND(new Date(t))).join(', ')}`
                     );
 
-                    let targetGain = stock.targetPrice - stock.triggerPrice
-        
-                    // Place SL-M BUY order at price higher than trigger price
-                    if (ltp > stock.triggerPrice) {
-                        if ((stock.targetPrice - ltp) / targetGain > 0.8)
-                            orderResponse = await placeOrder('BUY', 'MARKET', null, stock.quantity, stock.stockSymbol, `trigger-m-${tag}`)
-                        else
-                            return sendMessageToChannel(`🔔 ${tag.toUpperCase()}: BUY order not placed: LTP too close to target price`, stock.stockSymbol, stock.quantity, stock.targetPrice, ltp)
-                    }
-        
+                    const orderType = direction === 'BULLISH' ? 'BUY' : 'SELL';
+                    orderResponse = await placeOrder(orderType, 'MARKET', null, stock.quantity, stock, `trigger-m-${tag}`)
+                    await logOrder('PLACED', 'TRIGGER', orderResponse)
+
+                    const [rowS, colS] = getStockLoc(stock.stockSymbol, 'Status', rowHeaders, colHeaders)
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colS) + String(rowS), 
+                        values: [['triggered']], 
+                    })
                 } 
                 // else if (triggerConfirmation.confirmationCount > 0) {
                 //     await sendMessageToChannel(
@@ -1013,6 +1017,16 @@ async function checkBenoitDoubleConfirmation() {
                         `Direction: ${direction}, Stop Loss: ${stock.stopLossPrice}, LTP: ${ltp}`,
                         `Confirmation times: ${stopLossConfirmation.confirmationTimes.map(t => getDateStringIND(new Date(t))).join(', ')}`
                     );
+
+                    const orderType = direction === 'BULLISH' ? 'SELL' : 'BUY';
+                    orderResponse = await placeOrder(orderType, 'MARKET', null, stock.quantity, stock, `sl-m-${tag}`)
+                    await logOrder('PLACED', 'STOP LOSS', orderResponse)
+
+                    const [rowS, colS] = getStockLoc(stock.stockSymbol, 'Status', rowHeaders, colHeaders)
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colS) + String(rowS), 
+                        values: [['stopped']], 
+                    })
                 } 
                 // else if (stopLossConfirmation.confirmationCount > 0) {
                 //     await sendMessageToChannel(
@@ -1254,6 +1268,20 @@ const scheduleMISJobs = () => {
     const updateStopLossJob_2 = schedule.scheduleJob('15 0,15,30,45 9 * * 1-5', updateStopLossCB);
 
     sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+
+
+    const updateBenoitStopLossCB = () => {
+        sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+        updateBenoitStopLoss();
+    }
+    // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
+    // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
+    // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
+    const updateBenoitStopLossJob = schedule.scheduleJob('10 */15 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
+    const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,15,30,45 9 * * 1-5', updateBenoitStopLossCB);
+
+    sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateBenoitStopLossJob.nextInvocation() < updateBenoitStopLossJob_2.nextInvocation() ? updateBenoitStopLossJob.nextInvocation() : updateBenoitStopLossJob_2.nextInvocation()));
+
 
 
     if (false) {
