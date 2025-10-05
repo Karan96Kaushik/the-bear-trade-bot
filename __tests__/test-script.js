@@ -1,8 +1,10 @@
 const { scanZaireStocks, getDateRange, scanLightyearD2Stocks, checkV3ConditionsNumerical } = require("../analytics")
+const { scanBenoitStocks } = require("../analytics/benoit") 
 const { readSheetData, processMISSheetData, getStockLoc, appendRowsToMISD, processSheetWithHeaders } = require("../gsheets")
 const { updateNameInSheetForClosedOrder, processSuccessfulOrder } = require("../kite/processor")
 const { setupZaireOrders } = require("../kite/scheduledJobs")
 const { processMoneycontrolData, getMoneycontrolData } = require("../kite/utils");
+const { createBenoitOrdersEntries, cancelBenoitOrders, updateBenoitStopLoss, setupBenoitOrders, checkBenoitDoubleConfirmation } = require("../kite/benoit");
 
 const { kiteSession } = require("../kite/setup")
 // const { placeOrder } = require("../kite/processor")
@@ -90,15 +92,45 @@ const run = async () => {
 
     try {
 
-        let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
-        niftyList = niftyList.map(stock => stock[0]).filter(d => d !== 'NOT FOUND' && d)
+        await kiteSession.authenticate();
 
-        console.time('scanZaireStocksLambda')
-        let result = await scanZaireStocksLambda(niftyList, false, true, '5m', zaireV3Params, {
-            timeout: 10000
-        })
-        console.timeEnd('scanZaireStocksLambda')
-        console.log(result)
+
+        if (1) {
+            let startDate = new Date('2025-10-01T03:00:10.000Z')
+            let endDate = new Date('2025-10-01T08:00:10.000Z')
+            await checkBenoitDoubleConfirmation(startDate, endDate)
+        }
+
+        if (0) {
+            await updateBenoitStopLoss()
+        }
+
+        if (0) {
+            await cancelBenoitOrders()
+        }
+
+        if (0) {
+            await createBenoitOrdersEntries()
+        }
+
+        if (0) {
+            let niftyList = await readSheetData('HIGHBETA!D2:D550')  // await getDhanNIFTY50Data();
+            niftyList = niftyList.map(stock => stock[0]).filter(d => d !== 'NOT FOUND' && d)
+
+            console.time('scanBenoitStocks')
+            let result = await scanBenoitStocks(niftyList, '2025-10-01T08:00:10.000Z', '5m', false)
+            console.timeEnd('scanBenoitStocks')
+            const { selectedStocks, no_data_stocks, too_high_stocks, errored_stocks } = result
+
+            console.log(selectedStocks[3])
+        }
+
+        if (0) {
+            await setupBenoitOrders()
+        }
+
+
+
 
         return
 
