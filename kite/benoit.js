@@ -453,8 +453,9 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                     continue;
                 }
 
+                let actionTime = Number(stock.time);
                 // Assume order was placed at the beginning of the day or 3 hours ago
-                let startTime = Date.now() - (3 * 60 * 60 * 1000);
+                let startTime = Math.max(Date.now() - (3 * 60 * 60 * 1000), actionTime);
 
                 const currentIndex = data.length - 1;
 
@@ -496,9 +497,14 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                     await logOrder('PLACED', 'TRIGGER', orderResponse)
 
                     const [rowS, colS] = getStockLoc(stock.stockSymbol, 'Status', rowHeaders, colHeaders)
+                    const [rowT, colT] = getStockLoc(stock.stockSymbol, 'Time', rowHeaders, colHeaders)
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(colS) + String(rowS), 
                         values: [['triggered']], 
+                    })
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colT) + String(rowT), 
+                        values: [[+new Date()]], 
                     })
                 } 
                 // else if (triggerConfirmation.confirmationCount > 0) {
