@@ -21,7 +21,7 @@ async function setupBenoitOrders() {
 
         let highBetaData, niftyList;
 
-        highBetaData = await readSheetData('HIGHBETA!D2:D550')
+        highBetaData = await readSheetData('HIGHBETA!C2:C550')
         niftyList = highBetaData
                         .map(stock => stock[0])
                         .filter(d => d !== 'NOT FOUND' && d)
@@ -453,6 +453,7 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                     continue;
                 }
 
+                // Action time is the time when the order was placed or the position was opened
                 let actionTime = Number(stock.time);
                 // Assume order was placed at the beginning of the day or 3 hours ago
                 let startTime = Math.max(Date.now() - (3 * 60 * 60 * 1000), actionTime);
