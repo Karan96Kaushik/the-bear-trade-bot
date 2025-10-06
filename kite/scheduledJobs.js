@@ -952,7 +952,7 @@ const scheduleMISJobs = () => {
 
 
     if (true) {
-        
+
         const updateBenoitStopLossCB = () => {
             sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
             updateBenoitStopLoss();
@@ -962,8 +962,9 @@ const scheduleMISJobs = () => {
         // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
         const updateBenoitStopLossJob = schedule.scheduleJob('10 */15 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
         const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,15,30,45 9 * * 1-5', updateBenoitStopLossCB);
+        const updateBenoitStopLossJob_3 = schedule.scheduleJob('10 50,55 3 * * 1-5', updateBenoitStopLossCB);
 
-        sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateBenoitStopLossJob.nextInvocation() < updateBenoitStopLossJob_2.nextInvocation() ? updateBenoitStopLossJob.nextInvocation() : updateBenoitStopLossJob_2.nextInvocation()));
+        sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
     }
 
     if (true) {
@@ -1075,8 +1076,9 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
         checkBenoitDoubleConfirmation();
     };
-    const benoitDoubleConfirmation = schedule.scheduleJob('25 */10 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
-    const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 0,10,20 9 * * 1-5', benoitDoubleConfirmationCB);
+    const benoitDoubleConfirmation = schedule.scheduleJob('25 */5 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
+    const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 50,55 3 * * 1-5', benoitDoubleConfirmationCB);
+    const benoitDoubleConfirmation_3 = schedule.scheduleJob('25 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', benoitDoubleConfirmationCB);
     sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
 }
 
