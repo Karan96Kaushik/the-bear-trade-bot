@@ -336,9 +336,21 @@ function checkDoubleConfirmation(currentIndex, priceLevel, conditionType, data, 
         startTime  // Don't look back before the order was placed or position opened
     );
     
+    console.debug(`[checkDoubleConfirmation] Starting check:`, {
+        currentIndex,
+        priceLevel,
+        conditionType,
+        lookbackHours,
+        currentCandleTime: new Date(currentCandle.time).toISOString(),
+        lookbackStartTime: new Date(lookbackStartTime).toISOString(),
+        startTime: new Date(startTime).toISOString(),
+        totalCandles: data.length
+    });
+    
     // Count how many candles in the lookback period meet the condition
     let confirmationCount = 0;
     const confirmationTimes = [];
+    let candlesChecked = 0;
 
     // Start from current index and go backwards
     for (let i = currentIndex; i >= 0; i--) {
@@ -346,9 +358,11 @@ function checkDoubleConfirmation(currentIndex, priceLevel, conditionType, data, 
         
         // Stop if we've gone beyond the lookback period
         if (candle.time < lookbackStartTime) {
+            console.debug(`[checkDoubleConfirmation] Stopped at candle ${i}, time ${new Date(candle.time).toISOString()} is before lookback start`);
             break;
         }
 
+        candlesChecked++;
         let conditionMet = false;
 
         switch (conditionType) {
@@ -380,10 +394,24 @@ function checkDoubleConfirmation(currentIndex, priceLevel, conditionType, data, 
         if (conditionMet) {
             confirmationCount++;
             confirmationTimes.push(candle.time);
+            console.debug(`[checkDoubleConfirmation] Condition met at candle ${i}:`, {
+                time: new Date(candle.time).toISOString(),
+                high: candle.high,
+                low: candle.low,
+                priceLevel,
+                confirmationCount
+            });
         }
     }
 
     const isConfirmed = confirmationCount >= 2;
+    console.debug(`[checkDoubleConfirmation] Result:`, {
+        isConfirmed,
+        confirmationCount,
+        candlesChecked,
+        confirmationTimes: confirmationTimes.map(t => new Date(t).toISOString())
+    });
+    
     return { isConfirmed, confirmationCount, confirmationTimes };
 }
 
