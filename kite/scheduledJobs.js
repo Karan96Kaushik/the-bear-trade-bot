@@ -1013,14 +1013,16 @@ const scheduleMISJobs = () => {
     // const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
     // sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
 
-    const baileyJobCB = () => {
+    if (false) {
+        const baileyJobCB = () => {
+            sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
+            setupBaileyOrders();
+        };
+        const baileyJob = schedule.scheduleJob('50 */5 4,5,6,7,8 * * 1-5', baileyJobCB);
+        const baileyJob_2 = schedule.scheduleJob('50 50,55 3 * * 1-5', baileyJobCB);
+        const baileyJob_3 = schedule.scheduleJob('50 0,5,10,15,20,25,30 9 * * 1-5', baileyJobCB);
         sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
-        setupBaileyOrders();
-    };
-    const baileyJob = schedule.scheduleJob('50 */5 4,5,6,7,8 * * 1-5', baileyJobCB);
-    const baileyJob_2 = schedule.scheduleJob('50 50,55 3 * * 1-5', baileyJobCB);
-    const baileyJob_3 = schedule.scheduleJob('50 0,5,10,15,20,25,30 9 * * 1-5', baileyJobCB);
-    sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
+    }
 
     // const zaireCancelCB = () => {
     //     sendMessageToChannel('⏰ Cancel Zaire Scheduled - ', getDateStringIND(zaireCancelJob.nextInvocation()));
