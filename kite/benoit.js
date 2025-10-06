@@ -210,7 +210,7 @@ async function cancelBenoitOrders() {
 
                 if (order.status != 'new') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
-                const timeSinceScan = +new Date() - order.time;
+                const timeSinceScan = +new Date() - Number(order.time);
                 // Cancel if the order was scanned more than 10 minutes ago
                 if (timeSinceScan < 1000 * 60 * 10) continue;
 
@@ -539,6 +539,11 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                 //     );
                 // }
 
+                if (updates.length > 0) {
+                    await bulkUpdateCells(updates)
+                }
+                updates = []
+
             } catch (error) {
                 console.error(`Error checking double confirmation for ${stock.stockSymbol}:`, error);
                 await sendMessageToChannel(`🚨 Error checking ${stock.stockSymbol}:`, error?.message);
@@ -546,6 +551,11 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
         }
 
         await sendMessageToChannel('✅ Completed Benoit Double Confirmation Check');
+
+        await sendMessageToChannel('❌ Cancelling old Benoit orders')
+
+        cancelBenoitOrders()
+
 
     } catch (error) {
         await sendMessageToChannel('🚨 Error running Benoit Double Confirmation Check', error?.message);
