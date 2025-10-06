@@ -1,6 +1,5 @@
 const {
-    logOrder, placeOrder,
-    getDateStringIND
+    logOrder, placeOrder
 } = require('./processor');
 const {
     kiteSession
