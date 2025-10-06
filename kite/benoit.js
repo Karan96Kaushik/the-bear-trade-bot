@@ -422,7 +422,9 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
             return;
         }
 
-        await sendMessageToChannel(`🔍 Checking ${benoitStocks.length} Benoit stocks for double confirmation`);
+        const newCount = benoitStocks.filter(s => s.status?.toLowerCase() === 'new').length;
+        const triggeredCount = benoitStocks.filter(s => s.status?.toLowerCase() === 'triggered').length;
+        await sendMessageToChannel(`🔍 Checking ${benoitStocks.length} Benoit stocks for double confirmation`, `New: ${newCount}`, `Triggered: ${triggeredCount}`);
 
         let updates = [];
 
@@ -478,7 +480,7 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
 
                 // Check stop loss condition with double confirmation (if applicable)
                 if (stock.stopLossPrice && stock.status?.toLowerCase() === 'triggered') {
-                    stopLossConditionType = direction === 'BULLISH' ? 'stoploss_bullish' : 'stoploss_bearish';
+                    const stopLossConditionType = direction === 'BULLISH' ? 'stoploss_bullish' : 'stoploss_bearish';
                     stopLossConfirmation = checkDoubleConfirmation(
                         currentIndex,
                         stock.stopLossPrice,
