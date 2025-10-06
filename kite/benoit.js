@@ -424,7 +424,7 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
 
         await sendMessageToChannel(`🔍 Checking ${benoitStocks.length} Benoit stocks for double confirmation`);
 
-        const updates = [];
+        let updates = [];
 
         let orderResponse = null;
         

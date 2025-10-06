@@ -951,18 +951,32 @@ const scheduleMISJobs = () => {
     sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
 
 
-    const updateBenoitStopLossCB = () => {
-        sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
-        updateBenoitStopLoss();
+    if (true) {
+        
+        const updateBenoitStopLossCB = () => {
+            sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+            updateBenoitStopLoss();
+        }
+        // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
+        // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
+        // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
+        const updateBenoitStopLossJob = schedule.scheduleJob('10 */15 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
+        const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,15,30,45 9 * * 1-5', updateBenoitStopLossCB);
+
+        sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateBenoitStopLossJob.nextInvocation() < updateBenoitStopLossJob_2.nextInvocation() ? updateBenoitStopLossJob.nextInvocation() : updateBenoitStopLossJob_2.nextInvocation()));
     }
-    // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
-    // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
-    // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
-    const updateBenoitStopLossJob = schedule.scheduleJob('10 */15 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
-    const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,15,30,45 9 * * 1-5', updateBenoitStopLossCB);
 
-    sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateBenoitStopLossJob.nextInvocation() < updateBenoitStopLossJob_2.nextInvocation() ? updateBenoitStopLossJob.nextInvocation() : updateBenoitStopLossJob_2.nextInvocation()));
+    if (true) {
 
+        const benoitJobCB = () => {
+            sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
+            setupBenoitOrders();
+        };
+        const benoitJob = schedule.scheduleJob('10 50,55 3 * * 1-5', benoitJobCB);
+        const benoitJob_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
+        sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
+
+    }
 
 
     if (false) {
@@ -980,16 +994,6 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(getEarliestTime(zaireJobV3, zaireJobV3_2))); //, zaireJobV3_3)));
         // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
     }
-
-    const benoitJobCB = () => {
-        sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
-        setupBenoitOrders();
-    };
-    const benoitJob = schedule.scheduleJob('10 50,55 3 * * 1-5', benoitJobCB);
-    const benoitJob_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
-    sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
-
-
 
     const lightyearTriggerHitCB = () => {
         sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2))); //, zaireJobV3_3)));
