@@ -13,6 +13,7 @@ const { sendMessageToChannel } = require("../slack-actions")
 const { calculateExtremePrice, getDataFromYahoo, processYahooData } = require('../kite/utils');
 const BENOIT_RISK_AMOUNT = 200;
 const { scanBenoitStocks } = require("../analytics/benoit");
+const { getDateStringIND } = require('../kite/utils');
 
 
 async function setupBenoitOrders() {
