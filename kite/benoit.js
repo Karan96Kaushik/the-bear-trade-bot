@@ -212,7 +212,7 @@ async function cancelBenoitOrders() {
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
                 const timeSinceScan = +new Date() - Number(order.time);
                 // Cancel if the order was scanned more than 10 minutes ago
-                if (timeSinceScan < 1000 * 60 * 10) continue;
+                if (timeSinceScan < 1000 * 60 * 20) continue;
 
                 await sendMessageToChannel('❎ Cancelled Benoit order:', order.symbol, order.quantity, order.status, order.source);
 
