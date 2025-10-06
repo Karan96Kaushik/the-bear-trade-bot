@@ -460,21 +460,25 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
 
                 const currentIndex = data.length - 1;
 
-                // Check trigger condition with double confirmation
-                const triggerConditionType = direction === 'BULLISH' ? 'trigger_bullish' : 'trigger_bearish';
-                const triggerConfirmation = checkDoubleConfirmation(
-                    currentIndex,
-                    stock.triggerPrice,
-                    triggerConditionType,
-                    data,
-                    startTime,
-                    3
-                );
+                let triggerConfirmation = { isConfirmed: false, confirmationCount: 0, confirmationTimes: [] };
+                let stopLossConfirmation = { isConfirmed: false, confirmationCount: 0, confirmationTimes: [] };
+
+                if (stock.status?.toLowerCase() === 'new') {
+                    // Check trigger condition with double confirmation
+                    const triggerConditionType = direction === 'BULLISH' ? 'trigger_bullish' : 'trigger_bearish';
+                    triggerConfirmation = checkDoubleConfirmation(
+                        currentIndex,
+                        stock.triggerPrice,
+                        triggerConditionType,
+                        data,
+                        startTime,
+                        3
+                    );
+                }
 
                 // Check stop loss condition with double confirmation (if applicable)
-                let stopLossConfirmation = { isConfirmed: false, confirmationCount: 0, confirmationTimes: [] };
-                if (stock.stopLossPrice) {
-                    const stopLossConditionType = direction === 'BULLISH' ? 'stoploss_bullish' : 'stoploss_bearish';
+                if (stock.stopLossPrice && stock.status?.toLowerCase() === 'triggered') {
+                    stopLossConditionType = direction === 'BULLISH' ? 'stoploss_bullish' : 'stoploss_bearish';
                     stopLossConfirmation = checkDoubleConfirmation(
                         currentIndex,
                         stock.stopLossPrice,
