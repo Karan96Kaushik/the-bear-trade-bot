@@ -9,9 +9,10 @@ const {
     getOrderLoc, processMISSheetData, appendRowsToMISD, processSheetWithHeaders
 } = require("../gsheets");
 const { sendMessageToChannel } = require("../slack-actions")
-const { calculateExtremePrice, getDataFromYahoo, processYahooData } = require('../kite/utils');
+const { getDataFromYahoo, processYahooData } = require('../kite/utils');
 const { scanBenoitStocks } = require("../analytics/benoit");
 const { getDateStringIND } = require('../kite/utils');
+const { calculateExtremePrice } = require('./scheduledJobs');
 
 
 const BENOIT_RISK_AMOUNT = 200;
@@ -214,7 +215,7 @@ async function cancelBenoitOrders() {
                 if (order.status != 'new') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
                 const timeSinceScan = +new Date() - Number(order.time);
-                // Cancel if the order was scanned more than 10 minutes ago
+                // Cancel if the order was scanned more than  minutes ago
                 if (timeSinceScan < 1000 * 60 * CANCEL_AFTER_MINUTES) continue;
 
                 await sendMessageToChannel('❎ Cancelled Benoit order:', order.symbol, order.quantity, order.status, order.source);
