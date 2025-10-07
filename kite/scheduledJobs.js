@@ -630,6 +630,12 @@ async function closePositions() {
 
         for (const position of allPositions) {
             try {
+
+                if (!position.tag) {
+                    await sendMessageToChannel('🔞 Ignoring position without tag', position.tradingsymbol, position.quantity, position.tag)
+                    continue
+                }
+                    
                 await placeOrder(position.quantity < 0 ? 'BUY' : 'SELL', 'MARKET', null, position.quantity, position, 'squareoff')
 
                 // await kiteSession.kc.placeOrder("regular", {
