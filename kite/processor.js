@@ -209,6 +209,11 @@ const processSuccessfulOrder = async (order) => {
             let upper_circuit_limit = quote[`NSE:${order.tradingsymbol}`]?.upper_circuit_limit
             let lower_circuit_limit = quote[`NSE:${order.tradingsymbol}`]?.lower_circuit_limit
 
+            if (order.tag?.includes('benoit')) {
+                sendMessageToChannel('🔔 Benoit order executed', order.tradingsymbol, order.quantity, order.average_price, order.filled_quantity, order.product, order.order_type, order.status, order.tag)
+                return
+            }
+
             try {
                 let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
                 const rowHeaders = sheetData.map(a => a[1])
