@@ -522,8 +522,12 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                     );
                 }
 
+                
                 // Send notifications based on confirmation results
-                if (triggerConfirmation.isConfirmed) {
+                if (triggerConfirmation.isConfirmed &&
+                    ((direction === 'BULLISH' && ltp && ltp > stock.triggerPrice) ||
+                    (direction === 'BEARISH' && ltp && ltp < stock.triggerPrice))
+                ) {
                     await sendMessageToChannel(
                         `✅ ${stock.stockSymbol} - Trigger CONFIRMED (${triggerConfirmation.confirmationCount} hits)`,
                         `Direction: ${direction}, Trigger: ${stock.triggerPrice}, LTP: ${ltp}`,
@@ -552,7 +556,10 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                 //     );
                 // }
 
-                if (stopLossConfirmation.isConfirmed) {
+                if (stopLossConfirmation.isConfirmed &&
+                    (direction === 'BULLISH' && ltp && ltp < stock.stopLossPrice) ||
+                    (direction === 'BEARISH' && ltp && ltp > stock.stopLossPrice)
+                ) {
                     await sendMessageToChannel(
                         `🛑 ${sym} - Stop Loss CONFIRMED (${stopLossConfirmation.confirmationCount} hits)`,
                         `Direction: ${direction}, Stop Loss: ${stock.stopLossPrice}, LTP: ${ltp}`,
