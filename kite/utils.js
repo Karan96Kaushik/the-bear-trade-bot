@@ -770,6 +770,14 @@ async function calculateExtremePrice(sym, type, timeFrame = 15) {
     return type === 'highest' ? Math.max(...lastData) : Math.min(...lastData);
 }
 
+const zeroToXMinsStr = (x, start = 0, gap = 1) => {
+    let str = ''
+    for (let i = start; i < x; i += gap) {
+        str += `${i}${i < x - gap ? ',' : ''}`
+    }
+    return str
+}
+
 // getMcIndicators('LT').then(console.log)
 
 // const dates = [
@@ -812,5 +820,6 @@ module.exports = {
     processMoneycontrolData,
     memoize,
     skipBackDateHolidays,
-    calculateExtremePrice
+    calculateExtremePrice,
+    zeroToXMinsStr
 };

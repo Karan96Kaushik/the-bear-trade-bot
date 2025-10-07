@@ -8,7 +8,7 @@ const { kiteSession } = require('./setup');
 const { scanBenoitStocks } = require('../analytics/benoit');
 const { createBenoitOrdersEntries, cancelBenoitOrders } = require('./benoit');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
-const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData, calculateExtremePrice } = require('./utils');
+const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData, calculateExtremePrice, zeroToXMinsStr } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
 const { 
     scanZaireStocks, isBullishCandle, scanLightyearD2Stocks,
@@ -22,7 +22,7 @@ const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet,
 const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 // const OrderLog = require('../models/OrderLog');
 const { updateBenoitStopLoss, setupBenoitOrders, 
-    checkBenoitDoubleConfirmation, executeBenoitOrders } = require('./benoit');
+    checkBenoitDoubleConfirmation, executeBenoitOrders, checkBenoitOrdersStoplossHit } = require('./benoit');
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
@@ -959,6 +959,19 @@ const scheduleMISJobs = () => {
             sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
         }
 
+        const ENABLE_BENOIT_STOP_LOSS_HIT = true;
+        if (ENABLE_BENOIT_STOP_LOSS_HIT) {
+            const checkBenoitOrdersStoplossHitCB = () => {
+                sendMessageToChannel('⏰ Check Benoit Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBenoitOrdersStoplossHitJob, checkBenoitOrdersStoplossHitJob_2)));
+                checkBenoitOrdersStoplossHit();
+            }
+            
+            const checkBenoitOrdersStoplossHitJob = schedule.scheduleJob('10 * 4,5,6,7,8 * * 1-5', checkBenoitOrdersStoplossHitCB);
+            const checkBenoitOrdersStoplossHitJob_2 = schedule.scheduleJob('10 ' + zeroToXMinsStr(0,46) + ' 9 * * 1-5', checkBenoitOrdersStoplossHitCB);
+            sendMessageToChannel('⏰ Check Benoit Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBenoitOrdersStoplossHitJob, checkBenoitOrdersStoplossHitJob_2)));
+        }
+
+
         // Setup Benoit orders - check every 5 mins to see if any new stocks are eligible and ltp has cleared trigger 1
         const ENABLE_BENOIT_ORDERS_SETUP = true;
         if (ENABLE_BENOIT_ORDERS_SETUP) {
@@ -1053,7 +1066,7 @@ const scheduleMISJobs = () => {
     // const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
     // sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
 
-    const ENABLE_BAILEY_ORDERS_SETUP = true;
+    const ENABLE_BAILEY_ORDERS_SETUP = false;
     if (ENABLE_BAILEY_ORDERS_SETUP) {
         const baileyJobCB = () => {
             sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));

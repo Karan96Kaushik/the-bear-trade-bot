@@ -314,6 +314,68 @@ async function executeBenoitOrders() {
 }
 
 /**
+ * Checks if the stoploss price of Benoit orders has been hit
+ * @returns {Promise<void>}
+ */
+async function checkBenoitOrdersStoplossHit() {
+    try {
+        await sendMessageToChannel('⌛️ Executing Check Benoit Orders Stoploss Hit Job');
+
+        let benoitSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+        const rowHeaders = benoitSheetData.map(a => a[1])
+        const colHeaders = benoitSheetData[0]
+        benoitSheetData = processSheetWithHeaders(benoitSheetData)
+
+        for (const order of benoitSheetData) {
+            try {
+                if (order.status != 'triggered') continue;
+                if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
+
+                const sym = `NSE:${order.symbol}`
+                let ltp = await kiteSession.kc.getLTP([sym]);
+                ltp = ltp[sym]?.last_price;
+
+                let exited = false;
+                let updates = [];
+                
+                if (order.direction === 'BULLISH') {
+                    if (ltp <= order.stopLossPrice) {
+                        exited = true;
+                        await sendMessageToChannel('❎ Benoit order stopped:', order.symbol, order.quantity, order.status, order.source);
+                        await placeOrder('SELL', 'MARKET', null, order.quantity, order, `sl-benoit-1t`);
+                        await logOrder('PLACED', 'STOPLOSS', order);
+                    }
+                }
+                else if (order.direction === 'BEARISH') {
+                    if (ltp >= order.stopLossPrice) {
+                        exited = true;
+                        await sendMessageToChannel('❎ Benoit order stopped:', order.symbol, order.quantity, order.status, order.source);
+                        await placeOrder('BUY', 'MARKET', null, order.quantity, order, `sl-benoit-1t`);
+                        await logOrder('PLACED', 'STOPLOSS', order);
+                    }
+                }
+
+                if (exited) {
+                    const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
+                        values: [['stopped']], 
+                    })
+                    await bulkUpdateCells(updates)
+                }
+            } catch (error) {
+                console.error(error)
+                await sendMessageToChannel('🚨 Error checking Benoit orders stoploss hit:', order.symbol, order.quantity, error?.message);
+            }
+        }
+
+    } catch (error) {
+        console.error(error);
+        await sendMessageToChannel(`🚨 Error checking Benoit orders stoploss hit`, error?.message);
+    }
+}
+
+/**
  * Creates Benoit orders for a given stock
  * @returns {Promise<void>}
  */
@@ -733,5 +795,6 @@ module.exports = {
     updateBenoitStopLoss,
     checkBenoitDoubleConfirmation,
     setupBenoitOrders,
-    executeBenoitOrders
+    executeBenoitOrders,
+    checkBenoitOrdersStoplossHit
 }
