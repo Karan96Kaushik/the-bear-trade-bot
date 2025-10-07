@@ -26,11 +26,13 @@ const slack_app = new App({
 });
 
 const run = async () => {
-	await slack_app.start(process.env.SLACK_PORT || 3002)
-	console.log('⚡️ Bolt slack_app is running!')
 	expressApp.listen(process.env.EXPRESS_PORT || 9002, () => {console.log(`Express app is running on port ${process.env.EXPRESS_PORT || 9002}`)});
-
-	initialize_slack(slack_app)
+	
+	if (process.env.NODE_ENV === 'production') {
+		await slack_app.start(process.env.SLACK_PORT || 3002)
+		console.log('⚡️ Bolt slack_app is running!')
+		initialize_slack(slack_app)
+	}
 	initialize_server(expressApp)
 
 	await sendMessageToChannel('🚀 Starting app!')
@@ -44,6 +46,10 @@ const run = async () => {
 	}
 	else {
 		await kiteSession.authenticate()
+
+		// const positions = await kiteSession.kc.getPositions()
+		// console.log(positions.net.filter(p => p.tradingsymbol == 'RELIANCE'))
+
 	}
 
 	// await kiteSession.authenticate()
