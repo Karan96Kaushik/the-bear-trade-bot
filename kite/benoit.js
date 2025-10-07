@@ -16,6 +16,7 @@ const { getDateStringIND } = require('../kite/utils');
 
 const BENOIT_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
+const EXECUTE_AFTER_MINUTES = 2;
 const MAX_ACTIVE_ORDERS = 2;
 
 async function setupBenoitOrders() {
@@ -118,6 +119,8 @@ async function createBenoitOrdersEntries(stock) {
 
         const source = 'benoit';
 
+        let validated = false;
+
         let sym = `NSE:${stock.sym}`
         let quote = await kiteSession.kc.getQuote([sym])
         let ltp = quote[sym]?.last_price
@@ -165,11 +168,26 @@ async function createBenoitOrdersEntries(stock) {
             triggerPrice = Math.round(triggerPrice * 10) / 10;
             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
 
-            quantity = Math.ceil(BENOIT_RISK_AMOUNT / (stopLossPrice - triggerPrice));
-            quantity = Math.abs(quantity);
-            quantity = -quantity
+            // quantity = Math.ceil(BENOIT_RISK_AMOUNT / (stopLossPrice - triggerPrice));
+            // quantity = Math.abs(quantity);
+            // quantity = -quantity
 
+            if (stock.direction == 'BULLISH') {
+                if (ltp > triggerPrice) {
+                    validated = true;
+                }
+            }
+            else {
+                if (ltp < triggerPrice) {
+                    validated = true;
+                }
+            }
 
+        }
+
+        if (!validated) {
+            console.debug('🔕 Benoit order not validated', stock.sym)
+            return;
         }
 
         const sheetEntry = {
@@ -184,13 +202,90 @@ async function createBenoitOrdersEntries(stock) {
         sheetEntry.targetPrice = targetPrice
         sheetEntry.stopLossPrice = stopLossPrice
         sheetEntry.triggerPrice = triggerPrice
-        sheetEntry.quantity = quantity
+        sheetEntry.quantity = '' // quantity
 
         await appendRowsToMISD([sheetEntry], source)
     } catch (error) {
         console.error(error);
         await sendMessageToChannel(`🚨 Error creating Benoit orders`, error?.message);
         return;
+    }
+}
+
+/**
+ * Checks MIS-ALPHA 'new' sheet Benoit orders and checks if their LTP has crossed the trigger price
+ * runs every 2 mins
+ * @returns {Promise<void>}
+ */
+async function executeBenoitOrders() {
+    try {
+        let benoitSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+        const rowHeaders = benoitSheetData.map(a => a[1])
+        const colHeaders = benoitSheetData[0]
+        benoitSheetData = processSheetWithHeaders(benoitSheetData)
+
+        for (const order of benoitSheetData) {
+            try {
+                if (order.status != 'new') continue;
+                if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
+                const timeSinceScan = +new Date() - Number(order.time); // time since the order was created
+                // Execute if the order was scanned more than EXECUTE_AFTER_MINUTES minutes ago
+                if (timeSinceScan < 1000 * 60 * EXECUTE_AFTER_MINUTES) continue;
+
+                const sym = `NSE:${order.symbol}`
+                let ltp = await kiteSession.kc.getLTP([sym]);
+                ltp = ltp[sym]?.last_price;
+
+                const updates = []
+
+                let quantity_calculated = null;
+                let executed = false;
+
+                if (order.direction === 'BULLISH') {
+                    if (ltp > order.triggerPrice) {
+
+                        // BENOIT_RISK_AMOUNT/(SLPrice-LTP)
+                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stopLossPrice - ltp)));
+                        await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
+                        await placeOrder('BUY', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
+                        executed = true;
+
+                    }
+                }
+                else if (order.direction === 'BEARISH') {
+                    if (ltp < order.triggerPrice) {
+
+                        // BENOIT_RISK_AMOUNT/(LTP-SLPrice)
+                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stopLossPrice - ltp)));
+
+                        await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
+                        await placeOrder('SELL', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
+                        executed = true;
+                    }
+                }
+
+                if (executed) {
+                    const [row, col] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
+                    const [rowS, colS] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+                        values: [[quantity_calculated]], 
+                    })
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colS) + String(rowS), 
+                        values: [['triggered']], 
+                    })
+                    await bulkUpdateCells(updates)
+                }
+
+            } catch (error) {
+                console.error(error)
+                await sendMessageToChannel('🚨 Error executing Benoit order:', order.symbol, order.quantity, error?.message);
+            }
+        }
+    } catch (error) {
+        console.error(error);
+        await sendMessageToChannel(`🚨 Error executing Benoit orders`, error?.message);
     }
 }
 
@@ -419,12 +514,13 @@ function checkDoubleConfirmation(currentIndex, priceLevel, conditionType, data, 
 }
 
 /**
+ * [DEPRECATED]
  * Monitors Zaire scans stored in MIS Alpha sheet with source "zaire" and status "new"
  * Checks for double confirmation of trigger or stop loss hits
  */
 async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
     try {
-        await sendMessageToChannel('⌛️ Executing Zaire Double Confirmation Check');
+        await sendMessageToChannel('⌛️ [DEPRECATED] Executing Zaire Double Confirmation Check');
 
         await kiteSession.authenticate();
 
@@ -612,5 +708,6 @@ module.exports = {
     cancelBenoitOrders,
     updateBenoitStopLoss,
     checkBenoitDoubleConfirmation,
-    setupBenoitOrders
+    setupBenoitOrders,
+    executeBenoitOrders
 }

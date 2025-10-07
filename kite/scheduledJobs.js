@@ -21,7 +21,8 @@ const { getPivotData } = require('../scripts/pivot-data-report-gen-sheet');
 const { createLightyearOrders, setupLightyearDayOneOrders, updateLightyearSheet, checkTriggerHit } = require('./lightyear');
 const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 // const OrderLog = require('../models/OrderLog');
-const { updateBenoitStopLoss, setupBenoitOrders, checkBenoitDoubleConfirmation } = require('./benoit');
+const { updateBenoitStopLoss, setupBenoitOrders, 
+    checkBenoitDoubleConfirmation, executeBenoitOrders } = require('./benoit');
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
@@ -954,8 +955,8 @@ const scheduleMISJobs = () => {
         sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
     }
 
+    // Setup Benoit orders - check every 5 mins to see if any new stocks are eligible and ltp has cleared trigger 1
     if (true) {
-
         const benoitJobCB = () => {
             sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
             setupBenoitOrders();
@@ -964,6 +965,17 @@ const scheduleMISJobs = () => {
         const benoitJob_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
         sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
 
+    }
+
+    // Execute Benoit orders - check every 2 mins to see if any orders are triggered and execute them
+    if (true) {
+        const executeBenoitOrdersCB = () => {
+            sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
+            executeBenoitOrders();
+        };
+        const executeBenoitOrdersT = schedule.scheduleJob('10 55 3 * * 1-5', executeBenoitOrdersCB);
+        const executeBenoitOrdersT_2 = schedule.scheduleJob('10 */2 4,5,6,7,8 * * 1-5', executeBenoitOrdersCB);
+        sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
     }
 
 
@@ -1059,14 +1071,16 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
 
-    const benoitDoubleConfirmationCB = () => {
+    if (false) {
+        const benoitDoubleConfirmationCB = () => {
+            sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
+            checkBenoitDoubleConfirmation();
+        };
+        const benoitDoubleConfirmation = schedule.scheduleJob('25 */5 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
+        const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 50,55 3 * * 1-5', benoitDoubleConfirmationCB);
+        const benoitDoubleConfirmation_3 = schedule.scheduleJob('25 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', benoitDoubleConfirmationCB);
         sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
-        checkBenoitDoubleConfirmation();
-    };
-    const benoitDoubleConfirmation = schedule.scheduleJob('25 */5 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
-    const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 50,55 3 * * 1-5', benoitDoubleConfirmationCB);
-    const benoitDoubleConfirmation_3 = schedule.scheduleJob('25 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', benoitDoubleConfirmationCB);
-    sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
+    }
 }
 
 module.exports = {
