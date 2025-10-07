@@ -8,7 +8,7 @@ const { kiteSession } = require('./setup');
 const { scanBenoitStocks } = require('../analytics/benoit');
 const { createBenoitOrdersEntries, cancelBenoitOrders } = require('./benoit');
 // const { getInstrumentToken } = require('./utils'); // Assuming you have a utility function to get instrument token
-const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData } = require('./utils');
+const { getDateStringIND, getDataFromYahoo, getDhanNIFTY50Data, processYahooData, calculateExtremePrice } = require('./utils');
 const { createOrders, createZaireOrders, placeOrder, logOrder, setToIgnoreInSheet } = require('./processor');
 const { 
     scanZaireStocks, isBullishCandle, scanLightyearD2Stocks,
@@ -709,25 +709,6 @@ async function closeZaireOppositePositions() {
         await sendMessageToChannel('🚨 Error running close negative positions job', error?.message);
         console.error("🚨 Error running close negative positions job: ", error?.message);
     }
-}
-
-async function calculateExtremePrice(sym, type, timeFrame = 15) {
-    let data = await getDataFromYahoo(sym, 1, '1m');  // 1 day of 1-minute data
-    data = processYahooData(data)
-
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
-
-    data = data.filter(d => +d.time >= +today)
-
-    const priceType = type === 'highest' ? 'high' : 'low';
-    const lastData = data
-                            .slice(-timeFrame)
-                            // .filter((d) => d.time >= thirtyMinutesAgo)
-                            .map(p => p[priceType])
-                            .filter(p => p);
-
-    return type === 'highest' ? Math.max(...lastData) : Math.min(...lastData);
 }
 
 async function updateStopLossOrders() {

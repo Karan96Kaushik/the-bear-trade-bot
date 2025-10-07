@@ -9,10 +9,9 @@ const {
     getOrderLoc, processMISSheetData, appendRowsToMISD, processSheetWithHeaders
 } = require("../gsheets");
 const { sendMessageToChannel } = require("../slack-actions")
-const { getDataFromYahoo, processYahooData } = require('../kite/utils');
+const { getDataFromYahoo, processYahooData, calculateExtremePrice } = require('../kite/utils');
 const { scanBenoitStocks } = require("../analytics/benoit");
 const { getDateStringIND } = require('../kite/utils');
-const { calculateExtremePrice } = require('./scheduledJobs');
 
 
 const BENOIT_RISK_AMOUNT = 200;
