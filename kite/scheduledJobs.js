@@ -954,7 +954,7 @@ const scheduleMISJobs = () => {
             // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
             const updateBenoitStopLossJob = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
             const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBenoitStopLossCB);
-            const updateBenoitStopLossJob_3 = null // schedule.scheduleJob('10 55 3 * * 1-5', updateBenoitStopLossCB);
+            const updateBenoitStopLossJob_3 = undefined // schedule.scheduleJob('10 55 3 * * 1-5', updateBenoitStopLossCB);
 
             sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
         }
