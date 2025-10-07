@@ -905,13 +905,16 @@ const getEarliestTime = (a, b, c={nextInvocation: () => 9999999999999}) => {
 const scheduleMISJobs = () => {
 
 
-    const sheetSetupJobCB = () => {
-        setupOrdersFromSheet()
+    const ENABLE_SHEET_SETUP = false;
+    if (ENABLE_SHEET_SETUP) {
+        const sheetSetupJobCB = () => {
+            setupOrdersFromSheet()
+            sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(getEarliestTime(sheetSetupJob, sheetSetupJob_2)))
+        }
+        const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', sheetSetupJobCB);
+        const sheetSetupJob_2 = schedule.scheduleJob('46,16 4,5,6 * * 1-5', sheetSetupJobCB);
         sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(getEarliestTime(sheetSetupJob, sheetSetupJob_2)))
     }
-    const sheetSetupJob = schedule.scheduleJob('46 3 * * 1-5', sheetSetupJobCB);
-    const sheetSetupJob_2 = schedule.scheduleJob('46,16 4,5,6 * * 1-5', sheetSetupJobCB);
-    sendMessageToChannel('⏰ Manual MIS Scheduled - ', getDateStringIND(getEarliestTime(sheetSetupJob, sheetSetupJob_2)))
 
     const closePositionsJob = schedule.scheduleJob('49 9 * * 1-5', () => {
         closePositions();
@@ -919,24 +922,29 @@ const scheduleMISJobs = () => {
     });
     sendMessageToChannel('⏰ Close Positions Job Scheduled - ', getDateStringIND(closePositionsJob.nextInvocation()));
 
-    const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
-        validateOrdersFromSheet();
+    const ENABLE_VALIDATION = false;
+    if (ENABLE_VALIDATION) {
+        const validationJob = schedule.scheduleJob('35 3 * * 1-5', () => {
+            validateOrdersFromSheet();
+            sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
+        });
         sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
-    });
-    sendMessageToChannel('⏰ Validation Job Scheduled - ', getDateStringIND(validationJob.nextInvocation()));
-
-
-    const updateStopLossCB = () => {
-        sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
-        updateStopLossOrders();
     }
-    // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
-    // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
-    // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
-    const updateStopLossJob = schedule.scheduleJob('15 */15 4,5,6,7,8 * * 1-5', updateStopLossCB);
-    const updateStopLossJob_2 = schedule.scheduleJob('15 0,15,30,45 9 * * 1-5', updateStopLossCB);
 
-    sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+    const ENABLE_UPDATE_STOP_LOSS = false;
+    if (ENABLE_UPDATE_STOP_LOSS) {
+        const updateStopLossCB = () => {
+            sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+            updateStopLossOrders();
+        }
+        // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
+        // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
+        // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
+        const updateStopLossJob = schedule.scheduleJob('15 */15 4,5,6,7,8 * * 1-5', updateStopLossCB);
+        const updateStopLossJob_2 = schedule.scheduleJob('15 0,15,30,45 9 * * 1-5', updateStopLossCB);
+
+        sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
+    }
 
     // Benoit jobs
     const ENABLE_BENOIT = true;
