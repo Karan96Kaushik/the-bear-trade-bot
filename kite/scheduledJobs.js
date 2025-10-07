@@ -938,44 +938,63 @@ const scheduleMISJobs = () => {
 
     sendMessageToChannel('⏰ Update Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
 
+    // Benoit jobs
+    const ENABLE_BENOIT = true;
+    if (ENABLE_BENOIT) {
 
-    if (true) {
+        const ENABLE_BENOIT_STOP_LOSS_UPDATE = true;
+        if (ENABLE_BENOIT_STOP_LOSS_UPDATE) {
 
-        const updateBenoitStopLossCB = () => {
-            sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(updateStopLossJob.nextInvocation() < updateStopLossJob_2.nextInvocation() ? updateStopLossJob.nextInvocation() : updateStopLossJob_2.nextInvocation()));
-            updateBenoitStopLoss();
+            const updateBenoitStopLossCB = () => {
+                sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
+                updateBenoitStopLoss();
+            }
+            // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
+            // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
+            // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
+            const updateBenoitStopLossJob = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
+            const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBenoitStopLossCB);
+            const updateBenoitStopLossJob_3 = null // schedule.scheduleJob('10 55 3 * * 1-5', updateBenoitStopLossCB);
+
+            sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
         }
-        // const updateStopLossJob = schedule.scheduleJob('*/5 4,5,6,7,8 * * 1-5', updateStopLossCB);
-        // const updateStopLossJob_2 = schedule.scheduleJob('55 3 * * 1-5', updateStopLossCB);
-        // const updateStopLossJob_3 = schedule.scheduleJob('0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateStopLossCB);
-        const updateBenoitStopLossJob = schedule.scheduleJob('10 */15 4,5,6,7,8 * * 1-5', updateBenoitStopLossCB);
-        const updateBenoitStopLossJob_2 = schedule.scheduleJob('10 0,15,30,45 9 * * 1-5', updateBenoitStopLossCB);
-        const updateBenoitStopLossJob_3 = schedule.scheduleJob('10 50,55 3 * * 1-5', updateBenoitStopLossCB);
 
-        sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
-    }
-
-    // Setup Benoit orders - check every 5 mins to see if any new stocks are eligible and ltp has cleared trigger 1
-    if (true) {
-        const benoitJobCB = () => {
+        // Setup Benoit orders - check every 5 mins to see if any new stocks are eligible and ltp has cleared trigger 1
+        const ENABLE_BENOIT_ORDERS_SETUP = true;
+        if (ENABLE_BENOIT_ORDERS_SETUP) {
+            const benoitJobCB = () => {
+                sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
+                setupBenoitOrders();
+            };
+            const benoitJob = schedule.scheduleJob('10 55 3 * * 1-5', benoitJobCB);
+            const benoitJob_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
             sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
-            setupBenoitOrders();
-        };
-        const benoitJob = schedule.scheduleJob('10 50,55 3 * * 1-5', benoitJobCB);
-        const benoitJob_2 = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
-        sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
 
-    }
+        }
 
-    // Execute Benoit orders - check every 2 mins to see if any orders are triggered and execute them
-    if (true) {
-        const executeBenoitOrdersCB = () => {
+        // Execute Benoit orders - check every 2 mins to see if any orders are triggered and execute them
+        const ENABLE_BENOIT_ORDERS_EXECUTE = true;
+        if (ENABLE_BENOIT_ORDERS_EXECUTE) {
+            const executeBenoitOrdersCB = () => {
+                sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
+                executeBenoitOrders();
+            };
+            const executeBenoitOrdersT = schedule.scheduleJob('10 55 3 * * 1-5', executeBenoitOrdersCB);
+            const executeBenoitOrdersT_2 = schedule.scheduleJob('10 */2 4,5,6,7,8 * * 1-5', executeBenoitOrdersCB);
             sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
-            executeBenoitOrders();
-        };
-        const executeBenoitOrdersT = schedule.scheduleJob('10 55 3 * * 1-5', executeBenoitOrdersCB);
-        const executeBenoitOrdersT_2 = schedule.scheduleJob('10 */2 4,5,6,7,8 * * 1-5', executeBenoitOrdersCB);
-        sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
+        }
+
+        const ENABLE_BENOIT_DOUBLE_CONFIRMATION = false;
+        if (ENABLE_BENOIT_DOUBLE_CONFIRMATION) {
+            const benoitDoubleConfirmationCB = () => {
+                sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
+                checkBenoitDoubleConfirmation();
+            };
+            const benoitDoubleConfirmation = schedule.scheduleJob('25 */5 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
+            const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 50,55 3 * * 1-5', benoitDoubleConfirmationCB);
+            const benoitDoubleConfirmation_3 = schedule.scheduleJob('25 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', benoitDoubleConfirmationCB);
+            sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
+        }
     }
 
 
@@ -995,16 +1014,33 @@ const scheduleMISJobs = () => {
         // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
     }
 
-    const lightyearTriggerHitCB = () => {
-        sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2))); //, zaireJobV3_3)));
-        // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
-        checkLightyearTriggerHit();
-    };
-    const lightyearTriggerHit_2 = schedule.scheduleJob('10 50,55 3 * * 1-5', lightyearTriggerHitCB);
-    const lightyearTriggerHit = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', lightyearTriggerHitCB);
-    const lightyearTriggerHit_3 = schedule.scheduleJob('10 0,5,10,15,20,25 9 * * 1-5', lightyearTriggerHitCB);
-    sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2, lightyearTriggerHit_3))); //, zaireJobV3_3)));
-    // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+    const ENABLE_LIGHTYEAR = false;
+    if (ENABLE_LIGHTYEAR) {
+        const lightyearTriggerHitCB = () => {
+            sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2))); //, zaireJobV3_3)));
+            // sendMessageToChannel('⏰ Zaire V3 Scheduled - ', getDateStringIND(zaireJobV3.nextInvocation()));
+            checkLightyearTriggerHit();
+        };
+        const lightyearTriggerHit_2 = schedule.scheduleJob('10 50,55 3 * * 1-5', lightyearTriggerHitCB);
+        const lightyearTriggerHit = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', lightyearTriggerHitCB);
+        const lightyearTriggerHit_3 = schedule.scheduleJob('10 0,5,10,15,20,25 9 * * 1-5', lightyearTriggerHitCB);
+        sendMessageToChannel('⏰ Lightyear Trigger Hit Check Scheduled - ', getDateStringIND(getEarliestTime(lightyearTriggerHit, lightyearTriggerHit_2, lightyearTriggerHit_3))); //, zaireJobV3_3)));
+        // sendMessageToChannel('⏰ Zaire V2 Scheduled - ', getDateStringIND(zaireJobV2.nextInvocation()));
+
+        const lightyearUpdateJob = schedule.scheduleJob('0 11 * * 1-5', () => {
+            updateLightyearOrders()
+            sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
+    
+        });
+        sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
+    
+        const lightyearJob = schedule.scheduleJob('30 11 * * 1-5', () => {
+            setupLightyearOrders()
+            sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
+        });
+        sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
+    
+    }
 
 
     const missingOrdersCB = () => {
@@ -1017,7 +1053,8 @@ const scheduleMISJobs = () => {
     // const missingOrders_3 = schedule.scheduleJob('21 2,7 9 * * 1-5', missingOrdersCB);
     // sendMessageToChannel('⏰ Missing Orders Scheduled - ', getDateStringIND(getEarliestTime(missingOrders, missingOrders_2, missingOrders_3)));
 
-    if (false) {
+    const ENABLE_BAILEY_ORDERS_SETUP = true;
+    if (ENABLE_BAILEY_ORDERS_SETUP) {
         const baileyJobCB = () => {
             sendMessageToChannel('⏰ Bailey Scheduled - ', getDateStringIND(getEarliestTime(baileyJob, baileyJob_2, baileyJob_3)));
             setupBaileyOrders();
@@ -1043,44 +1080,26 @@ const scheduleMISJobs = () => {
     // });
     // sendMessageToChannel('⏰ Close Zaire Opposite Positions Scheduled - ', getDateStringIND(zaireCloseJob.nextInvocation()));
 
-    const dailyReportJob = schedule.scheduleJob('40 10 * * 1-5', () => {
-        generateDailyReportF('29Nov')
+    const ENABLE_DAILY_REPORT = false;
+    if (ENABLE_DAILY_REPORT) {
+        const dailyReportJob = schedule.scheduleJob('40 10 * * 1-5', () => {
+            generateDailyReportF('29Nov')
+            sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
+
+        });
         sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
-
-    });
-    sendMessageToChannel('⏰ Daily Report Scheduled - ', getDateStringIND(dailyReportJob.nextInvocation()));
-
-    const pivotDataJob = schedule.scheduleJob('30 1 * * 1-5', () => {
-        getPivotData()
-        sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
-
-    });
-    sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
-
-
-    const lightyearUpdateJob = schedule.scheduleJob('0 11 * * 1-5', () => {
-        updateLightyearOrders()
-        sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
-
-    });
-    sendMessageToChannel('⏰ Lightyear Update Scheduled - ', getDateStringIND(lightyearUpdateJob.nextInvocation()));
-
-    const lightyearJob = schedule.scheduleJob('30 11 * * 1-5', () => {
-        setupLightyearOrders()
-        sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
-    });
-    sendMessageToChannel('⏰ Lightyear Scheduled - ', getDateStringIND(lightyearJob.nextInvocation()));
-
-    if (false) {
-        const benoitDoubleConfirmationCB = () => {
-            sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
-            checkBenoitDoubleConfirmation();
-        };
-        const benoitDoubleConfirmation = schedule.scheduleJob('25 */5 4,5,6,7,8 * * 1-5', benoitDoubleConfirmationCB);
-        const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 50,55 3 * * 1-5', benoitDoubleConfirmationCB);
-        const benoitDoubleConfirmation_3 = schedule.scheduleJob('25 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', benoitDoubleConfirmationCB);
-        sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
     }
+
+    const ENABLE_PIVOT_DATA = false;
+    if (ENABLE_PIVOT_DATA) {
+        const pivotDataJob = schedule.scheduleJob('30 1 * * 1-5', () => {
+            getPivotData()
+            sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
+
+        });
+        sendMessageToChannel('⏰ Pivot Data Scheduled - ', getDateStringIND(pivotDataJob.nextInvocation()));
+    }
+
 }
 
 module.exports = {

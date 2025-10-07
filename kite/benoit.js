@@ -17,7 +17,7 @@ const { getDateStringIND } = require('../kite/utils');
 const BENOIT_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
 const EXECUTE_AFTER_MINUTES = 2;
-const MAX_ACTIVE_ORDERS = 2;
+const MAX_ACTIVE_ORDERS = 3;
 
 async function setupBenoitOrders() {
     try {
@@ -265,17 +265,41 @@ async function executeBenoitOrders() {
                 }
 
                 if (executed) {
-                    const [row, col] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
-                    const [rowS, colS] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                    const [rowQuantity, colQuantity] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
+                    const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                    const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
                     updates.push({
-                        range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colQuantity) + String(rowQuantity), 
                         values: [[quantity_calculated]], 
                     })
                     updates.push({
-                        range: 'MIS-ALPHA!' + numberToExcelColumn(colS) + String(rowS), 
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
                         values: [['triggered']], 
                     })
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
+                        values: [[+new Date()]], 
+                    })
                     await bulkUpdateCells(updates)
+                }
+                // Not executed; chjeck for cancellation
+                else {
+                    // Cancel if the order was scanned more than CANCEL_AFTER_MINUTES minutes ago
+                    if (timeSinceScan > 1000 * 60 * CANCEL_AFTER_MINUTES) {
+                        const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                        const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
+                        updates.push({
+                            range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
+                            values: [['cancelled']], 
+                        })
+                        updates.push({
+                            range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
+                            values: [[+new Date()]], 
+                        })
+                        await bulkUpdateCells(updates)
+                        await sendMessageToChannel('❎ Cancelled Benoit order:', order.symbol, order.quantity, order.status, order.source);
+                    }
+
                 }
 
             } catch (error) {
