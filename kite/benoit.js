@@ -16,7 +16,7 @@ const { getDateStringIND } = require('../kite/utils');
 
 const BENOIT_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 20;
-
+const MAX_ACTIVE_ORDERS = 2;
 
 async function setupBenoitOrders() {
     try {
@@ -67,9 +67,9 @@ async function setupBenoitOrders() {
 
         if (
             // Check if there are more than 5 triggered benoit orders in the sheet
-            sheetData.filter(s => s.status?.toLowerCase() == 'triggered' && s.source?.toLowerCase() == 'benoit').length >= 5
+            sheetData.filter(s => s.status?.toLowerCase() == 'triggered' && s.source?.toLowerCase() == 'benoit').length >= MAX_ACTIVE_ORDERS
         ) {
-            await sendMessageToChannel('🔔 Benoit Active positions are more than 5')
+            await sendMessageToChannel('🔔 Benoit Active positions are more than ' + MAX_ACTIVE_ORDERS)
             return
         }
 
