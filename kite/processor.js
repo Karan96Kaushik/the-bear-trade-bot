@@ -473,7 +473,7 @@ async function createZaireOrders(stock, tag='zaire') {
 async function placeOrder(transactionType, orderType, price, quantity, stock, initiatedBy='-') {
     const order = {
         exchange: "NSE",
-        tradingsymbol: stock.sym || stock.stockSymbol || stock.tradingsymbol,
+        tradingsymbol: stock.sym || stock.stockSymbol || stock.tradingsymbol || stock.symbol,
         transaction_type: transactionType,
         quantity: Math.abs(parseInt(quantity)),
         order_type: orderType,
