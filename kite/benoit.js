@@ -245,7 +245,7 @@ async function executeBenoitOrders() {
                 let executed = false;
 
                 if (direction === 'BULLISH') {
-                    if (ltp > order.trigger_price) {
+                    if (ltp > order.price) {
 
                         // BENOIT_RISK_AMOUNT/(SLPrice-LTP)
                         quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
@@ -257,7 +257,7 @@ async function executeBenoitOrders() {
                     }
                 }
                 else if (direction === 'BEARISH') {
-                    if (ltp < order.trigger_price) {
+                    if (ltp < order.price) {
 
                         // BENOIT_RISK_AMOUNT/(LTP-SLPrice)
                         quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
@@ -272,7 +272,7 @@ async function executeBenoitOrders() {
                     quantity_calculated = direction === 'BULLISH' ? quantity_calculated : -quantity_calculated;
                 }
 
-                console.debug('🔕 Benoit exec', executed, order.symbol, direction, ltp, order.trigger_price, quantity_calculated)
+                console.debug('🔕 Benoit exec', executed, order.symbol, direction, ltp, order.price, quantity_calculated)
 
                 if (executed) {
                     const [rowQuantity, colQuantity] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
