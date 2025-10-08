@@ -171,6 +171,7 @@ async function createBenoitOrdersEntries(stock) {
             // quantity = Math.ceil(BENOIT_RISK_AMOUNT / (stopLossPrice - triggerPrice));
             // quantity = Math.abs(quantity);
             // quantity = -quantity
+            quantity = -1;
 
             if (stock.direction == 'BULLISH') {
                 if (ltp > triggerPrice) {
@@ -202,7 +203,7 @@ async function createBenoitOrdersEntries(stock) {
         sheetEntry.targetPrice = targetPrice
         sheetEntry.stopLossPrice = stopLossPrice
         sheetEntry.triggerPrice = triggerPrice
-        sheetEntry.quantity = '' // quantity
+        sheetEntry.quantity = quantity
 
         await appendRowsToMISD([sheetEntry], source)
     } catch (error) {
@@ -232,6 +233,8 @@ async function executeBenoitOrders() {
                 // Execute if the order was scanned more than EXECUTE_AFTER_MINUTES minutes ago
                 if (timeSinceScan < 1000 * 60 * EXECUTE_AFTER_MINUTES) continue;
 
+                const direction = Number(order.quantity) > 0 ? 'BULLISH' : 'BEARISH';
+
                 const sym = `NSE:${order.symbol}`
                 let ltp = await kiteSession.kc.getLTP([sym]);
                 ltp = ltp[sym]?.last_price;
@@ -241,7 +244,7 @@ async function executeBenoitOrders() {
                 let quantity_calculated = null;
                 let executed = false;
 
-                if (order.direction === 'BULLISH') {
+                if (direction === 'BULLISH') {
                     if (ltp > order.triggerPrice) {
 
                         // BENOIT_RISK_AMOUNT/(SLPrice-LTP)
@@ -252,7 +255,7 @@ async function executeBenoitOrders() {
 
                     }
                 }
-                else if (order.direction === 'BEARISH') {
+                else if (direction === 'BEARISH') {
                     if (ltp < order.triggerPrice) {
 
                         // BENOIT_RISK_AMOUNT/(LTP-SLPrice)
@@ -264,7 +267,11 @@ async function executeBenoitOrders() {
                     }
                 }
 
-                console.debug('🔕 Benoit exec', executed, order.symbol, order.direction, ltp, order.triggerPrice)
+                if (quantity_calculated) {
+                    quantity_calculated = direction === 'BULLISH' ? quantity_calculated : -quantity_calculated;
+                }
+
+                console.debug('🔕 Benoit exec', executed, order.symbol, direction, ltp, order.triggerPrice, quantity_calculated)
 
                 if (executed) {
                     const [rowQuantity, colQuantity] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
@@ -338,6 +345,8 @@ async function checkBenoitOrdersStoplossHit() {
                 if (order.status != 'triggered') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
 
+                const direction = Number(order.quantity) > 0 ? 'BULLISH' : 'BEARISH';
+
                 const sym = `NSE:${order.symbol}`
                 let ltp = await kiteSession.kc.getLTP([sym]);
                 ltp = ltp[sym]?.last_price;
@@ -345,7 +354,7 @@ async function checkBenoitOrdersStoplossHit() {
                 let exited = false;
                 let updates = [];
                 
-                if (order.direction === 'BULLISH') {
+                if (direction === 'BULLISH') {
                     if (ltp <= order.stopLossPrice) {
                         exited = true;
                         await sendMessageToChannel('❎ Benoit order stopped:', order.symbol, order.quantity, order.status, order.source);
@@ -353,7 +362,7 @@ async function checkBenoitOrdersStoplossHit() {
                         await logOrder('PLACED', 'STOPLOSS', order);
                     }
                 }
-                else if (order.direction === 'BEARISH') {
+                else if (direction === 'BEARISH') {
                     if (ltp >= order.stopLossPrice) {
                         exited = true;
                         await sendMessageToChannel('❎ Benoit order stopped:', order.symbol, order.quantity, order.status, order.source);
