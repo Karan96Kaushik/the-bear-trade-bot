@@ -365,9 +365,9 @@ async function executeBenoitOrders() {
  */
 async function cancelSafetyStopLoss(order, direction) {
     try {
-        const orders = await kiteSession.kc.getOrders();
-        const existingOrder = orders.find(o1 => 
-            o1.tradingsymbol === o1.symbol && 
+        const allOrders = await kiteSession.kc.getOrders();
+        const existingOrder = allOrders.find(o1 => 
+            o1.tradingsymbol === order.symbol && 
             o1.transaction_type === (direction === 'BEARISH' ? 'BUY' : 'SELL') && 
             o1.tag?.includes('-safe') &&
             (o1.status === 'TRIGGER PENDING' || o1.status === 'OPEN')
@@ -401,8 +401,11 @@ async function checkBenoitOrdersStoplossHit() {
                 if (order.status != 'triggered') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
 
-                if (positions.net.find(p => p.tradingsymbol === order.symbol && p.quantity > 0)) {
+                const activePosition = positions.net.find(p => p.tradingsymbol === order.symbol && p.quantity > 0)
+                if (!activePosition) {
                     await sendMessageToChannel('⁉️ Benoit order not in position', order.symbol, order.quantity, order.status, order.source);
+                    console.log('⁉️ Benoit order not in position', order.symbol, order.quantity, order.status, order.source);
+                    console.log('all positions', positions.net.map(p => [p.tradingsymbol, p.quantity]));
                     continue;
                 }
 
@@ -532,7 +535,7 @@ async function createBenoitSafetyStopLoss(stock, quantity, direction, lower_circ
         await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', stock.symbol, quantity, direction, safetyPrice, lower_circuit_limit, upper_circuit_limit);
 
 
-        await placeOrder(actionType, orderType, safetyPrice, stock.quantity, stock, `sl-benoit-safe`);
+        await placeOrder(actionType, orderType, safetyPrice, quantity, stock, `sl-benoit-safe`);
         await logOrder('PLACED', 'STOPLOSS SAFETY', stock);
     } catch (error) {
         console.error(error);
@@ -853,8 +856,8 @@ async function checkBenoitDoubleConfirmation(startDate = null, endDate = null) {
                 // }
 
                 if (stopLossConfirmation.isConfirmed &&
-                    (direction === 'BULLISH' && ltp && ltp < stock.stopLossPrice) ||
-                    (direction === 'BEARISH' && ltp && ltp > stock.stopLossPrice)
+                    ((direction === 'BULLISH' && ltp && ltp < stock.stopLossPrice) ||
+                    (direction === 'BEARISH' && ltp && ltp > stock.stopLossPrice))
                 ) {
                     await sendMessageToChannel(
                         `🛑 ${sym} - Stop Loss CONFIRMED (${stopLossConfirmation.confirmationCount} hits)`,

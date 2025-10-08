@@ -1,0 +1,92 @@
+graph TD
+    Start([Benoit Process Start]) --> Setup[setupBenoitOrders<br/>Every 5 mins]
+    
+    Setup --> ReadStocks[Read High Beta Stocks<br/>from HIGHBETA sheet]
+    ReadStocks --> ScanStocks[scanBenoitStocks<br/>5m interval data]
+    
+    ScanStocks --> Conditions{Check All<br/>Conditions}
+    Conditions -->|Bearish candle| Cond1[Previous close < mid]
+    Conditions -->|On SMA| Cond2[Touching 22-period SMA]
+    Conditions -->|Price limit| Cond3[Close < 5000]
+    Conditions -->|Narrow range| Cond4[Range ≤ 0.5% of avg price]
+    Conditions -->|Breaking lower| Cond5[Current low < Previous low]
+    
+    Cond1 & Cond2 & Cond3 & Cond4 & Cond5 --> CheckLimit{Active orders<br/> < 3?}
+    
+    CheckLimit -->|No| Stop1([Skip - Too many active])
+    CheckLimit -->|Yes| CheckExists{Already in<br/>position or sheet?}
+    
+    CheckExists -->|Yes| Stop2([Skip - Already exists])
+    CheckExists -->|No| CreateEntry[createBenoitOrdersEntries]
+    
+    CreateEntry --> CalcPrices[Calculate Prices:<br/>Trigger = low - padding<br/>SL = high + buffer<br/>Quantity = -1]
+    CalcPrices --> CheckLTP{LTP < Trigger?}
+    
+    CheckLTP -->|Yes| Status1[Status: trigger-1]
+    CheckLTP -->|No| Status2[Status: new]
+    
+    Status1 & Status2 --> AddSheet[Add to MIS-ALPHA sheet]
+    
+    AddSheet --> Execute[executeBenoitOrders<br/>Every minute]
+    
+    Execute --> ReadOrders[Read orders with<br/>status 'new' or 'trigger-1']
+    ReadOrders --> CheckTime{Time since scan<br/> > 2 mins?}
+    
+    CheckTime -->|No| Wait1([Wait])
+    CheckTime -->|Yes| CheckStatus{Current Status?}
+    
+    CheckStatus -->|new| CheckTrigger1{LTP < Trigger?}
+    CheckStatus -->|trigger-1| CheckTrigger2{LTP < Trigger?}
+    
+    CheckTrigger1 -->|Yes| UpdateTrigger1[Update status to 'trigger-1']
+    CheckTrigger1 -->|No| CheckCancel{Time > 10 mins?}
+    
+    CheckTrigger2 -->|Yes| CalcQty[Calculate Quantity:<br/>RISK_AMOUNT ÷ SL - LTP]
+    CheckTrigger2 -->|No| Wait2([Wait])
+    
+    CalcQty --> PlaceOrder[Place SELL Market Order]
+    PlaceOrder --> CreateSafety[createBenoitSafetyStopLoss<br/>SL-M at 20% inside]
+    CreateSafety --> UpdateTriggered[Update status to 'triggered']
+    
+    CheckCancel -->|Yes| CancelOrder[Mark as cancelled<br/>Prefix symbol with '-']
+    CheckCancel -->|No| Wait3([Wait])
+    
+    UpdateTriggered --> Monitor[checkBenoitOrdersStoplossHit<br/>Every minute]
+    
+    Monitor --> ReadTriggered[Read orders with<br/>status 'triggered']
+    ReadTriggered --> CheckSL{LTP ≥ Stop Loss?}
+    
+    CheckSL -->|Yes| ExitOrder[Place BUY Market Order]
+    CheckSL -->|No| Continue1([Continue monitoring])
+    
+    ExitOrder --> CancelSafety[Cancel Safety Stop Loss]
+    CancelSafety --> UpdateStopped[Update status to 'stopped']
+    
+    UpdateTriggered --> UpdateSL[updateBenoitStopLoss<br/>Every 5 mins]
+    
+    UpdateSL --> GetExtreme[Get highest price<br/>in last 15 mins]
+    GetExtreme --> CheckBetter{New SL < Old SL?}
+    
+    CheckBetter -->|Yes| UpdateSheet[Update SL in sheet]
+    CheckBetter -->|No| Continue2([No update])
+    
+    UpdateStopped --> End([Process Complete])
+    UpdateSheet --> End
+    Continue1 --> End
+    Continue2 --> End
+    Wait1 --> End
+    Wait2 --> End
+    Wait3 --> End
+    Stop1 --> End
+    Stop2 --> End
+    CancelOrder --> End
+    UpdateTrigger1 --> End
+    
+    style Start fill:#90EE90
+    style End fill:#FFB6C1
+    style PlaceOrder fill:#FFD700
+    style ExitOrder fill:#FFD700
+    style CreateSafety fill:#87CEEB
+    style CancelOrder fill:#FFA07A
+    style UpdateTriggered fill:#98FB98
+    style UpdateStopped fill:#DDA0DD
