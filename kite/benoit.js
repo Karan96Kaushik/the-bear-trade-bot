@@ -186,7 +186,7 @@ async function createBenoitOrdersEntries(stock) {
         }
 
         if (!validated) {
-            console.debug('🔕 Benoit order not validated', stock.sym)
+            console.debug('🔕 Benoit order not validated', stock.sym, stock.direction, ltp, triggerPrice)
             return;
         }
 
