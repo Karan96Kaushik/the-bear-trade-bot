@@ -341,10 +341,17 @@ async function checkBenoitOrdersStoplossHit() {
         const colHeaders = benoitSheetData[0]
         benoitSheetData = processSheetWithHeaders(benoitSheetData)
 
+        const positions = await kiteSession.kc.getPositions();
+
         for (const order of benoitSheetData) {
             try {
                 if (order.status != 'triggered') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
+
+                if (positions.net.find(p => p.tradingsymbol === order.symbol) && p.quantity > 0) {
+                    await sendMessageToChannel('⁉️ Benoit order not in position', order.symbol, order.quantity, order.status, order.source);
+                    continue;
+                }
 
                 const direction = Number(order.quantity) > 0 ? 'BULLISH' : 'BEARISH';
 
