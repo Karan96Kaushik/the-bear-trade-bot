@@ -236,8 +236,11 @@ async function executeBenoitOrders() {
                 const direction = Number(order.quantity) > 0 ? 'BULLISH' : 'BEARISH';
 
                 const sym = `NSE:${order.symbol}`
-                let ltp = await kiteSession.kc.getLTP([sym]);
-                ltp = ltp[sym]?.last_price;
+
+                let quote = await kiteSession.kc.getQuote([sym]) 
+                let upper_circuit_limit = quote[sym]?.upper_circuit_limit
+                let lower_circuit_limit = quote[sym]?.lower_circuit_limit
+                let ltp = quote[sym]?.last_price
 
                 const updates = []
 
@@ -252,6 +255,9 @@ async function executeBenoitOrders() {
                         
                         await placeOrder('BUY', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
                         await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
+
+                        await createBenoitSafetyStopLoss(order, quantity_calculated, direction, lower_circuit_limit, upper_circuit_limit);
+
                         executed = true;
 
                     }
@@ -263,6 +269,9 @@ async function executeBenoitOrders() {
                         quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
 
                         await placeOrder('SELL', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
+
+                        await createBenoitSafetyStopLoss(order, quantity_calculated, direction, lower_circuit_limit, upper_circuit_limit);
+
                         await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
                         executed = true;
                     }
@@ -383,9 +392,14 @@ async function checkBenoitOrdersStoplossHit() {
 
                 if (exited) {
                     const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                    const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
                         values: [['stopped']], 
+                    })
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
+                        values: [[+new Date()]], 
                     })
                     await bulkUpdateCells(updates)
                 }
@@ -449,6 +463,35 @@ async function cancelBenoitOrders() {
         console.error(error);
         await sendMessageToChannel(`🚨 Error cancelling Benoit orders`, error?.message);
         return;
+    }
+}
+
+async function createBenoitSafetyStopLoss(stock, quantity, direction, lower_circuit_limit, upper_circuit_limit) {
+    try {
+        let actionType, orderType, safetyPrice;
+        if (direction === 'BULLISH') {
+            safetyPrice = stock.stop_loss - ((stock.price - stock.stop_loss) * 0.2);
+            if (safetyPrice < lower_circuit_limit) {
+                safetyPrice = lower_circuit_limit + 0.1;
+            }
+            orderType = 'SL-M';
+            actionType = 'SELL';
+        } else if (direction === 'BEARISH') {
+            safetyPrice = stock.stop_loss + ((stock.stop_loss - stock.price) * 0.2);
+            if (safetyPrice > upper_circuit_limit) {
+                safetyPrice = upper_circuit_limit - 0.1;
+            }
+            orderType = 'SL-M';
+            actionType = 'BUY';
+        }
+        await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', stock.symbol, quantity, direction, stock.stockSymbol, safetyPrice, lower_circuit_limit, upper_circuit_limit);
+
+
+        await placeOrder(actionType, orderType, safetyPrice, stock.quantity, stock, `sl-benoit-safe`);
+        await logOrder('PLACED', 'STOPLOSS SAFETY', stock);
+    } catch (error) {
+        console.error(error);
+        await sendMessageToChannel(`🚨 Error creating Benoit safety stop loss`, stock.symbol, quantity, direction, stock.stockSymbol, lower_circuit_limit, upper_circuit_limit, error?.message);
     }
 }
 

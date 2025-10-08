@@ -627,13 +627,14 @@ async function closePositions() {
         await kiteSession.authenticate();
 
         const positions = await kiteSession.kc.getPositions();
+        const cncPostionSymbols = positions.net.filter(p => p.product == 'CNC').map(p => p.tradingsymbol);
         const allPositions = positions.net.filter(p => p.product == 'MIS').filter(position => (position.quantity || 0) != 0);
 
         for (const position of allPositions) {
             try {
 
-                if (!position.tag) {
-                    await sendMessageToChannel('🔞 Ignoring position without tag', position.tradingsymbol, position.quantity, position.tag)
+                if (cncPostionSymbols.includes(position.tradingsymbol)) {
+                    await sendMessageToChannel('🔞 Ignoring position with CNC symbol', position.tradingsymbol, position.quantity, position.product, cncPostionSymbols)
                     continue
                 }
                     
