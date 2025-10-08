@@ -264,6 +264,8 @@ async function executeBenoitOrders() {
                     }
                 }
 
+                console.debug('🔕 Benoit exec', executed, order.symbol, order.direction, ltp, order.triggerPrice)
+
                 if (executed) {
                     const [rowQuantity, colQuantity] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
                     const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
@@ -286,8 +288,13 @@ async function executeBenoitOrders() {
                 else {
                     // Cancel if the order was scanned more than CANCEL_AFTER_MINUTES minutes ago
                     if (timeSinceScan > 1000 * 60 * CANCEL_AFTER_MINUTES) {
+                        const [rowSym, colSym] = getStockLoc(order.symbol, 'Symbol', rowHeaders, colHeaders)
                         const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
                         const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
+                        updates.push({
+                            range: 'MIS-ALPHA!' + numberToExcelColumn(colSym) + String(rowSym), 
+                            values: [['-' + order.symbol]], 
+                        })
                         updates.push({
                             range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
                             values: [['cancelled']], 
