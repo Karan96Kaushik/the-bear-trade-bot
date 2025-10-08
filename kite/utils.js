@@ -803,6 +803,8 @@ const zeroToXMinsStr = (x, start = 0, gap = 1) => {
 //         .catch(err => console.error(`Error fetching data for ${startDate}-${endDate}:`, err));
 // }
 
+// console.log(zeroToXMinsStr(60))
+
 module.exports = {
     getInstrumentToken,
     getDateStringIND,

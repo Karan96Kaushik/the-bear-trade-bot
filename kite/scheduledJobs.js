@@ -988,8 +988,9 @@ const scheduleMISJobs = () => {
                 sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
                 setupBenoitOrders();
             };
-            const benoitJob = schedule.scheduleJob('59 56 3 * * 1-5', benoitJobCB);
-            const benoitJob_2 = schedule.scheduleJob('59 ' + zeroToXMinsStr(59,1,5)+ ' 4,5,6,7,8 * * 1-5', benoitJobCB);
+            const benoitJob = schedule.scheduleJob('45 55 3 * * 1-5', benoitJobCB);
+            // zeroToXMinsStr(60
+            const benoitJob_2 = schedule.scheduleJob('45 */5 4,5,6,7,8 * * 1-5', benoitJobCB);
             sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
 
         }
@@ -1001,8 +1002,8 @@ const scheduleMISJobs = () => {
                 sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
                 executeBenoitOrders();
             };
-            const executeBenoitOrdersT = schedule.scheduleJob('10 55 3 * * 1-5', executeBenoitOrdersCB);
-            const executeBenoitOrdersT_2 = schedule.scheduleJob('10 */2 4,5,6,7,8 * * 1-5', executeBenoitOrdersCB);
+            const executeBenoitOrdersT = schedule.scheduleJob('10 56,57,58,59 3 * * 1-5', executeBenoitOrdersCB);
+            const executeBenoitOrdersT_2 = schedule.scheduleJob('10 * 4,5,6,7,8 * * 1-5', executeBenoitOrdersCB);
             sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
         }
 
