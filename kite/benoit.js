@@ -119,7 +119,7 @@ async function createBenoitOrdersEntries(stock) {
 
         const source = 'benoit';
 
-        let validated = false;
+        let triggerOne = false;
 
         let sym = `NSE:${stock.sym}`
         let quote = await kiteSession.kc.getQuote([sym])
@@ -175,20 +175,15 @@ async function createBenoitOrdersEntries(stock) {
 
             if (stock.direction == 'BULLISH') {
                 if (ltp > triggerPrice) {
-                    validated = true;
+                    triggerOne = true;
                 }
             }
             else {
                 if (ltp < triggerPrice) {
-                    validated = true;
+                    triggerOne = true;
                 }
             }
 
-        }
-
-        if (!validated) {
-            console.debug('🔕 Benoit order not validated', stock.sym, stock.direction, ltp, triggerPrice)
-            return;
         }
 
         const sheetEntry = {
@@ -196,7 +191,7 @@ async function createBenoitOrdersEntries(stock) {
             stockSymbol: stock.sym,
             reviseSL: '',
             ignore: true,    // '' = false
-            status: 'new',    // '' = false
+            status: triggerOne ? 'trigger-1' : 'new',    // '' = false
             time: +new Date(),
         }
 
@@ -227,7 +222,7 @@ async function executeBenoitOrders() {
 
         for (const order of benoitSheetData) {
             try {
-                if (order.status != 'new') continue;
+                if (order.status != 'new' && order.status != 'trigger-1') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
                 const timeSinceScan = +new Date() - Number(order.time); // time since the order was created
                 // Execute if the order was scanned more than EXECUTE_AFTER_MINUTES minutes ago
@@ -246,43 +241,55 @@ async function executeBenoitOrders() {
 
                 let quantity_calculated = null;
                 let executed = false;
+                let triggerOne = false;
 
                 if (direction === 'BULLISH') {
                     if (ltp > order.price) {
 
-                        // BENOIT_RISK_AMOUNT/(SLPrice-LTP)
-                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
-                        
-                        await placeOrder('BUY', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
-                        await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
+                        if (order.status == 'trigger-1') {
+                            // BENOIT_RISK_AMOUNT/(SLPrice-LTP)
+                            quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
+                            
+                            await placeOrder('BUY', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
+                            await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
 
-                        await createBenoitSafetyStopLoss(order, quantity_calculated, direction, lower_circuit_limit, upper_circuit_limit);
+                            await createBenoitSafetyStopLoss(order, quantity_calculated, direction, lower_circuit_limit, upper_circuit_limit);
 
-                        executed = true;
+                            executed = true;
+                        }
+                        else {
+                            triggerOne = true;
+                        }
 
                     }
                 }
                 else if (direction === 'BEARISH') {
                     if (ltp < order.price) {
 
-                        // BENOIT_RISK_AMOUNT/(LTP-SLPrice)
-                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
+                        if (order.status == 'trigger-1') {
+                            // BENOIT_RISK_AMOUNT/(LTP-SLPrice)
+                            quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
 
-                        await placeOrder('SELL', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
+                            await placeOrder('SELL', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
 
-                        await createBenoitSafetyStopLoss(order, quantity_calculated, direction, lower_circuit_limit, upper_circuit_limit);
+                            await createBenoitSafetyStopLoss(order, quantity_calculated, direction, lower_circuit_limit, upper_circuit_limit);
 
-                        await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
-                        executed = true;
+                            await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
+                            executed = true;
+                        }
+                        else {
+                            triggerOne = true;
+                        }
                     }
                 }
 
-                if (quantity_calculated) {
+                if (quantity_calculated && executed) {
                     quantity_calculated = direction === 'BULLISH' ? quantity_calculated : -quantity_calculated;
                 }
 
-                console.debug('🔕 Benoit exec', executed, order.symbol, direction, ltp, order.price, quantity_calculated)
+                sendMessageToChannel('🔎 Benoit exec', `E-${executed} T1-${triggerOne} ${order.symbol} ${direction} LTP:${ltp} Tr:${order.price} ${quantity_calculated}`)
 
+                // Executed on 2 triggers
                 if (executed) {
                     const [rowQuantity, colQuantity] = getStockLoc(order.symbol, 'Quantity', rowHeaders, colHeaders)
                     const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
@@ -294,6 +301,20 @@ async function executeBenoitOrders() {
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
                         values: [['triggered']], 
+                    })
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
+                        values: [[+new Date()]], 
+                    })
+                    await bulkUpdateCells(updates)
+                }
+                // Trigger one
+                else if (triggerOne) {
+                    const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                    const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
+                        values: [['trigger-1']], 
                     })
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
@@ -336,6 +357,29 @@ async function executeBenoitOrders() {
         await sendMessageToChannel(`🚨 Error executing Benoit orders`, error?.message);
     }
 }
+
+/**
+ * Cancels the safety stop loss order for a given order
+ * @param {Object} order - Order object
+ * @returns {Promise<void>}
+ */
+async function cancelSafetyStopLoss(order, direction) {
+    try {
+        const orders = await kiteSession.kc.getOrders();
+        const existingOrder = orders.find(o1 => 
+            o1.tradingsymbol === o1.symbol && 
+            o1.transaction_type === (direction === 'BEARISH' ? 'BUY' : 'SELL') && 
+            o1.tag?.includes('-safe') &&
+            (o1.status === 'TRIGGER PENDING' || o1.status === 'OPEN')
+        );
+        await kiteSession.kc.cancelOrder("regular", existingOrder.order_id);
+        await sendMessageToChannel('❎ Cancelled Benoit safety stop loss:', order.symbol, order.quantity, order.status, order.source, existingOrder.status);
+    } catch (error) {
+        console.error(error);
+        await sendMessageToChannel('🚨 Error cancelling Benoit safety stop loss:', order.symbol, error?.message);
+    }
+}
+
 
 /**
  * Checks if the stoploss price of Benoit orders has been hit
@@ -388,7 +432,7 @@ async function checkBenoitOrdersStoplossHit() {
                     }
                 }
 
-                console.debug('🔕 Benoit stoploss check', exited, order.symbol, direction, ltp, order.stop_loss)
+                sendMessageToChannel('🔎 Benoit stoploss check', `E-${exited} ${order.symbol} LTP:${ltp} SL:${order.stop_loss}`)
 
                 if (exited) {
                     const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
@@ -401,6 +445,7 @@ async function checkBenoitOrdersStoplossHit() {
                         range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
                         values: [[+new Date()]], 
                     })
+                    await cancelSafetyStopLoss(order, direction);
                     await bulkUpdateCells(updates)
                 }
             } catch (error) {
@@ -484,7 +529,7 @@ async function createBenoitSafetyStopLoss(stock, quantity, direction, lower_circ
             orderType = 'SL-M';
             actionType = 'BUY';
         }
-        await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', stock.symbol, quantity, direction, stock.stockSymbol, safetyPrice, lower_circuit_limit, upper_circuit_limit);
+        await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', stock.symbol, quantity, direction, safetyPrice, lower_circuit_limit, upper_circuit_limit);
 
 
         await placeOrder(actionType, orderType, safetyPrice, stock.quantity, stock, `sl-benoit-safe`);
