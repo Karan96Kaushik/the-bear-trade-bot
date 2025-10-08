@@ -248,7 +248,7 @@ async function executeBenoitOrders() {
                     if (ltp > order.trigger_price) {
 
                         // BENOIT_RISK_AMOUNT/(SLPrice-LTP)
-                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stopLossPrice - ltp)));
+                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
                         await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
                         await placeOrder('BUY', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
                         executed = true;
@@ -259,7 +259,7 @@ async function executeBenoitOrders() {
                     if (ltp < order.trigger_price) {
 
                         // BENOIT_RISK_AMOUNT/(LTP-SLPrice)
-                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stopLossPrice - ltp)));
+                        quantity_calculated = Math.ceil(Math.abs(BENOIT_RISK_AMOUNT / (order.stop_loss - ltp)));
 
                         await sendMessageToChannel('✅ Benoit order executed', ltp, order.symbol, quantity_calculated, order.status, order.source);
                         await placeOrder('SELL', 'MARKET', null, quantity_calculated, order, `trg-benoit-2t`);
