@@ -988,7 +988,7 @@ const scheduleMISJobs = () => {
                 setupBenoitOrders();
             };
             const benoitJob = schedule.scheduleJob('59 56 3 * * 1-5', benoitJobCB);
-            const benoitJob_2 = schedule.scheduleJob('25 ' + zeroToXMinsStr(59,1,5)+ ' 4,5,6,7,8 * * 1-5', benoitJobCB);
+            const benoitJob_2 = schedule.scheduleJob('59 ' + zeroToXMinsStr(59,1,5)+ ' 4,5,6,7,8 * * 1-5', benoitJobCB);
             sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
 
         }
