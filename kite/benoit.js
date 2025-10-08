@@ -68,7 +68,7 @@ async function setupBenoitOrders() {
 
         if (
             // Check if there are more than 5 triggered benoit orders in the sheet
-            sheetData.filter(s => s.status?.toLowerCase() == 'triggered' && s.source?.toLowerCase() == 'benoit').length >= MAX_ACTIVE_ORDERS
+            sheetData.filter(s => s.status?.toLowerCase() == 'triggered' && s.source?.toLowerCase() == 'benoit' && s.stockSymbol[0] != '-' && s.stockSymbol[0] != '*').length >= MAX_ACTIVE_ORDERS
         ) {
             await sendMessageToChannel('🔔 Benoit Active positions are more than ' + MAX_ACTIVE_ORDERS)
             return
