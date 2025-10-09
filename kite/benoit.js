@@ -401,7 +401,7 @@ async function checkBenoitOrdersStoplossHit() {
                 if (order.status != 'triggered') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
 
-                const activePosition = positions.net.find(p => p.tradingsymbol === order.symbol && p.quantity > 0)
+                const activePosition = positions.net.find(p => p.tradingsymbol === order.symbol && p.quantity != 0)
                 if (!activePosition) {
                     await sendMessageToChannel('⁉️ Benoit order not in position', order.symbol, order.quantity, order.status, order.source);
                     console.log('⁉️ Benoit order not in position', order.symbol, order.quantity, order.status, order.source);
