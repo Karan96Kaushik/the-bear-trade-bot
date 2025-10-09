@@ -220,10 +220,6 @@ async function executeBenoitOrders() {
         const colHeaders = benoitSheetData[0]
         benoitSheetData = processSheetWithHeaders(benoitSheetData)
 
-        const triggeredBenoitOrders = benoitSheetData.filter(o => o.status == 'triggered')
-
-        const limitReached = triggeredBenoitOrders.length >= MAX_ACTIVE_ORDERS
-
         for (const order of benoitSheetData) {
             try {
                 if (order.status != 'new' && order.status != 'trigger-1') continue;
@@ -247,10 +243,7 @@ async function executeBenoitOrders() {
                 let executed = false;
                 let triggerOne = false;
 
-                if (limitReached) {
-                    await sendMessageToChannel('🔔 Benoit max active orders limit reached - not checking for triggers');
-                }
-                else if (direction === 'BULLISH') {
+                if (direction === 'BULLISH') {
                     if (ltp > order.price) {
 
                         if (order.status == 'trigger-1') {
@@ -524,22 +517,25 @@ async function cancelBenoitOrders() {
 async function createBenoitSafetyStopLoss(stock, quantity, direction, lower_circuit_limit, upper_circuit_limit) {
     try {
         let actionType, orderType, safetyPrice;
+        let stoploss = Number(stock.stop_loss);
+        let triggerprice = Number(stock.price);
+
         if (direction === 'BULLISH') {
-            safetyPrice = stock.stop_loss - ((stock.price - stock.stop_loss) * 0.2);
+            safetyPrice = stoploss - ((triggerprice - stoploss) * 0.2);
             if (safetyPrice < lower_circuit_limit) {
                 safetyPrice = lower_circuit_limit + 0.1;
             }
             orderType = 'SL-M';
             actionType = 'SELL';
         } else if (direction === 'BEARISH') {
-            safetyPrice = stock.stop_loss + ((stock.stop_loss - stock.price) * 0.2);
+            safetyPrice = stoploss + ((stoploss - triggerprice) * 0.2);
             if (safetyPrice > upper_circuit_limit) {
                 safetyPrice = upper_circuit_limit - 0.1;
             }
             orderType = 'SL-M';
             actionType = 'BUY';
         }
-        await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', `${stock.symbol} ${quantity}  Saftey:${safetyPrice} LCL:${lower_circuit_limit} UCL:${upper_circuit_limit}`);
+        await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', stock.symbol, quantity, direction, safetyPrice, lower_circuit_limit, upper_circuit_limit);
 
 
         await placeOrder(actionType, orderType, safetyPrice, quantity, stock, `sl-benoit-safe`);
