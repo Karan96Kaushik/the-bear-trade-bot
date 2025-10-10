@@ -17,7 +17,7 @@ const { getDateStringIND } = require('../kite/utils');
 const BENOIT_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
 const EXECUTE_AFTER_MINUTES = 2;
-const MAX_ACTIVE_ORDERS = 3;
+const MAX_ACTIVE_ORDERS = 1;
 
 async function setupBenoitOrders() {
     try {
