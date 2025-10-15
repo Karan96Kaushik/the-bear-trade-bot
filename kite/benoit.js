@@ -542,6 +542,7 @@ async function createBenoitSafetyStopLoss(stock, quantity, direction, lower_circ
             orderType = 'SL-M';
             actionType = 'BUY';
         }
+        safetyPrice = Math.round(safetyPrice * 10) / 10;
         await sendMessageToChannel('⛑️ Creating Benoit safety stop loss', `${stock.symbol} safety:${safetyPrice}, LCL:${lower_circuit_limit}, UCL:${upper_circuit_limit}`);
 
 
