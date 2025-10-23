@@ -338,7 +338,7 @@ async function sendMessageToChannel(channel_name='bot-status-updates-5', ...mess
         let channelId = slack_channel_ids[channel_name]
 
         if (!channelId) {
-            channelId = slack_channel_ids['bot-status-updates-4']
+            channelId = slack_channel_ids['bot-status-updates-5']
             message.unshift(channel_name)
         }
 
