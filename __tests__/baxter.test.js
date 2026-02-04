@@ -16,7 +16,36 @@ const { logSimulationResult, printStatistics } = require("../analytics/baxterLog
 
 const RISK_AMOUNT = 200;
 
-async function testBaxterScanning() {
+function roundToTick(price, tick = 0.1) {
+    return Math.round(price / tick) * tick;
+}
+
+function getTriggerPadding(high) {
+    if (high < 20) return 0.1;
+    if (high < 50) return 0.2;
+    if (high < 100) return 0.3;
+    if (high < 300) return 0.5;
+    return 1;
+}
+
+function getMostRecentTradingDayAtUTC(targetHour, targetMinute) {
+    const now = new Date();
+    const d = new Date(now);
+    d.setUTCSeconds(0, 0);
+    d.setUTCHours(targetHour, targetMinute, 0, 0);
+
+    // If current time is earlier than the target time today, go to previous day.
+    if (now < d) d.setUTCDate(d.getUTCDate() - 1);
+
+    // Skip weekends.
+    while (d.getUTCDay() === 0 || d.getUTCDay() === 6) {
+        d.setUTCDate(d.getUTCDate() - 1);
+    }
+
+    return d;
+}
+
+async function testBaxterScanning(scanTime = null) {
     console.log('\n=== Testing Baxter Stock Scanning ===\n');
     
     try {
@@ -34,11 +63,12 @@ async function testBaxterScanning() {
         
         console.log(`Testing with ${stockList.length} stocks`);
         
-        // Test date - use a recent trading day
-        const testDate = '2025-12-15T08:00:00.000Z';
+        // Scan time: aim for a time after market open so 15m candles exist.
+        // 04:45Z ~= 10:15 IST
+        const scanDate = scanTime || getMostRecentTradingDayAtUTC(4, 45);
         
         console.time('scanBaxterStocks');
-        const result = await scanBaxterStocks(stockList, testDate, '15m', false);
+        const result = await scanBaxterStocks(stockList, scanDate, '15m', false);
         console.timeEnd('scanBaxterStocks');
         
         const { selectedStocks, no_data_stocks, too_high_stocks, errored_stocks } = result;
@@ -53,7 +83,7 @@ async function testBaxterScanning() {
             console.log(`\nFirst selected stock details:`);
             console.log(selectedStocks[0]);
         }
-        
+
         return selectedStocks;
     } catch (error) {
         console.error('Error in scanning test:', error);
@@ -61,8 +91,136 @@ async function testBaxterScanning() {
     }
 }
 
+async function simulateOneBaxterStockFromScan(scanStock, orderTime) {
+    const triggerPadding = getTriggerPadding(scanStock.high);
+
+    const triggerPrice = roundToTick(scanStock.high + triggerPadding, 0.1);
+    const stopLossPrice = roundToTick(scanStock.low - triggerPadding, 0.1);
+    const targetPrice = null; // No target for Baxter
+
+    const riskPerShare = triggerPrice - stopLossPrice;
+    if (!Number.isFinite(riskPerShare) || riskPerShare <= 0) {
+        throw new Error(`Invalid risk per share for ${scanStock.sym}: ${riskPerShare}`);
+    }
+
+    const quantity = Math.ceil(RISK_AMOUNT / riskPerShare);
+
+    // Fetch 5-minute data for simulation (same day)
+    const startDate = new Date(orderTime);
+    const endDate = new Date(orderTime);
+    startDate.setUTCHours(3, 0, 0, 0);
+    endDate.setUTCHours(11, 0, 0, 0);
+
+    let yahooData = await getGrowwChartData(scanStock.sym, startDate, endDate, 5, true);
+    yahooData = processGrowwData(yahooData);
+
+    const sim = new Simulator({
+        stockSymbol: scanStock.sym,
+        triggerPrice,
+        targetPrice,
+        stopLossPrice,
+        quantity,
+        direction: 'BULLISH',
+        yahooData,
+        orderTime,
+        cancelInMins: 60,
+        updateSL: true,
+        updateSLInterval: 30,
+        updateSLFrequency: 15,
+        enableTriggerDoubleConfirmation: false,
+        enableStopLossDoubleConfirmation: false
+    });
+
+    await sim.run();
+
+    return {
+        sim,
+        setup: {
+            sym: scanStock.sym,
+            triggerPrice,
+            stopLossPrice,
+            targetPrice,
+            quantity,
+            orderTime,
+            scanHigh: scanStock.high,
+            scanLow: scanStock.low
+        }
+    };
+}
+
+function extractExecutedTradeSummary(sim, setup) {
+    const entryAction = sim.tradeActions.find(a => a.action === 'Trigger Hit');
+    if (!entryAction) return null;
+
+    const exitAction = sim.tradeActions.find(a =>
+        a.action === 'Stop Loss Hit' ||
+        a.action === 'Target Hit' ||
+        a.action === 'Auto Square-off'
+    );
+
+    return {
+        sym: setup.sym,
+        quantity: setup.quantity,
+        triggerPrice: setup.triggerPrice,
+        stopLossPrice: setup.stopLossPrice,
+        startedAt: sim.startedAt,
+        entryPrice: entryAction.price,
+        exitTime: sim.exitTime || exitAction?.time || null,
+        exitPrice: exitAction?.price ?? null,
+        exitReason: sim.exitReason || null,
+        pnl: sim.pnl
+    };
+}
+
+const NUM_STOCKS_TO_SIMULATE = 25;
+
+async function testBaxterSimulationBatch(selectedStocks, scanTime) {
+    console.log('\n=== Testing Baxter Simulation (Batch: up to 5 stocks) ===\n');
+
+    const orderTime = new Date(scanTime);
+    const stocksToSimulate = selectedStocks.slice(0, NUM_STOCKS_TO_SIMULATE || 5);
+    const executedTrades = [];
+
+    console.log(`Simulating ${stocksToSimulate.length} stock(s) from scanTime=${scanTime.toISOString()}`);
+
+    for (const s of stocksToSimulate) {
+        try {
+            console.log(`\n--- ${s.sym} ---`);
+
+            const { sim, setup } = await simulateOneBaxterStockFromScan(s, orderTime);
+
+            const tradeSummary = extractExecutedTradeSummary(sim, setup);
+            if (tradeSummary) {
+                executedTrades.push(tradeSummary);
+                console.log(`Executed trade: ENTRY @ ₹${tradeSummary.entryPrice?.toFixed(2)} | exit=${tradeSummary.exitReason} | PnL=₹${tradeSummary.pnl.toFixed(2)}`);
+            } else {
+                console.log(`No trade executed (trigger never hit). Exit reason: ${sim.exitReason || 'N/A'}`);
+            }
+        } catch (error) {
+            console.log(`Simulation error for ${s.sym}: ${error.message}`);
+        }
+    }
+
+    console.log('\n=== Executed Trades (up to 5) ===');
+    if (executedTrades.length === 0) {
+        console.log('No executed trades found in these simulations.');
+        return [];
+    }
+
+    executedTrades.slice(0, 5).forEach((t, idx) => {
+        const startedAt = t.startedAt ? getDateStringIND(t.startedAt) : 'N/A';
+        const exitAt = t.exitTime ? getDateStringIND(t.exitTime) : 'N/A';
+        const exitPrice = t.exitPrice != null ? `₹${Number(t.exitPrice).toFixed(2)}` : 'N/A';
+        console.log(
+            `${idx + 1}. ${t.sym} qty=${t.quantity} | entry=${startedAt} @ ₹${Number(t.entryPrice).toFixed(2)} | exit=${exitAt} @ ${exitPrice} | reason=${t.exitReason} | pnl=₹${t.pnl.toFixed(2)}`
+        );
+    });
+
+    return executedTrades;
+}
+
 async function testBaxterSimulation() {
-    console.log('\n=== Testing Baxter Simulation ===\n');
+    console.log('\n=== Testing Baxter Simulation (Single Stock) ===\n');
     
     try {
         // Use a test stock
@@ -76,19 +234,9 @@ async function testBaxterSimulation() {
             sma44: 2840.00
         };
         
-        // Calculate trigger and SL with padding
-        let triggerPadding = 1;
-        if (testStock.high < 20)
-            triggerPadding = 0.1;
-        else if (testStock.high < 50)
-            triggerPadding = 0.2;
-        else if (testStock.high < 100)
-            triggerPadding = 0.3;
-        else if (testStock.high < 300)
-            triggerPadding = 0.5;
-        
-        const triggerPrice = Math.round((testStock.high + triggerPadding) * 10) / 10;
-        const stopLossPrice = Math.round((testStock.low - triggerPadding) * 10) / 10;
+        const triggerPadding = getTriggerPadding(testStock.high);
+        const triggerPrice = roundToTick(testStock.high + triggerPadding, 0.1);
+        const stopLossPrice = roundToTick(testStock.low - triggerPadding, 0.1);
         const targetPrice = null; // No target for Baxter
         
         const quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
@@ -134,7 +282,7 @@ async function testBaxterSimulation() {
         });
         
         console.log('\nRunning simulation...');
-        sim.run();
+        await sim.run();
         
         console.log('\n=== Simulation Results ===');
         console.log(`PnL: ₹${sim.pnl.toFixed(2)}`);
@@ -341,11 +489,14 @@ async function runAllTests() {
         // Test 1: Parameter Validation (Phase 2)
         await testParameterValidation();
 
-        // Test 2: Stock Scanning
-        await testBaxterScanning();
-        
-        // Test 3: Simulation with Trailing SL
-        await testBaxterSimulation();
+        // Test 2: Stock Scanning + Batch Simulation (up to 5)
+        let scanTime = getMostRecentTradingDayAtUTC(4, 45);
+        scanTime = new Date("2026-02-03T04:45:00.000Z"); // 2 days ago for more data
+        scanTime = new Date("2026-02-02T04:45:00.000Z"); // 2 days ago for more data
+        const selectedStocks = await testBaxterScanning(scanTime);
+
+        // Test 3: Simulate up to 5 of the selected stocks and show up to 5 executed trades
+        await testBaxterSimulationBatch(selectedStocks, scanTime);
         
         // Test 4: LTP-Based Cancellation
         await testLTPCancellation();
