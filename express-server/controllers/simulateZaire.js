@@ -225,6 +225,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             
                             // console.log(simulation)
 
+                            console.log('targetPrice in zaire set to null------------')
+                            targetPrice = null;
+
                             const sim = new Simulator({
                                 stockSymbol: stock.sym,
                                 triggerPrice,

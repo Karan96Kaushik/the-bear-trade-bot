@@ -18,6 +18,7 @@ const BENOIT_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
 const EXECUTE_AFTER_MINUTES = 2;
 const MAX_ACTIVE_ORDERS = 1;
+const SAFETY_STOP_LOSS_PERCENTAGE = 1;
 
 async function setupBenoitOrders() {
     try {
@@ -528,14 +529,14 @@ async function createBenoitSafetyStopLoss(stock, quantity, direction, lower_circ
         let triggerprice = Number(stock.price);
 
         if (direction === 'BULLISH') {
-            safetyPrice = stoploss - ((triggerprice - stoploss) * 0.2);
+            safetyPrice = stoploss - ((triggerprice - stoploss) * SAFETY_STOP_LOSS_PERCENTAGE);
             if (safetyPrice < lower_circuit_limit) {
                 safetyPrice = lower_circuit_limit + 0.1;
             }
             orderType = 'SL-M';
             actionType = 'SELL';
         } else if (direction === 'BEARISH') {
-            safetyPrice = stoploss + ((stoploss - triggerprice) * 0.2);
+            safetyPrice = stoploss + ((stoploss - triggerprice) * SAFETY_STOP_LOSS_PERCENTAGE);
             if (safetyPrice > upper_circuit_limit) {
                 safetyPrice = upper_circuit_limit - 0.1;
             }

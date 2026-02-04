@@ -5,7 +5,7 @@ const { getDateRange, addMovingAverage } = require("../../analytics")
 const { readSheetData } = require("../../gsheets")
 const { getGrowwChartData, processGrowwData } = require("../../kite/utils")
 
-const RISK_AMOUNT = 100;
+const RISK_AMOUNT = 200;
 
 // Store ongoing simulations
 const simulationJobs = new Map();
@@ -99,7 +99,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         console.log(currentDate, finalEndDate)
 
         if (currentDate.toISOString() == finalEndDate.toISOString()) {
-            singleDate = true;
+            singleDate = false;
         }
 
         // Iterate through each day
@@ -144,8 +144,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 const interval = '5m'
 
+                console.log('selectionParams', selectionParams)
+
                 const candleDate = new Date(dayStartTime)
-                const {selectedStocks} = await scanBenoitStocks(niftyList, candleDate, interval, true);
+                const {selectedStocks} = await scanBenoitStocks(niftyList, candleDate, interval, true, selectionParams);
 
                 if (selectedStocks.length > 0) {
                     const BATCH_SIZE = 2;
@@ -190,6 +192,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             triggerPrice = Math.round(triggerPrice * 10) / 10;
                             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
                             targetPrice = Math.round(targetPrice * 10) / 10;
+
+                            targetPrice = null;
 
                             let quantity = Math.ceil(RISK_AMOUNT / (stopLossPrice - triggerPrice));
                             quantity = Math.abs(quantity);

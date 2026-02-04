@@ -99,6 +99,7 @@ router.get('/trade-analysis', async (req, res) => {
         res.json(results);
     } catch (error) {
         console.error('Error fetching trade analysis:', error);
+        console.trace(error);
         res.status(500).json({ message: 'Server error' });
     }
 });

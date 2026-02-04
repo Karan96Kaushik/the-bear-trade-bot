@@ -5,22 +5,22 @@ const DEBUG = process.env.DEBUG || false;
 const MAX_STOCK_PRICE = 5000;
 
 const DEFAULT_PARAMS = {
-	TOUCHING_SMA_TOLERANCE: 0.0001,
+	TOUCHING_SMA_TOLERANCE: 0.002,
 	NARROW_RANGE_TOLERANCE: 0.0046,
-	MA_WINDOW: 22,
+	MA_WINDOW: 44,
 }
 
 /**
- * Scan stocks based on Benoit strategy
+ * Scan stocks based on Baxter strategy (BULLISH - opposite of Benoit)
  * 
  * Conditions:
- * 1. Bearish definition: [-1] close < ([-1] high + [-1] low) / 2
- * 2. Placement on MA: [-1] low * 0.999 <= [-1] sma(close, 22) AND [-1] high * 1.001 >= [-1] sma(close, 22)
+ * 1. Bullish definition: [0] close > ([0] high + [0] low) / 2
+ * 2. Placement on MA: [0] low * 0.998 <= [0] sma(close, 44) AND [0] high * 1.002 >= [0] sma(close, 44)
  * 3. Max stock price: [0] close < 5000
- * 4. Candle size: ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.005
- * 5. Entry point: [0] low < [-1] low
+ * 4. Candle size: ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
+ * 5. Entry point: [0] high > [-1] high (breakout above previous candle - The Queen)
  */
-async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCached = false, params = DEFAULT_PARAMS) {
+async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCached = false, params = DEFAULT_PARAMS) {
 	const selectedStocks = [];
 	const BATCH_SIZE = 5;
 
@@ -42,7 +42,7 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 			try {
 				const { startDate, endDate } = getDateRange(endDateNew);
 				
-				// Fetch 5-minute data
+				// Fetch 15-minute data
 				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
 				df = processYahooData(df, interval, useCached);
 				
@@ -52,18 +52,18 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 					return null;
 				}
 				
-				// Need at least 2 candles to compare [-1] and [0]
-				if (df.length < 23) { // Need at least 22 for SMA + 1 more
+				// Need at least 2 candles to compare [0] and [-1]
+				if (df.length < 45) { // Need at least 44 for SMA + 1 more
 					if (DEBUG) console.log('Not enough data for', sym);
 					return null;
 				}
 				
-				// Add 22-period SMA
-				df = addMovingAverage(df, 'close', params.MA_WINDOW, 'sma22');
+				// Add 44-period SMA
+				df = addMovingAverage(df, 'close', params.MA_WINDOW, 'sma44');
 				df = df.filter(r => r.close);
 				
 				// Get current and previous candles
-				const currentCandle = df[df.length - 1];  // [0]
+				const currentCandle = df[df.length - 1];  // [0] - The Queen
 				const previousCandle = df[df.length - 2]; // [-1]
 				
 				// Condition 3: Max stock price check
@@ -73,27 +73,27 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 					return null;
 				}
 				
-				// Condition 1: Bearish definition
-				// [-1] close < ([-1] high + [-1] low) / 2
-				const previousCandleMid = (previousCandle.high + previousCandle.low) / 2;
-				const isBearish = previousCandle.close < previousCandleMid;
+				// Condition 1: Bullish definition
+				// [0] close > ([0] high + [0] low) / 2
+				const currentCandleMid = (currentCandle.high + currentCandle.low) / 2;
+				const isBullish = currentCandle.close > currentCandleMid;
 				
-				if (!isBearish) {
-					if (DEBUG) console.log('Not bearish for', sym);
+				if (!isBullish) {
+					if (DEBUG) console.log('Not bullish for', sym);
 					return null;
 				}
 				
 				// Condition 2: Placement on moving average
-				// [-1] low * 0.999 <= [-1] sma22 AND [-1] high * 1.001 >= [-1] sma22
-				const previousSma = previousCandle.sma22;
-				if (!previousSma) {
+				// [0] low * 0.998 <= [0] sma44 AND [0] high * 1.002 >= [0] sma44
+				const currentSma = currentCandle.sma44;
+				if (!currentSma) {
 					if (DEBUG) console.log('No SMA for', sym);
 					return null;
 				}
 				
-				const lowBound = previousCandle.low * (1 - params.TOUCHING_SMA_TOLERANCE);
-				const highBound = previousCandle.high * (1 + params.TOUCHING_SMA_TOLERANCE);
-				const isTouchingSma = lowBound <= previousSma && highBound >= previousSma;
+				const lowBound = currentCandle.low * (1 - params.TOUCHING_SMA_TOLERANCE);
+				const highBound = currentCandle.high * (1 + params.TOUCHING_SMA_TOLERANCE);
+				const isTouchingSma = lowBound <= currentSma && highBound >= currentSma;
 				
 				if (!isTouchingSma) {
 					if (DEBUG) console.log('Not touching SMA for', sym);
@@ -101,7 +101,7 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 				}
 				
 				// Condition 4: Candle size condition
-				// ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.005
+				// ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
 				const currentRange = currentCandle.high - currentCandle.low;
 				const currentAvgPrice = (currentCandle.high + currentCandle.low) / 2;
 				const maxAllowedRange = currentAvgPrice * params.NARROW_RANGE_TOLERANCE;
@@ -112,12 +112,12 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 					return null;
 				}
 				
-				// Condition 5: Entry point
-				// [0] low < [-1] low
-				const isBreakingLower = currentCandle.low < previousCandle.low;
+				// Condition 5: Entry point - breakout above previous high
+				// [0] high > [-1] high
+				const isBreakingHigher = currentCandle.high > previousCandle.high;
 				
-				if (!isBreakingLower) {
-					if (DEBUG) console.log('Not breaking lower for', sym);
+				if (!isBreakingHigher) {
+					if (DEBUG) console.log('Not breaking higher for', sym);
 					return null;
 				}
 				
@@ -129,14 +129,14 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 					high: currentCandle.high,
 					low: currentCandle.low,
 					time: getDateStringIND(currentCandle.time),
-					direction: 'BEARISH', // Benoit is a bearish strategy
-					sma22: currentCandle.sma22,
+					direction: 'BULLISH', // Baxter is a bullish strategy
+					sma44: currentCandle.sma44,
 					previousCandle: {
 						open: previousCandle.open,
 						close: previousCandle.close,
 						high: previousCandle.high,
 						low: previousCandle.low,
-						sma22: previousCandle.sma22
+						sma44: previousCandle.sma44
 					}
 				};
 			} catch (error) {
@@ -152,7 +152,7 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 	}
 	
 	if (DEBUG) {
-		console.log(`Benoit scan results: ${selectedStocks.length} stocks selected`);
+		console.log(`Baxter scan results: ${selectedStocks.length} stocks selected`);
 		console.log(`No data: ${no_data_stocks.length}, Too high: ${too_high_stocks.length}, Errors: ${errored_stocks.length}`);
 	}
 	
@@ -165,6 +165,5 @@ async function scanBenoitStocks(stockList, endDateNew, interval = '5m', useCache
 }
 
 module.exports = {
-	scanBenoitStocks
+	scanBaxterStocks
 };
-

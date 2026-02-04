@@ -45,10 +45,13 @@ const run = async () => {
 		await kiteSession.authenticate(true)
 	}
 	else {
-		// await kiteSession.authenticate()
+		await kiteSession.authenticate()
 
-		// const positions = await kiteSession.kc.getPositions()
-		// console.log(positions.net.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
+		const positions = await kiteSession.kc.getPositions()
+		console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
+
+		const orders = await kiteSession.kc.getOrders()
+		console.log(orders)
 
 	}
 

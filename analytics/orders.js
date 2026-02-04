@@ -115,7 +115,7 @@ async function getRetrospective(startDate, endDate) {
 
         let results = [];
 
-        const allOrders = await OrderLog.find({
+        let allOrders = await OrderLog.find({
             // bear_status: 'COMPLETED',
             timestamp: {
                 $gte: startDate, // Replace with your desired date
@@ -124,7 +124,20 @@ async function getRetrospective(startDate, endDate) {
         })
         .sort({ timestamp: 1 });
 
+        console.table(allOrders.map(a => {
+            return {
+                timestamp: a.timestamp,
+                tradingsymbol: a.tradingsymbol,
+                bear_status: a.bear_status,
+                quantity: a.quantity,
+                price: a.average_price || a.price,
+                order_type: a.order_type,
+                tag: a.tag
+            }
+        }))
+
         allOrders.sort((a, b) => a.timestamp - b.timestamp);
+        allOrders = allOrders.filter(a => a.tradingsymbol);
         allOrders.sort((a, b) => a.tradingsymbol.localeCompare(b.tradingsymbol));
 
         const completedOrders = allOrders.filter(a => a.bear_status === 'COMPLETED');
@@ -137,7 +150,7 @@ async function getRetrospective(startDate, endDate) {
             price: a.average_price || a.price, 
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
-            source: !a.tag ? '?' : a.tag?.includes('lgy') ? 'lightyear' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : 'sheet',
+            source: !a.tag ? '?' : a.tag?.includes('lgy') ? 'lightyear' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : a.tag?.includes('benoit') ? 'benoit' : 'sheet',
             exitReason: a.tag?.includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || '',
             isExit: a.tag?.includes('trigger') ? false : true
@@ -225,11 +238,12 @@ async function getTradeAnalysis(startDate, endDate) {
         
     const analysis = await calculatePnLForPairs(trades);
 
-    // console.table(analysis)
+    console.table(analysis)
 
     const zaireTrades = analysis.filter(t => t.source === 'zaire');
     const baileyTrades = analysis.filter(t => t.source === 'bailey');
     const lightyearTrades = analysis.filter(t => t.source === 'lightyear');
+    const benoitTrades = analysis.filter(t => t.source === 'benoit');
     const manualTrades = analysis.filter(t => t.source === 'sheet');
 
     // Calculate overall statistics
@@ -279,6 +293,14 @@ async function getTradeAnalysis(startDate, endDate) {
             lightyearStopLossExits: lightyearTrades.filter(t => t.exitReason === 'stoploss').length,
             lightyearStopLossUDExits: lightyearTrades.filter(t => t.exitReason === 'stoploss-u').length,
             lightyearOtherExits: lightyearTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
+
+            benoitTrades: benoitTrades.length,
+            benoitWinRate: benoitTrades.length ? parseFloat(((winningTrades.filter(t => t.source === 'benoit').length / benoitTrades.length) * 100).toFixed(2)) : 0,
+            benoitPnL: parseFloat(benoitTrades.reduce((sum, trade) => sum + trade.pnl, 0).toFixed(2)),
+            benoitTargetExits: benoitTrades.filter(t => t.exitReason === 'target').length,
+            benoitStopLossExits: benoitTrades.filter(t => t.exitReason === 'stoploss').length,
+            benoitStopLossUDExits: benoitTrades.filter(t => t.exitReason === 'stoploss-u').length,
+            benoitOtherExits: benoitTrades.filter(t => t.exitReason !== 'target' && t.exitReason !== 'stoploss').length,
         }
     };
 }

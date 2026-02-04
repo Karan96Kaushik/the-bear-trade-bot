@@ -12,3 +12,5 @@ trial*
 test*csv
 
 dump.rdb
+*.rdb
+logs/
