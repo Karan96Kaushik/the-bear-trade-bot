@@ -77,9 +77,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         let stockList = []
         let allTraded = []
 
-        console.log(selectionParams)
+        console.log(selectionParams, symbol)
 
         if (!symbol) {
+            console.log('No symbol provided, reading from sheet based on selectionParams', selectionParams)
             // Read from Baxter-StockList sheet, column "bullish"
             let sheetData = await readSheetData(selectionParams.STOCK_LIST || 'Baxter-StockList');
             sheetData = processSheetWithHeaders(sheetData);
@@ -145,7 +146,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             // Inner loop for each 5-minute interval within the day
             while (dayStartTime < dayEndTime) {
-                console.log(getDateStringIND(dayStartTime), '---------')
+                // console.log(getDateStringIND(dayStartTime), '---------')
 
                 simulationJobs.get(jobId).currentDate = dayStartTime;
 
@@ -155,7 +156,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 const minutesSinceLastScan = (dayStartTime - lastScanTime) / (1000 * 60);
                 
                 if (minutesSinceLastScan >= 15) {
-                    console.log('selectionParams', selectionParams)
+                    // console.log('selectionParams', selectionParams)
 
                     const candleDate = new Date(dayStartTime)
                     const {selectedStocks} = await scanBaxterStocks(stockList, candleDate, interval, true, selectionParams);
