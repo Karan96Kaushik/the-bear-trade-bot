@@ -80,19 +80,24 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
         // console.log(selectionParams, symbol)
 
+        // When reading from sheet: separate lists per direction for scan; when symbol provided: single list (bullish by default)
+        let bullishStockList = [];
+        let bearishStockList = [];
+
         if (!symbol) {
             console.log('No symbol provided, reading from sheet based on selectionParams', selectionParams)
-            // Read from Baxter-StockList sheet, column "bullish"
             let sheetData = await readSheetData(selectionParams.STOCK_LIST || 'Baxter-StockList');
             sheetData = processSheetWithHeaders(sheetData);
-            // Extract bullish column
-            stockList = sheetData.map(row => row.bullish)
+            bullishStockList = (sheetData.map(row => row.bullish).filter(s => s?.length > 0));
+            bearishStockList = (sheetData.map(row => row.bearish).filter(s => s?.length > 0));
         }
         else {
-            stockList = symbol.split(',').map(s => s.trim())
+            const symbols = symbol.split(',').map(s => s.trim()).filter(Boolean);
+            bullishStockList = symbols;
+            bearishStockList = [];
         }
 
-        stockList = stockList.filter(stock => stock?.length > 0)
+        stockList = [...bullishStockList, ...bearishStockList].filter(Boolean);
 
         // console.log(stockList)
         // console.log(startdate, enddate)
@@ -159,8 +164,17 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 if (minutesSinceLastScan >= 15) {
                     // console.log('selectionParams', selectionParams)
 
-                    const candleDate = new Date(dayStartTime)
-                    const {selectedStocks} = await scanBaxterStocks(stockList, candleDate, interval, true, selectionParams);
+                    const candleDate = new Date(dayStartTime);
+                    let selectedStocks = [];
+
+                    if (bullishStockList.length > 0) {
+                        const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, candleDate, interval, true, selectionParams, 'BULLISH');
+                        selectedStocks.push(...bullishSelected);
+                    }
+                    if (bearishStockList.length > 0) {
+                        const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, candleDate, interval, true, selectionParams, 'BEARISH');
+                        selectedStocks.push(...bearishSelected);
+                    }
 
                     allSelectedStocks.push(...selectedStocks);
 
@@ -194,21 +208,27 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                 else if (stock.high < 300)
                                     triggerPadding = 0.5;
 
-                                let direction = stock.direction; // Always BULLISH for Baxter
+                                let direction = stock.direction;
                                 let triggerPrice, targetPrice, stopLossPrice;
 
                                 let [targetMultiplier, stopLossMultiplier] = simulation.targetStopLossRatio.split(':').map(Number);
                                 let candleLength = stock.high - stock.low;
 
-                                // For BULLISH direction
-                                triggerPrice = stock.high + triggerPadding; // Buy above The Queen's high
-                                stopLossPrice = stock.low - triggerPadding; // The Knight - initial SL
-                                targetPrice = null; // No target, trail infinitely
+                                if (direction === 'BULLISH') {
+                                    triggerPrice = stock.high + triggerPadding; // Buy above The Queen's high
+                                    stopLossPrice = stock.low - triggerPadding; // The Knight - initial SL
+                                    targetPrice = null;
+                                } else {
+                                    // BEARISH: short below The Queen's low, SL above high
+                                    triggerPrice = stock.low - triggerPadding;
+                                    stopLossPrice = stock.high + triggerPadding;
+                                    targetPrice = null;
+                                }
 
                                 triggerPrice = Math.round(triggerPrice * 10) / 10;
                                 stopLossPrice = Math.round(stopLossPrice * 10) / 10;
 
-                                let quantity = Math.ceil(RISK_AMOUNT / (triggerPrice - stopLossPrice));
+                                let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
                                 quantity = Math.abs(quantity);
 
                                 const sim = new Simulator({

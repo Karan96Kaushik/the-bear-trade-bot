@@ -24,7 +24,7 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 	
 	const key = `${sym}_${timestamp || 'unknown'}`;
 	
-	if (!debugLogData.has(key)) {
+		if (!debugLogData.has(key)) {
 		debugLogData.set(key, {
 			timestamp: timestamp || new Date().toISOString(),
 			symbol: sym,
@@ -41,7 +41,9 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 			failedReason: '',
 			maxPrice: '',
 			isBullish: '',
+			isBearish: '',
 			bullishMid: '',
+			bearishMid: '',
 			touchingSma: '',
 			smaLowBound: '',
 			smaHighBound: '',
@@ -63,7 +65,10 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 	if (details.previousHigh) entry.previousHigh = details.previousHigh;
 	if (details.previousLow) entry.previousLow = details.previousLow;
 	if (details.previousClose) entry.previousClose = details.previousClose;
-	if (details.currentMid) entry.bullishMid = details.currentMid;
+	if (details.currentMid) {
+			entry.bullishMid = details.currentMid;
+			entry.bearishMid = details.currentMid;
+		}
 	if (details.lowBound) entry.smaLowBound = details.lowBound;
 	if (details.highBound) entry.smaHighBound = details.highBound;
 	if (details.candleRange) entry.candleRange = details.candleRange;
@@ -97,6 +102,13 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 			if (status === 'FAILED') {
 				entry.failedCondition = 'BULLISH';
 				entry.failedReason = details.notes || 'Not bullish';
+			}
+			break;
+		case 'BEARISH':
+			entry.isBearish = status === 'PASSED' ? 'YES' : 'NO';
+			if (status === 'FAILED') {
+				entry.failedCondition = 'BEARISH';
+				entry.failedReason = details.notes || 'Not bearish';
 			}
 			break;
 		case 'TOUCHING_SMA':
@@ -161,7 +173,9 @@ function writeDebugLogToCSV(filename = 'baxter_debug.csv') {
 		'dataLength',
 		'maxPrice',
 		'isBullish',
+		'isBearish',
 		'bullishMid',
+		'bearishMid',
 		'touchingSma',
 		'smaLowBound',
 		'smaHighBound',
@@ -208,21 +222,24 @@ function clearDebugLog() {
 }
 
 /**
- * Scan stocks based on Baxter strategy (BULLISH - opposite of Benoit)
- * 
+ * Scan stocks based on Baxter strategy (BULLISH or BEARISH)
+ *
+ * @param {string} [direction='BULLISH'] - 'BULLISH' or 'BEARISH'
+ *
  * Conditions:
- * 1. Bullish definition: [0] close > ([0] high + [0] low) / 2
+ * 1. Candle sentiment: BULLISH → [0] close > ([0] high + [0] low) / 2; BEARISH → [0] close < ([0] high + [0] low) / 2
  * 2. Placement on MA: [0] low * 0.998 <= [0] sma(close, 44) AND [0] high * 1.002 >= [0] sma(close, 44)
  * 3. Max stock price: [0] close < 5000
  * 4. Candle size: ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
- * 5. Entry point: [0] high > [-1] high (breakout above previous candle - The Queen)
+ * 5. Entry point: BULLISH → [0] high > [-1] high; BEARISH → [0] low < [-1] low (breakout/breakdown - The Queen)
  */
-async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCached = false, params = DEFAULT_PARAMS) {
+async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCached = false, params = DEFAULT_PARAMS, direction = 'BULLISH') {
 	const selectedStocks = [];
 	const BATCH_SIZE = 5;
 
 	params = { ...DEFAULT_PARAMS, ...params };
-	
+	const isBullishMode = (direction || 'BULLISH').toUpperCase() === 'BULLISH';
+
 	// Split stockList into batches
 	const batches = [];
 	for (let i = 0; i < stockList.length; i += BATCH_SIZE) {
@@ -299,29 +316,35 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 					notes: `Price ${currentCandle.close} < ${MAX_STOCK_PRICE}`
 				});
 				
-				// Condition 1: Bullish definition
-				// [0] close > ([0] high + [0] low) / 2
+				// Condition 1: Candle sentiment (Bullish or Bearish)
 				const currentCandleMid = (currentCandle.high + currentCandle.low) / 2;
-				const isBullish = currentCandle.close > currentCandleMid;
-				
-				if (!isBullish) {
-					if (DEBUG) console.log('Not bullish for', sym);
-					logStockDebug(sym, timestamp, 'BULLISH', 'FAILED', {
+				const isBullishCandle = currentCandle.close > currentCandleMid;
+				const isBearishCandle = currentCandle.close < currentCandleMid;
+				const sentimentOk = isBullishMode ? isBullishCandle : isBearishCandle;
+				const conditionName = isBullishMode ? 'BULLISH' : 'BEARISH';
+
+				if (!sentimentOk) {
+					if (DEBUG) console.log(`Not ${conditionName.toLowerCase()} for`, sym);
+					logStockDebug(sym, timestamp, conditionName, 'FAILED', {
 						close: currentCandle.close,
 						high: currentCandle.high,
 						low: currentCandle.low,
 						currentMid: currentCandleMid,
-						notes: `Close ${currentCandle.close} <= Mid ${currentCandleMid.toFixed(2)}`
+						notes: isBullishMode
+							? `Close ${currentCandle.close} <= Mid ${currentCandleMid.toFixed(2)}`
+							: `Close ${currentCandle.close} >= Mid ${currentCandleMid.toFixed(2)}`
 					});
 					return null;
 				}
-				
-				logStockDebug(sym, timestamp, 'BULLISH', 'PASSED', {
+
+				logStockDebug(sym, timestamp, conditionName, 'PASSED', {
 					close: currentCandle.close,
 					high: currentCandle.high,
 					low: currentCandle.low,
 					currentMid: currentCandleMid,
-					notes: `Close ${currentCandle.close} > Mid ${currentCandleMid.toFixed(2)}`
+					notes: isBullishMode
+						? `Close ${currentCandle.close} > Mid ${currentCandleMid.toFixed(2)}`
+						: `Close ${currentCandle.close} < Mid ${currentCandleMid.toFixed(2)}`
 				});
 				
 				// Condition 2: Placement on moving average
@@ -387,27 +410,28 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 					maxAllowedRange: maxAllowedRange,
 					notes: `Range ${currentRange.toFixed(2)} <= Max ${maxAllowedRange.toFixed(2)}`
 				});
-				
-				// Condition 5: Entry point - breakout above previous high
-				// [0] high > [-1] high
-				// const isBreakingHigher = currentCandle.high > previousCandle.high;
-				
-				// if (!isBreakingHigher) {
-				// 	if (DEBUG) console.log('Not breaking higher for', sym);
-				// 	logStockDebug(sym, timestamp, 'BREAKOUT', 'FAILED', {
-				// 		high: currentCandle.high,
-				// 		previousHigh: previousCandle.high,
-				// 		notes: `High ${currentCandle.high} <= Previous ${previousCandle.high}`
-				// 	});
-				// 	return null;
-				// }
-				
-				// logStockDebug(sym, timestamp, 'BREAKOUT', 'PASSED', {
-				// 	high: currentCandle.high,
-				// 	previousHigh: previousCandle.high,
-				// 	notes: `High ${currentCandle.high} > Previous ${previousCandle.high}`
-				// });
-				
+
+				// Condition 5: Breakout (bullish) or breakdown (bearish)
+				const hasBreakout = isBullishMode
+					? currentCandle.high > previousCandle.high
+					: currentCandle.low < previousCandle.low;
+
+				if (!hasBreakout) {
+					if (DEBUG) console.log(`No ${isBullishMode ? 'breakout' : 'breakdown'} for`, sym);
+					logStockDebug(sym, timestamp, 'BREAKOUT', 'FAILED', {
+						notes: isBullishMode
+							? `[0] high ${currentCandle.high.toFixed(2)} <= [-1] high ${previousCandle.high.toFixed(2)}`
+							: `[0] low ${currentCandle.low.toFixed(2)} >= [-1] low ${previousCandle.low.toFixed(2)}`
+					});
+					return null;
+				}
+
+				logStockDebug(sym, timestamp, 'BREAKOUT', 'PASSED', {
+					notes: isBullishMode
+						? `[0] high ${currentCandle.high.toFixed(2)} > [-1] high ${previousCandle.high.toFixed(2)}`
+						: `[0] low ${currentCandle.low.toFixed(2)} < [-1] low ${previousCandle.low.toFixed(2)}`
+				});
+
 				logStockDebug(sym, timestamp, 'ALL_CONDITIONS', 'PASSED', {
 					close: currentCandle.close,
 					high: currentCandle.high,
@@ -417,6 +441,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				});
 				
 				// All conditions met - return stock data
+				const resultDirection = isBullishMode ? 'BULLISH' : 'BEARISH';
 				return {
 					sym,
 					open: currentCandle.open,
@@ -424,7 +449,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 					high: currentCandle.high,
 					low: currentCandle.low,
 					time: getDateStringIND(currentCandle.time),
-					direction: 'BULLISH', // Baxter is a bullish strategy
+					direction: resultDirection,
 					sma44: currentCandle.sma44,
 					previousCandle: {
 						open: previousCandle.open,
