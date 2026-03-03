@@ -1,13 +1,210 @@
-const { getDateStringIND, getDataFromYahoo, processYahooData } = require("../kite/utils");
+const { getDateStringIND, getDataFromYahoo, processYahooData, getDataFromMoneycontrol, processMoneycontrolData } = require("../kite/utils");
 const { getDateRange, addMovingAverage } = require("./index");
+const fs = require('fs');
+const path = require('path');
 
 const DEBUG = process.env.DEBUG || false;
 const MAX_STOCK_PRICE = 5000;
+const ENABLE_CSV_DEBUG_LOGGER = process.env.ENABLE_CSV_DEBUG_LOGGER || true;
 
 const DEFAULT_PARAMS = {
 	TOUCHING_SMA_TOLERANCE: 0.002,
 	NARROW_RANGE_TOLERANCE: 0.0046,
 	MA_WINDOW: 44,
+}
+
+let debugLogData = new Map();
+
+/**
+ * CSV Debug Logger for tracking stock condition evaluation
+ * Accumulates data for each symbol+timestamp and writes one row per combination
+ */
+function logStockDebug(sym, timestamp, condition, status, details = {}) {
+	if (!ENABLE_CSV_DEBUG_LOGGER) return;
+	
+	const key = `${sym}_${timestamp || 'unknown'}`;
+	
+	if (!debugLogData.has(key)) {
+		debugLogData.set(key, {
+			timestamp: timestamp || new Date().toISOString(),
+			symbol: sym,
+			close: '',
+			high: '',
+			low: '',
+			open: '',
+			sma44: '',
+			previousHigh: '',
+			previousLow: '',
+			previousClose: '',
+			dataLength: '',
+			failedCondition: '',
+			failedReason: '',
+			maxPrice: '',
+			isBullish: '',
+			bullishMid: '',
+			touchingSma: '',
+			smaLowBound: '',
+			smaHighBound: '',
+			narrowRange: '',
+			candleRange: '',
+			maxAllowedRange: '',
+			breakout: '',
+			allConditionsPassed: 'NO'
+		});
+	}
+	
+	const entry = debugLogData.get(key);
+	
+	if (details.close) entry.close = details.close;
+	if (details.high) entry.high = details.high;
+	if (details.low) entry.low = details.low;
+	if (details.open) entry.open = details.open;
+	if (details.sma44) entry.sma44 = details.sma44;
+	if (details.previousHigh) entry.previousHigh = details.previousHigh;
+	if (details.previousLow) entry.previousLow = details.previousLow;
+	if (details.previousClose) entry.previousClose = details.previousClose;
+	if (details.currentMid) entry.bullishMid = details.currentMid;
+	if (details.lowBound) entry.smaLowBound = details.lowBound;
+	if (details.highBound) entry.smaHighBound = details.highBound;
+	if (details.candleRange) entry.candleRange = details.candleRange;
+	if (details.maxAllowedRange) entry.maxAllowedRange = details.maxAllowedRange;
+	
+	switch(condition) {
+		case 'DATA_FETCH':
+			if (status === 'PASSED' && details.notes) {
+				const match = details.notes.match(/(\d+) candles/);
+				if (match) entry.dataLength = match[1];
+			} else if (status === 'FAILED') {
+				entry.failedCondition = 'DATA_FETCH';
+				entry.failedReason = details.notes || 'No data';
+			}
+			break;
+		case 'DATA_LENGTH':
+			if (status === 'FAILED') {
+				entry.failedCondition = 'DATA_LENGTH';
+				entry.failedReason = details.notes || 'Insufficient candles';
+			}
+			break;
+		case 'MAX_PRICE':
+			entry.maxPrice = status === 'PASSED' ? 'YES' : 'NO';
+			if (status === 'FAILED') {
+				entry.failedCondition = 'MAX_PRICE';
+				entry.failedReason = details.notes || 'Price too high';
+			}
+			break;
+		case 'BULLISH':
+			entry.isBullish = status === 'PASSED' ? 'YES' : 'NO';
+			if (status === 'FAILED') {
+				entry.failedCondition = 'BULLISH';
+				entry.failedReason = details.notes || 'Not bullish';
+			}
+			break;
+		case 'TOUCHING_SMA':
+			entry.touchingSma = status === 'PASSED' ? 'YES' : 'NO';
+			if (status === 'FAILED') {
+				entry.failedCondition = 'TOUCHING_SMA';
+				entry.failedReason = details.notes || 'Not touching SMA';
+			}
+			break;
+		case 'NARROW_RANGE':
+			entry.narrowRange = status === 'PASSED' ? 'YES' : 'NO';
+			if (status === 'FAILED') {
+				entry.failedCondition = 'NARROW_RANGE';
+				entry.failedReason = details.notes || 'Range too wide';
+			}
+			break;
+		case 'BREAKOUT':
+			entry.breakout = status === 'PASSED' ? 'YES' : 'NO';
+			if (status === 'FAILED') {
+				entry.failedCondition = 'BREAKOUT';
+				entry.failedReason = details.notes || 'Not breaking higher';
+			}
+			break;
+		case 'ALL_CONDITIONS':
+			if (status === 'PASSED') {
+				entry.allConditionsPassed = 'YES';
+				entry.failedCondition = 'NONE';
+				entry.failedReason = 'All conditions passed';
+			}
+			break;
+		case 'ERROR':
+			entry.failedCondition = 'ERROR';
+			entry.failedReason = details.notes || 'Exception occurred';
+			break;
+	}
+}
+
+/**
+ * Write accumulated debug logs to CSV file (appends to existing file)
+ */
+function writeDebugLogToCSV(filename = 'baxter_debug.csv') {
+	if (!ENABLE_CSV_DEBUG_LOGGER || debugLogData.size === 0) return;
+	
+	const logsDir = path.join(__dirname, '..', 'logs');
+	if (!fs.existsSync(logsDir)) {
+		fs.mkdirSync(logsDir, { recursive: true });
+	}
+	
+	const filepath = path.join(logsDir, filename);
+	
+	const headers = [
+		'timestamp',
+		'symbol',
+		'close',
+		'high',
+		'low',
+		'open',
+		'sma44',
+		'previousHigh',
+		'previousLow',
+		'previousClose',
+		'dataLength',
+		'maxPrice',
+		'isBullish',
+		'bullishMid',
+		'touchingSma',
+		'smaLowBound',
+		'smaHighBound',
+		'narrowRange',
+		'candleRange',
+		'maxAllowedRange',
+		'breakout',
+		'allConditionsPassed',
+		'failedCondition',
+		'failedReason'
+	];
+	
+	const fileExists = fs.existsSync(filepath);
+	const needsHeader = !fileExists || fs.readFileSync(filepath, 'utf8').trim() === '';
+	
+	const rows = Array.from(debugLogData.values()).map(entry => 
+		headers.map(header => {
+			const value = entry[header];
+			if (value === null || value === undefined || value === '') return '';
+			if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+				return `"${value.replace(/"/g, '""')}"`;
+			}
+			return value;
+		}).join(',')
+	);
+	
+	let csvContent = '';
+	if (needsHeader) {
+		csvContent = headers.join(',') + '\n';
+	}
+	csvContent += rows.join('\n') + '\n';
+	
+	fs.appendFileSync(filepath, csvContent, 'utf8');
+	console.log(`Debug log appended to: ${filepath} (${debugLogData.size} rows)`);
+	
+	debugLogData.clear();
+}
+
+/**
+ * Clear debug log data (useful for testing or resetting between scans)
+ */
+function clearDebugLog() {
+	debugLogData.clear();
 }
 
 /**
@@ -45,9 +242,17 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				// Fetch 15-minute data
 				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
 				df = processYahooData(df, interval, useCached);
+
+				const resolution = parseInt(interval)
+				// let df = await getDataFromMoneycontrol(sym, startDate, endDate, resolution, useCached);
+				// console.log(df)
+				// df = processMoneycontrolData(df, interval, useCached);
+
+				console.log(df[0], df[df.length - 1])
 				
 				if (!df || df.length === 0) {
 					if (DEBUG) console.log('No data for', sym);
+					logStockDebug(sym, null, 'DATA_FETCH', 'FAILED', { notes: 'No data returned' });
 					no_data_stocks.push(sym);
 					return null;
 				}
@@ -55,6 +260,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				// Need at least 2 candles to compare [0] and [-1]
 				if (df.length < 45) { // Need at least 44 for SMA + 1 more
 					if (DEBUG) console.log('Not enough data for', sym);
+					logStockDebug(sym, null, 'DATA_LENGTH', 'FAILED', { notes: `Only ${df.length} candles, need 45` });
 					return null;
 				}
 				
@@ -66,12 +272,32 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				const currentCandle = df[df.length - 1];  // [0] - The Queen
 				const previousCandle = df[df.length - 2]; // [-1]
 				
+				const timestamp = getDateStringIND(currentCandle.time);
+				
+				logStockDebug(sym, timestamp, 'DATA_FETCH', 'PASSED', {
+					close: currentCandle.close,
+					high: currentCandle.high,
+					low: currentCandle.low,
+					open: currentCandle.open,
+					sma44: currentCandle.sma44,
+					notes: `${df.length} candles available`
+				});
+				
 				// Condition 3: Max stock price check
 				if (currentCandle.close >= MAX_STOCK_PRICE) {
 					if (DEBUG) console.log('Price too high for', sym);
+					logStockDebug(sym, timestamp, 'MAX_PRICE', 'FAILED', {
+						close: currentCandle.close,
+						notes: `Price ${currentCandle.close} >= ${MAX_STOCK_PRICE}`
+					});
 					too_high_stocks.push(sym);
 					return null;
 				}
+				
+				logStockDebug(sym, timestamp, 'MAX_PRICE', 'PASSED', {
+					close: currentCandle.close,
+					notes: `Price ${currentCandle.close} < ${MAX_STOCK_PRICE}`
+				});
 				
 				// Condition 1: Bullish definition
 				// [0] close > ([0] high + [0] low) / 2
@@ -80,14 +306,32 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				
 				if (!isBullish) {
 					if (DEBUG) console.log('Not bullish for', sym);
+					logStockDebug(sym, timestamp, 'BULLISH', 'FAILED', {
+						close: currentCandle.close,
+						high: currentCandle.high,
+						low: currentCandle.low,
+						currentMid: currentCandleMid,
+						notes: `Close ${currentCandle.close} <= Mid ${currentCandleMid.toFixed(2)}`
+					});
 					return null;
 				}
+				
+				logStockDebug(sym, timestamp, 'BULLISH', 'PASSED', {
+					close: currentCandle.close,
+					high: currentCandle.high,
+					low: currentCandle.low,
+					currentMid: currentCandleMid,
+					notes: `Close ${currentCandle.close} > Mid ${currentCandleMid.toFixed(2)}`
+				});
 				
 				// Condition 2: Placement on moving average
 				// [0] low * 0.998 <= [0] sma44 AND [0] high * 1.002 >= [0] sma44
 				const currentSma = currentCandle.sma44;
 				if (!currentSma) {
 					if (DEBUG) console.log('No SMA for', sym);
+					logStockDebug(sym, timestamp, 'SMA_AVAILABLE', 'FAILED', {
+						notes: 'SMA44 not calculated'
+					});
 					return null;
 				}
 				
@@ -97,8 +341,25 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				
 				if (!isTouchingSma) {
 					if (DEBUG) console.log('Not touching SMA for', sym);
+					logStockDebug(sym, timestamp, 'TOUCHING_SMA', 'FAILED', {
+						high: currentCandle.high,
+						low: currentCandle.low,
+						sma44: currentSma,
+						lowBound: lowBound,
+						highBound: highBound,
+						notes: `SMA ${currentSma.toFixed(2)} not between ${lowBound.toFixed(2)} and ${highBound.toFixed(2)}`
+					});
 					return null;
 				}
+				
+				logStockDebug(sym, timestamp, 'TOUCHING_SMA', 'PASSED', {
+					high: currentCandle.high,
+					low: currentCandle.low,
+					sma44: currentSma,
+					lowBound: lowBound,
+					highBound: highBound,
+					notes: `SMA ${currentSma.toFixed(2)} between ${lowBound.toFixed(2)} and ${highBound.toFixed(2)}`
+				});
 				
 				// Condition 4: Candle size condition
 				// ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
@@ -109,17 +370,51 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				
 				if (!isNarrowRange) {
 					if (DEBUG) console.log('Range too wide for', sym);
+					logStockDebug(sym, timestamp, 'NARROW_RANGE', 'FAILED', {
+						high: currentCandle.high,
+						low: currentCandle.low,
+						candleRange: currentRange,
+						maxAllowedRange: maxAllowedRange,
+						notes: `Range ${currentRange.toFixed(2)} > Max ${maxAllowedRange.toFixed(2)}`
+					});
 					return null;
 				}
+				
+				logStockDebug(sym, timestamp, 'NARROW_RANGE', 'PASSED', {
+					high: currentCandle.high,
+					low: currentCandle.low,
+					candleRange: currentRange,
+					maxAllowedRange: maxAllowedRange,
+					notes: `Range ${currentRange.toFixed(2)} <= Max ${maxAllowedRange.toFixed(2)}`
+				});
 				
 				// Condition 5: Entry point - breakout above previous high
 				// [0] high > [-1] high
-				const isBreakingHigher = currentCandle.high > previousCandle.high;
+				// const isBreakingHigher = currentCandle.high > previousCandle.high;
 				
-				if (!isBreakingHigher) {
-					if (DEBUG) console.log('Not breaking higher for', sym);
-					return null;
-				}
+				// if (!isBreakingHigher) {
+				// 	if (DEBUG) console.log('Not breaking higher for', sym);
+				// 	logStockDebug(sym, timestamp, 'BREAKOUT', 'FAILED', {
+				// 		high: currentCandle.high,
+				// 		previousHigh: previousCandle.high,
+				// 		notes: `High ${currentCandle.high} <= Previous ${previousCandle.high}`
+				// 	});
+				// 	return null;
+				// }
+				
+				// logStockDebug(sym, timestamp, 'BREAKOUT', 'PASSED', {
+				// 	high: currentCandle.high,
+				// 	previousHigh: previousCandle.high,
+				// 	notes: `High ${currentCandle.high} > Previous ${previousCandle.high}`
+				// });
+				
+				logStockDebug(sym, timestamp, 'ALL_CONDITIONS', 'PASSED', {
+					close: currentCandle.close,
+					high: currentCandle.high,
+					low: currentCandle.low,
+					sma44: currentCandle.sma44,
+					notes: 'Stock selected for Baxter strategy'
+				});
 				
 				// All conditions met - return stock data
 				return {
@@ -141,6 +436,9 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				};
 			} catch (error) {
 				if (DEBUG) console.error(`Error processing ${sym}:`, error);
+				logStockDebug(sym, null, 'ERROR', 'FAILED', {
+					notes: `Exception: ${error.message}`
+				});
 				errored_stocks.push(sym);
 				return null;
 			}
@@ -149,6 +447,10 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 		// Wait for all promises in the batch to resolve
 		const batchResults = await Promise.all(batchPromises);
 		selectedStocks.push(...batchResults.filter(result => result !== null));
+	}
+	
+	if (ENABLE_CSV_DEBUG_LOGGER) {
+		writeDebugLogToCSV();
 	}
 	
 	if (DEBUG) {
@@ -165,5 +467,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 }
 
 module.exports = {
-	scanBaxterStocks
+	scanBaxterStocks,
+	writeDebugLogToCSV,
+	clearDebugLog
 };

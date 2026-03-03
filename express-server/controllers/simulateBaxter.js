@@ -76,8 +76,9 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
     try {
         let stockList = []
         let allTraded = []
+        let allSelectedStocks = []
 
-        console.log(selectionParams, symbol)
+        // console.log(selectionParams, symbol)
 
         if (!symbol) {
             console.log('No symbol provided, reading from sheet based on selectionParams', selectionParams)
@@ -93,15 +94,15 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
         stockList = stockList.filter(stock => stock?.length > 0)
 
-        console.log(stockList)
-        console.log(startdate, enddate)
+        // console.log(stockList)
+        // console.log(startdate, enddate)
 
         // Convert start and end dates to Date objects
         let currentDate = new Date(startdate)
         let finalEndDate = new Date(enddate)
         let singleDate = false;
 
-        console.log(currentDate, finalEndDate)
+        // console.log(currentDate, finalEndDate)
 
         if (currentDate.toISOString() == finalEndDate.toISOString()) {
             singleDate = false;
@@ -131,7 +132,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             let dayStartTime = new Date(currentDate)
             let dayEndTime = new Date(currentDate)
 
-            console.log(dayStartTime, dayEndTime)
+            // console.log(dayStartTime, dayEndTime)
 
             dayStartTime.setUTCHours(3, 50, 20, 0)
 
@@ -160,6 +161,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                     const candleDate = new Date(dayStartTime)
                     const {selectedStocks} = await scanBaxterStocks(stockList, candleDate, interval, true, selectionParams);
+
+                    allSelectedStocks.push(...selectedStocks);
 
                     lastScanTime = new Date(dayStartTime);
 
@@ -309,6 +312,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1)
         }
+
+        console.log('allSelectedStocks', allSelectedStocks.length)
+        console.log(allSelectedStocks[0])
+        console.table(allSelectedStocks.map(s => {return {sym: s.sym, time: s.time, high: s.high, low: s.low}}))
         
         return allTraded;
     } catch (error) {

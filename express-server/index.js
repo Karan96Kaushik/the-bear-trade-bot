@@ -2,7 +2,7 @@ const bodyParser = require('body-parser');
 const { sendMessageToChannel } = require('../slack-actions');
 const { processSuccessfulOrder } = require('../kite/processor');
 
-const { login, data, orders, kite, zaire, db_orders, simulation } = require('./routes');
+const { login, data, orders, kite, zaire, db_orders, simulation, files } = require('./routes');
 const { auth } = require('./modules/auth');
 const timings = require('server-timings')
 const morgan = require('morgan')
@@ -48,6 +48,7 @@ const initialize_server = (app) => {
     app.use('/api/zaire', zaire);
     app.use('/api/db-orders', db_orders);
     app.use('/api/simulation', simulation);
+    app.use('/api/files', files);
 }
 
 module.exports = {

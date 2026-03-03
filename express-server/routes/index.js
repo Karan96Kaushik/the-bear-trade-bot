@@ -6,5 +6,6 @@ module.exports = {
     zaire: require('./zaire'),
     db_orders: require('./db_orders'),
     simulation: require('./simulation'),
+    files: require('./files'),
 }
 
