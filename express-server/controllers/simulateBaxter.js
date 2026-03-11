@@ -99,7 +99,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
         stockList = [...bullishStockList, ...bearishStockList].filter(Boolean);
 
-        // console.log(stockList)
         // console.log(startdate, enddate)
 
         // Convert start and end dates to Date objects

@@ -23,6 +23,8 @@ const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 // const OrderLog = require('../models/OrderLog');
 const { updateBenoitStopLoss, setupBenoitOrders, 
     checkBenoitDoubleConfirmation, executeBenoitOrders, checkBenoitOrdersStoplossHit } = require('./benoit');
+const { setupBaxterOrders, updateBaxterStopLoss, 
+    checkBaxterOrdersStoplossHit, executeBaxterOrders } = require('./baxter');
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
@@ -1017,6 +1019,60 @@ const scheduleMISJobs = () => {
             const benoitDoubleConfirmation_2 = schedule.scheduleJob('25 50,55 3 * * 1-5', benoitDoubleConfirmationCB);
             const benoitDoubleConfirmation_3 = schedule.scheduleJob('25 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', benoitDoubleConfirmationCB);
             sendMessageToChannel('⏰ Benoit Double Confirmation Check Scheduled - ', getDateStringIND(getEarliestTime(benoitDoubleConfirmation, benoitDoubleConfirmation_2)));
+        }
+    }
+
+    // Baxter jobs
+    const ENABLE_BAXTER = true;
+    if (ENABLE_BAXTER) {
+
+        const ENABLE_BAXTER_STOP_LOSS_UPDATE = true;
+        if (ENABLE_BAXTER_STOP_LOSS_UPDATE) {
+
+            const updateBaxterStopLossCB = () => {
+                sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
+                updateBaxterStopLoss();
+            }
+            const updateBaxterStopLossJob = schedule.scheduleJob('15 */5 4,5,6,7,8 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob_2 = schedule.scheduleJob('15 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob_3 = undefined
+
+            sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
+        }
+
+        const ENABLE_BAXTER_STOP_LOSS_HIT = true;
+        if (ENABLE_BAXTER_STOP_LOSS_HIT) {
+            const checkBaxterOrdersStoplossHitCB = () => {
+                sendMessageToChannel('⏰ Check Baxter Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
+                checkBaxterOrdersStoplossHit();
+            }
+            
+            const checkBaxterOrdersStoplossHitJob = schedule.scheduleJob('20 * 4,5,6,7,8 * * 1-5', checkBaxterOrdersStoplossHitCB);
+            const checkBaxterOrdersStoplossHitJob_2 = schedule.scheduleJob('20 ' + zeroToXMinsStr(0,46) + ' 9 * * 1-5', checkBaxterOrdersStoplossHitCB);
+            sendMessageToChannel('⏰ Check Baxter Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
+        }
+
+        const ENABLE_BAXTER_ORDERS_SETUP = true;
+        if (ENABLE_BAXTER_ORDERS_SETUP) {
+            const baxterJobCB = () => {
+                sendMessageToChannel('⏰ Baxter Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
+                setupBaxterOrders();
+            };
+            const baxterJob = schedule.scheduleJob('45 55 3 * * 1-5', baxterJobCB);
+            const baxterJob_2 = schedule.scheduleJob('45 */15 4,5,6,7,8 * * 1-5', baxterJobCB);
+            sendMessageToChannel('⏰ Baxter Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
+
+        }
+
+        const ENABLE_BAXTER_ORDERS_EXECUTE = true;
+        if (ENABLE_BAXTER_ORDERS_EXECUTE) {
+            const executeBaxterOrdersCB = () => {
+                sendMessageToChannel('⏰ Execute Baxter Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBaxterOrdersT, executeBaxterOrdersT_2)));
+                executeBaxterOrders();
+            };
+            const executeBaxterOrdersT = schedule.scheduleJob('15 56,57,58,59 3 * * 1-5', executeBaxterOrdersCB);
+            const executeBaxterOrdersT_2 = schedule.scheduleJob('15 * 4,5,6,7,8 * * 1-5', executeBaxterOrdersCB);
+            sendMessageToChannel('⏰ Execute Baxter Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBaxterOrdersT, executeBaxterOrdersT_2)));
         }
     }
 
