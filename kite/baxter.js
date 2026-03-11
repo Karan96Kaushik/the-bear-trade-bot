@@ -12,25 +12,88 @@ const { sendMessageToChannel } = require("../slack-actions")
 const { getDataFromYahoo, processYahooData, calculateExtremePrice } = require('../kite/utils');
 const { scanBaxterStocks } = require("../analytics/baxter");
 const { getDateStringIND } = require('../kite/utils');
-const {
-    logScanStart,
-    logScanComplete,
-    logCandleCheck,
-    logOrderPlacement,
-    logOrderExecution,
-    logOrderCancellation,
-    logStopLossUpdate,
-    logStopLossHit,
-    logPositionCheck,
-    logError,
-    logScanDetails
-} = require("../analytics/baxterLiveLogger");
+const fs = require('fs');
+const path = require('path');
 
 
 const BAXTER_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
 const MAX_ACTIVE_ORDERS = 1;
 const UPDATE_SL_INTERVAL = 15;
+const ENABLE_ORDER_DEBUG_LOGGER = process.env.ENABLE_ORDER_DEBUG_LOGGER || true;
+
+let orderDebugLogData = [];
+
+function logOrderDebug(eventType, sym, details = {}) {
+    if (!ENABLE_ORDER_DEBUG_LOGGER) return;
+    
+    const logEntry = {
+        timestamp: new Date().toISOString(),
+        eventType,
+        symbol: sym,
+        ...details
+    };
+    
+    orderDebugLogData.push(logEntry);
+}
+
+function writeOrderDebugLogToCSV(filename = 'baxter_orders_debug.csv') {
+    if (!ENABLE_ORDER_DEBUG_LOGGER || orderDebugLogData.length === 0) return;
+    
+    const logsDir = path.join(__dirname, '..', 'logs');
+    if (!fs.existsSync(logsDir)) {
+        fs.mkdirSync(logsDir, { recursive: true });
+    }
+    
+    const filepath = path.join(logsDir, filename);
+    
+    const headers = [
+        'timestamp',
+        'eventType',
+        'symbol',
+        'direction',
+        'high',
+        'low',
+        'ltp',
+        'triggerPrice',
+        'stopLossPrice',
+        'triggerPadding',
+        'quantity',
+        'riskAmount',
+        'orderType',
+        'orderAction',
+        'status',
+        'reason',
+        'oldStopLoss',
+        'newStopLoss',
+        'extremePrice',
+        'timeSinceScan',
+        'cancelTimeout',
+        'circuitLimitAdjustment'
+    ];
+    
+    const fileExists = fs.existsSync(filepath);
+    const needsHeader = !fileExists || fs.readFileSync(filepath, 'utf8').trim() === '';
+    
+    const rows = orderDebugLogData.map(entry => 
+        headers.map(header => {
+            const value = entry[header];
+            if (value === null || value === undefined || value === '') return '';
+            if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+                return `"${value.replace(/"/g, '""')}"`;
+            }
+            return String(value);
+        }).join(',')
+    );
+    
+    const csvContent = (needsHeader ? headers.join(',') + '\n' : '') + rows.join('\n') + '\n';
+    
+    fs.appendFileSync(filepath, csvContent, 'utf8');
+    
+    orderDebugLogData = [];
+    
+    console.log(`📝 Baxter order debug logs written to ${filepath}`);
+}
 
 async function setupBaxterOrders() {
     try {
@@ -42,60 +105,21 @@ async function setupBaxterOrders() {
         let bullishStockList = (stockListData.map(row => row.bullish).filter(s => s?.length > 0));
         let bearishStockList = (stockListData.map(row => row.bearish).filter(s => s?.length > 0));
 
-        const totalStocks = [...bullishStockList, ...bearishStockList].filter(Boolean);
-        logScanStart(totalStocks);
-
         let sheetData = await readSheetData('MIS-ALPHA!A2:W1000')
         sheetData = processMISSheetData(sheetData)
 
         await kiteSession.authenticate();
 
         let selectedStocks = [];
-        let scannedStocks = [];
         
         if (bullishStockList.length > 0) {
             const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, null, '15m', true, {}, 'BULLISH');
             selectedStocks.push(...bullishSelected);
-            scannedStocks.push(...bullishStockList.map(s => ({ symbol: s, direction: 'BULLISH' })));
         }
         if (bearishStockList.length > 0) {
             const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, null, '15m', true, {}, 'BEARISH');
             selectedStocks.push(...bearishSelected);
-            scannedStocks.push(...bearishStockList.map(s => ({ symbol: s, direction: 'BEARISH' })));
         }
-
-        // Log candle checks for all scanned stocks
-        for (const stock of selectedStocks) {
-            logCandleCheck({
-                symbol: stock.sym,
-                direction: stock.direction,
-                scanTime: stock.time,
-                high: stock.high,
-                low: stock.low,
-                close: stock.close,
-                triggerPrice: stock.direction === 'BULLISH' ? stock.high : stock.low,
-                stopLoss: stock.direction === 'BULLISH' ? stock.low : stock.high,
-                selected: true,
-                reason: 'Met Baxter criteria'
-            });
-        }
-
-        logScanComplete(selectedStocks.length, totalStocks.length);
-        
-        // Log detailed scan results
-        logScanDetails({
-            bullishStocksScanned: bullishStockList.length,
-            bearishStocksScanned: bearishStockList.length,
-            totalScanned: totalStocks.length,
-            selectedStocks: selectedStocks.map(s => ({
-                symbol: s.sym,
-                direction: s.direction,
-                high: s.high,
-                low: s.low,
-                close: s.close
-            })),
-            scannedStocks: scannedStocks
-        });
 
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
@@ -139,13 +163,11 @@ async function setupBaxterOrders() {
                 let sheetEntry = await createBaxterOrdersEntries(stock);
             } catch (error) {
                 console.error(error);
-                logError(stock.sym, 'CREATE_ORDER', error);
                 await sendMessageToChannel(`🚨 Error running Baxter MIS Jobs`, stock, error?.message);
             }
         }
 
     } catch (error) {
-        logError(null, 'SETUP_ORDERS', error);
         await sendMessageToChannel(`🚨 Error running Baxter MIS Jobs`, error?.message);
     }
 }
@@ -159,6 +181,12 @@ async function createBaxterOrdersEntries(stock) {
         let quote = await kiteSession.kc.getQuote([sym])
         let ltp = quote[sym]?.last_price
         if (!ltp) {
+            logOrderDebug('LTP_NOT_FOUND', stock.sym, {
+                direction: stock.direction,
+                high: stock.high,
+                low: stock.low,
+                reason: 'LTP not available from quote'
+            });
             await sendMessageToChannel('🔕 LTP not found for', stock.sym);
             return;
         }
@@ -177,6 +205,8 @@ async function createBaxterOrdersEntries(stock) {
         else if (stock.high < 300)
             triggerPadding = 0.5;
 
+        let circuitAdjustment = '';
+
         if (stock.direction == 'BULLISH') {
             triggerPrice = stock.high + triggerPadding;
             stopLossPrice = stock.low - triggerPadding;
@@ -184,10 +214,12 @@ async function createBaxterOrdersEntries(stock) {
 
             if (stopLossPrice < lower_circuit_limit) {
                 stopLossPrice = lower_circuit_limit + 0.1
+                circuitAdjustment = `SL adjusted from ${stock.low - triggerPadding} to ${stopLossPrice} (lower circuit: ${lower_circuit_limit})`;
                 sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.sym, stopLossPrice)
             }
             if (stopLossPrice > upper_circuit_limit) {
                 stopLossPrice = upper_circuit_limit - 0.1
+                circuitAdjustment = `SL adjusted from ${stock.low - triggerPadding} to ${stopLossPrice} (upper circuit: ${upper_circuit_limit})`;
                 sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.sym, stopLossPrice)
             }
 
@@ -204,10 +236,12 @@ async function createBaxterOrdersEntries(stock) {
 
             if (stopLossPrice < lower_circuit_limit) {
                 stopLossPrice = lower_circuit_limit + 0.1
+                circuitAdjustment = `SL adjusted from ${stock.high + triggerPadding} to ${stopLossPrice} (lower circuit: ${lower_circuit_limit})`;
                 sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.sym, stopLossPrice)
             }
             if (stopLossPrice > upper_circuit_limit) {
                 stopLossPrice = upper_circuit_limit - 0.1
+                circuitAdjustment = `SL adjusted from ${stock.high + triggerPadding} to ${stopLossPrice} (upper circuit: ${upper_circuit_limit})`;
                 sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.sym, stopLossPrice)
             }
 
@@ -218,6 +252,19 @@ async function createBaxterOrdersEntries(stock) {
             quantity = Math.abs(quantity);
             quantity = -quantity;
         }
+
+        logOrderDebug('PRICE_CALCULATED', stock.sym, {
+            direction: stock.direction,
+            high: stock.high,
+            low: stock.low,
+            ltp,
+            triggerPrice,
+            stopLossPrice,
+            triggerPadding,
+            quantity,
+            riskAmount: BAXTER_RISK_AMOUNT,
+            circuitLimitAdjustment: circuitAdjustment || 'none'
+        });
 
         const sheetEntry = {
             source: source,
@@ -238,9 +285,19 @@ async function createBaxterOrdersEntries(stock) {
         let orderResponse;
         if (stock.direction === 'BULLISH') {
             if (ltp > triggerPrice) {
+                logOrderDebug('ORDER_PLACED', stock.sym, {
+                    direction: stock.direction,
+                    ltp,
+                    triggerPrice,
+                    stopLossPrice,
+                    quantity,
+                    orderType: 'MARKET',
+                    orderAction: 'BUY',
+                    reason: 'LTP already above trigger'
+                });
+                
                 orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, `trigger-m-baxter`);
                 await logOrder('PLACED', 'TRIGGER', orderResponse);
-                logOrderPlacement(stock.sym, stock.direction, 'MARKET', null, quantity, triggerPrice, stopLossPrice, ltp, orderResponse.order_id, 'trigger-m-baxter');
                 await sendMessageToChannel('✅ Baxter market order placed', ltp, stock.sym, quantity, stock.direction);
                 
                 const benoitSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
@@ -254,16 +311,36 @@ async function createBaxterOrdersEntries(stock) {
                 }];
                 await bulkUpdateCells(updates);
             } else {
+                logOrderDebug('ORDER_PLACED', stock.sym, {
+                    direction: stock.direction,
+                    ltp,
+                    triggerPrice,
+                    stopLossPrice,
+                    quantity,
+                    orderType: 'SL-M',
+                    orderAction: 'BUY',
+                    reason: 'LTP below trigger, waiting for trigger'
+                });
+                
                 orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, `trigger-baxter`);
                 await logOrder('PLACED', 'TRIGGER', orderResponse);
-                logOrderPlacement(stock.sym, stock.direction, 'SL-M', triggerPrice, quantity, triggerPrice, stopLossPrice, ltp, orderResponse.order_id, 'trigger-baxter');
                 await sendMessageToChannel('✅ Baxter trigger order placed', stock.sym, quantity, triggerPrice, stock.direction);
             }
         } else {
             if (ltp < triggerPrice) {
+                logOrderDebug('ORDER_PLACED', stock.sym, {
+                    direction: stock.direction,
+                    ltp,
+                    triggerPrice,
+                    stopLossPrice,
+                    quantity,
+                    orderType: 'MARKET',
+                    orderAction: 'SELL',
+                    reason: 'LTP already below trigger'
+                });
+                
                 orderResponse = await placeOrder('SELL', 'MARKET', null, Math.abs(quantity), stock, `trigger-m-baxter`);
                 await logOrder('PLACED', 'TRIGGER', orderResponse);
-                logOrderPlacement(stock.sym, stock.direction, 'MARKET', null, Math.abs(quantity), triggerPrice, stopLossPrice, ltp, orderResponse.order_id, 'trigger-m-baxter');
                 await sendMessageToChannel('✅ Baxter market order placed', ltp, stock.sym, quantity, stock.direction);
                 
                 const benoitSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
@@ -277,16 +354,32 @@ async function createBaxterOrdersEntries(stock) {
                 }];
                 await bulkUpdateCells(updates);
             } else {
+                logOrderDebug('ORDER_PLACED', stock.sym, {
+                    direction: stock.direction,
+                    ltp,
+                    triggerPrice,
+                    stopLossPrice,
+                    quantity,
+                    orderType: 'SL-M',
+                    orderAction: 'SELL',
+                    reason: 'LTP above trigger, waiting for trigger'
+                });
+                
                 orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, Math.abs(quantity), stock, `trigger-baxter`);
                 await logOrder('PLACED', 'TRIGGER', orderResponse);
-                logOrderPlacement(stock.sym, stock.direction, 'SL-M', triggerPrice, Math.abs(quantity), triggerPrice, stopLossPrice, ltp, orderResponse.order_id, 'trigger-baxter');
                 await sendMessageToChannel('✅ Baxter trigger order placed', stock.sym, quantity, triggerPrice, stock.direction);
             }
         }
 
+        writeOrderDebugLogToCSV();
+
     } catch (error) {
         console.error(error);
-        logError(stock.sym, 'CREATE_ORDER_ENTRY', error);
+        logOrderDebug('ERROR', stock?.sym || 'unknown', {
+            reason: error?.message || 'Unknown error',
+            stack: error?.stack
+        });
+        writeOrderDebugLogToCSV();
         await sendMessageToChannel(`🚨 Error creating Baxter orders`, error?.message);
         return;
     }
@@ -320,6 +413,12 @@ async function executeBaxterOrders() {
                 );
 
                 if (triggerOrder) {
+                    logOrderDebug('ORDER_EXECUTED', order.symbol, {
+                        direction,
+                        status: 'triggered',
+                        reason: 'Trigger order completed'
+                    });
+                    
                     const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
                     const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
                     updates.push({
@@ -331,10 +430,16 @@ async function executeBaxterOrders() {
                         values: [[+new Date()]], 
                     })
                     await bulkUpdateCells(updates)
-                    logOrderExecution(order.symbol, direction, triggerOrder.average_price, order.quantity, triggerOrder.order_id, triggerOrder.tag);
                     await sendMessageToChannel('✅ Baxter order executed', order.symbol, order.quantity, order.status);
                 }
                 else if (timeSinceScan > 1000 * 60 * CANCEL_AFTER_MINUTES) {
+                    logOrderDebug('ORDER_CANCELLED', order.symbol, {
+                        direction,
+                        timeSinceScan: Math.round(timeSinceScan / 60000),
+                        cancelTimeout: CANCEL_AFTER_MINUTES,
+                        reason: 'Order not executed within timeout'
+                    });
+                    
                     const pendingOrder = orders.find(o => 
                         o.tradingsymbol === order.symbol && 
                         o.tag?.includes('baxter') && 
@@ -344,7 +449,6 @@ async function executeBaxterOrders() {
 
                     if (pendingOrder) {
                         await kiteSession.kc.cancelOrder("regular", pendingOrder.order_id);
-                        logOrderCancellation(order.symbol, direction, 'Timeout after ' + CANCEL_AFTER_MINUTES + ' mins', pendingOrder.order_id, pendingOrder.tag);
                         await sendMessageToChannel('❎ Cancelled Baxter trigger order:', order.symbol, order.quantity);
                     }
 
@@ -369,13 +473,14 @@ async function executeBaxterOrders() {
 
             } catch (error) {
                 console.error(error)
-                logError(order.symbol, 'EXECUTE_ORDER', error);
                 await sendMessageToChannel('🚨 Error executing Baxter order:', order.symbol, order.quantity, error?.message);
             }
         }
+        
+        writeOrderDebugLogToCSV();
     } catch (error) {
         console.error(error);
-        logError(null, 'EXECUTE_ORDERS', error);
+        writeOrderDebugLogToCSV();
         await sendMessageToChannel(`🚨 Error executing Baxter orders`, error?.message);
     }
 }
@@ -415,6 +520,13 @@ async function checkBaxterOrdersStoplossHit() {
                 if (direction === 'BULLISH') {
                     if (ltp <= order.stop_loss) {
                         exited = true;
+                        logOrderDebug('STOPLOSS_HIT', order.symbol, {
+                            direction,
+                            ltp,
+                            stopLossPrice: order.stop_loss,
+                            reason: 'LTP hit or crossed below stop loss'
+                        });
+                        
                         await sendMessageToChannel('❎ Baxter order stopped:', order.symbol, order.quantity, order.status);
                         await placeOrder('SELL', 'MARKET', null, order.quantity, order, `sl-baxter`);
                         await logOrder('PLACED', 'STOPLOSS', order);
@@ -423,6 +535,13 @@ async function checkBaxterOrdersStoplossHit() {
                 else if (direction === 'BEARISH') {
                     if (ltp >= order.stop_loss) {
                         exited = true;
+                        logOrderDebug('STOPLOSS_HIT', order.symbol, {
+                            direction,
+                            ltp,
+                            stopLossPrice: order.stop_loss,
+                            reason: 'LTP hit or crossed above stop loss'
+                        });
+                        
                         await sendMessageToChannel('❎ Baxter order stopped:', order.symbol, order.quantity, order.status);
                         await placeOrder('BUY', 'MARKET', null, Math.abs(order.quantity), order, `sl-baxter`);
                         await logOrder('PLACED', 'STOPLOSS', order);
@@ -443,20 +562,17 @@ async function checkBaxterOrdersStoplossHit() {
                         values: [[+new Date()]], 
                     })
                     await bulkUpdateCells(updates)
-                    logStopLossHit(order.symbol, direction, order.stop_loss, ltp, order.quantity, 'Stop loss price hit');
-                } else {
-                    logPositionCheck(order.symbol, direction, ltp, order.stop_loss, 'ACTIVE');
                 }
             } catch (error) {
                 console.error(error)
-                logError(order.symbol, 'CHECK_STOPLOSS', error);
                 await sendMessageToChannel('🚨 Error checking Baxter orders stoploss hit:', order.symbol, order.quantity, error?.message);
             }
         }
 
+        writeOrderDebugLogToCSV();
     } catch (error) {
         console.error(error);
-        logError(null, 'CHECK_STOPLOSS_HIT', error);
+        writeOrderDebugLogToCSV();
         await sendMessageToChannel(`🚨 Error checking Baxter orders stoploss hit`, error?.message);
     }
 }
@@ -547,18 +663,25 @@ async function updateBaxterStopLoss() {
                 if (shouldUpdate) {
                     newPrice = Math.round(newPrice * 10) / 10;
 
+                    logOrderDebug('STOPLOSS_UPDATED', order.symbol, {
+                        direction: isBearish ? 'BEARISH' : 'BULLISH',
+                        oldStopLoss: existingStopLoss,
+                        newStopLoss: newPrice,
+                        extremePrice: newPrice,
+                        ltp,
+                        reason: `Trailing SL ${isBearish ? 'downward' : 'upward'}`
+                    });
+
                     const [row, col] = getStockLoc(order.symbol, 'Stop Loss', rowHeaders, colHeaders)
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
                         values: [[newPrice]], 
                     })
 
-                    logStopLossUpdate(order.symbol, isBearish ? 'BEARISH' : 'BULLISH', existingStopLoss, newPrice, ltp, 'Trailing SL');
                     await sendMessageToChannel(`🔄 Updated Baxter SL for ${sym}`, `Old: ${existingStopLoss}`, `New: ${newPrice}`, `LTP: ${ltp}`);
                 }
             } catch (error) {
                 console.error(error)
-                logError(order.symbol, 'UPDATE_STOPLOSS', error);
                 await sendMessageToChannel('🚨 Error updating Baxter stop loss:', order.symbol, newPrice, ltp, shouldUpdate, error?.message);
             }
         }
@@ -567,9 +690,11 @@ async function updateBaxterStopLoss() {
             await bulkUpdateCells(updates)
             await sendMessageToChannel(`✅ Updated ${updates.length} Baxter stop loss prices`);
         }
+        
+        writeOrderDebugLogToCSV();
     } catch (error) {
         console.error(error);
-        logError(null, 'UPDATE_STOPLOSS_JOB', error);
+        writeOrderDebugLogToCSV();
         await sendMessageToChannel(`🚨 Error updating Baxter stop loss prices`, error?.message);
         return;
     }
