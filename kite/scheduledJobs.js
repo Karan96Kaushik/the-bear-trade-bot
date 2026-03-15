@@ -1033,8 +1033,8 @@ const scheduleMISJobs = () => {
                 sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
                 updateBaxterStopLoss();
             }
-            const updateBaxterStopLossJob = schedule.scheduleJob('15 */5 4,5,6,7,8 * * 1-5', updateBaxterStopLossCB);
-            const updateBaxterStopLossJob_2 = schedule.scheduleJob('15 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob_2 = schedule.scheduleJob('10 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBaxterStopLossCB);
             const updateBaxterStopLossJob_3 = undefined
 
             sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
@@ -1047,8 +1047,8 @@ const scheduleMISJobs = () => {
                 checkBaxterOrdersStoplossHit();
             }
             
-            const checkBaxterOrdersStoplossHitJob = schedule.scheduleJob('20 * 4,5,6,7,8 * * 1-5', checkBaxterOrdersStoplossHitCB);
-            const checkBaxterOrdersStoplossHitJob_2 = schedule.scheduleJob('20 ' + zeroToXMinsStr(0,46) + ' 9 * * 1-5', checkBaxterOrdersStoplossHitCB);
+            const checkBaxterOrdersStoplossHitJob = schedule.scheduleJob('40 * 4,5,6,7,8 * * 1-5', checkBaxterOrdersStoplossHitCB);
+            const checkBaxterOrdersStoplossHitJob_2 = schedule.scheduleJob('40 ' + zeroToXMinsStr(0,46) + ' 9 * * 1-5', checkBaxterOrdersStoplossHitCB);
             sendMessageToChannel('⏰ Check Baxter Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
         }
 
@@ -1070,8 +1070,8 @@ const scheduleMISJobs = () => {
                 sendMessageToChannel('⏰ Execute Baxter Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBaxterOrdersT, executeBaxterOrdersT_2)));
                 executeBaxterOrders();
             };
-            const executeBaxterOrdersT = schedule.scheduleJob('15 56,57,58,59 3 * * 1-5', executeBaxterOrdersCB);
-            const executeBaxterOrdersT_2 = schedule.scheduleJob('15 * 4,5,6,7,8 * * 1-5', executeBaxterOrdersCB);
+            const executeBaxterOrdersT = schedule.scheduleJob('25 56,57,58,59 3 * * 1-5', executeBaxterOrdersCB);
+            const executeBaxterOrdersT_2 = schedule.scheduleJob('25 * 4,5,6,7,8 * * 1-5', executeBaxterOrdersCB);
             sendMessageToChannel('⏰ Execute Baxter Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBaxterOrdersT, executeBaxterOrdersT_2)));
         }
     }
