@@ -12,6 +12,7 @@ const expressApp = express();
 
 const log_level = 2 // 0 error; 1 log; 2 debug; 3 info; 4 warn;
 
+
 console._log = console.log
 console.error = log_level >= 0 ? (...l) => console._log('[ERROR]', ...l) : () => {}
 console.log = log_level >= 1 ? (...l) => console._log('[LOG]', ...l) : () => {}
