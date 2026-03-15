@@ -168,6 +168,8 @@ async function runRequests() {
 	let req_id = await secondRequest(ref_url)
 
 	const token = otplib.authenticator.generate(secret);
+	console.log('token', token)
+	console.log('secret', secret)
 
 	await thirdRequest(req_id, token, ref_url)
 
@@ -177,7 +179,7 @@ async function runRequests() {
 	const rt = finalURL.searchParams.get('request_token')
 
 	console.info("finalURL.searchParams.get('request_token')", rt)
-	// console.info(finalURL.searchParams)
+	console.info(finalURL.searchParams)
 
 	return rt
 }
