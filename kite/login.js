@@ -121,7 +121,6 @@ async function thirdRequest(req_id, token, ref_url) {
 			}
 		);
 		
-		console.log('Response from 3 request:', response.data);
 		console.info('Response from 3 request:', response.data);
 	} catch (error) {
 		console.error('Error during 3 request:', error.message);
@@ -155,9 +154,6 @@ async function fourthRequest(ref_url) {
 			}
 		);
 
-		console.log('Response from 4 request:', response.data);
-		console.log('Response from 4 request:', response.request.res);
-
 		return response.request.res.responseUrl;
 
 		
@@ -171,19 +167,12 @@ async function runRequests() {
 	let ref_url = await firstRequest()  
 	let req_id = await secondRequest(ref_url)
 
-	console.log('req_id', req_id)
-	console.log('ref_url', ref_url)
-
 	const token = otplib.authenticator.generate(secret);
-	console.log('token', token)
-	console.log('secret', secret)
 
 	await thirdRequest(req_id, token, ref_url)
 
 	let finalURL = await fourthRequest(ref_url)
 	finalURL = new URL(finalURL)
-
-	console.log('finalURL', finalURL)
 
 	const rt = finalURL.searchParams.get('request_token')
 
