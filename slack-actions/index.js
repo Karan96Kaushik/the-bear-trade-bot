@@ -2,6 +2,7 @@ let slack_app
 
 const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || true;
 const CSV_LOG_PATH = process.env.CSV_LOG_PATH || './logs/slack-messages.csv';
+const { getDateStringIND } = require('../kite/utils');
 
 const initialize_slack = (app) => {
 
@@ -340,7 +341,7 @@ async function logMessageToCSV(channel_name, message) {
 		const logDir = path.dirname(CSV_LOG_PATH);
 		await fs.mkdir(logDir, { recursive: true });
 		
-		const timestamp = getDateStringIND()
+		const timestamp = getDateStringIND(new Date())
 		
 		const csvLine = `${timestamp},${channel_name},${message}\n`;
 		
