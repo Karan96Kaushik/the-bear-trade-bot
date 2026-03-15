@@ -169,7 +169,8 @@ class KiteSetup {
             this.clearState()
 
             const generated_request_token = await runRequests()
-            // console.log(generated_request_token, apiSecret)
+            console.log('generated_request_token', generated_request_token)
+            console.log('apiSecret', apiSecret)
             const response = await this.kc.generateSession(generated_request_token, apiSecret);
             // let holdings = await this.kc.getHoldings()
             // console.log(holdings)
