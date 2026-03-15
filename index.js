@@ -26,50 +26,61 @@ const slack_app = new App({
 });
 
 const run = async () => {
-	expressApp.listen(process.env.EXPRESS_PORT || 9002, () => {console.log(`Express app is running on port ${process.env.EXPRESS_PORT || 9002}`)});
-	
-	if (process.env.NODE_ENV === 'production') {
-		await slack_app.start(process.env.SLACK_PORT || 3002)
-		console.log('⚡️ Bolt slack_app is running!')
-		initialize_slack(slack_app)
+	try {
+		expressApp.listen(process.env.EXPRESS_PORT || 9002, () => {console.log(`Express app is running on port ${process.env.EXPRESS_PORT || 9002}`)});
+		
+		if (process.env.NODE_ENV === 'production') {
+			await slack_app.start(process.env.SLACK_PORT || 3002)
+			console.log('⚡️ Bolt slack_app is running!')
+			initialize_slack(slack_app)
+		}
+		initialize_server(expressApp)
+
+		await sendMessageToChannel('🚀 Starting app!')
+
+		console.log("Connecting to database...")
+		await connectToDatabase();
+
+		if (process.env.NODE_ENV === 'production') {
+			kiteSession.clearState()
+			await kiteSession.authenticate(true)
+
+			const positions = await kiteSession.kc.getPositions()
+			console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
+
+			const orders = await kiteSession.kc.getOrders()
+			console.log(orders)
+		}
+		else {
+			await kiteSession.authenticate()
+
+			const positions = await kiteSession.kc.getPositions()
+			console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
+
+			const orders = await kiteSession.kc.getOrders()
+			console.log(orders)
+
+			const symbol = 'RELIANCE'
+			const sym = `NSE:${symbol}`
+			let ltp = await kiteSession.kc.getLTP([sym]);
+			ltp = ltp[sym].last_price
+
+			console.log(ltp)
+
+
+		}
+
+		// await kiteSession.authenticate()
+
+		// tradeManagerWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
+
+		if (process.env.NODE_ENV === 'production') {
+			// setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
+			scheduleMISJobs()
+		}
+	} catch (error) {
+		console.error('Error in run:', error)
 	}
-	initialize_server(expressApp)
-
-	await sendMessageToChannel('🚀 Starting app!')
-
-	console.log("Connecting to database...")
-	await connectToDatabase();
-
-	if (process.env.NODE_ENV === 'production') {
-		kiteSession.clearState()
-		await kiteSession.authenticate(true)
-
-		const positions = await kiteSession.kc.getPositions()
-		console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
-
-		const orders = await kiteSession.kc.getOrders()
-		console.log(orders)
-	}
-	else {
-		await kiteSession.authenticate()
-
-		const positions = await kiteSession.kc.getPositions()
-		console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
-
-		const orders = await kiteSession.kc.getOrders()
-		console.log(orders)
-
-	}
-
-	// await kiteSession.authenticate()
-
-	// tradeManagerWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
-
-	if (process.env.NODE_ENV === 'production') {
-		// setupWs(kiteSession.state.apiKey, kiteSession.state.accessToken)
-		scheduleMISJobs()
-	}
-
 }
 
 run()
