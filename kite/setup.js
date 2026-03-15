@@ -8,7 +8,7 @@ const { sendMessageToChannel } = require('../slack-actions');
 const apiKey = process.env.API_KEY;
 const apiSecret = process.env.API_SECRET;
 // const requestToken = process.env.REQUEST_TOKEN;
-const IS_DEV = process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
+const IS_DEV = false // process.env.NODE_ENV === 'development' || process.env.DEV_MODE === 'true';
 
 const STATE_FILE = path.join(__dirname, 'traderState.json');
 
