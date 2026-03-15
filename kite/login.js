@@ -167,6 +167,9 @@ async function runRequests() {
 	let ref_url = await firstRequest()  
 	let req_id = await secondRequest(ref_url)
 
+	console.log('req_id', req_id)
+	console.log('ref_url', ref_url)
+
 	const token = otplib.authenticator.generate(secret);
 	console.log('token', token)
 	console.log('secret', secret)
