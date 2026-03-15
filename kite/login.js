@@ -179,6 +179,8 @@ async function runRequests() {
 	let finalURL = await fourthRequest(ref_url)
 	finalURL = new URL(finalURL)
 
+	console.log('finalURL', finalURL)
+
 	const rt = finalURL.searchParams.get('request_token')
 
 	console.info("finalURL.searchParams.get('request_token')", rt)
