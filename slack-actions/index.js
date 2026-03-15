@@ -1,8 +1,7 @@
 let slack_app
 
-const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || true;
+const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || false;
 const CSV_LOG_PATH = process.env.CSV_LOG_PATH || './logs/slack-messages.csv';
-const { getDateStringIND } = require('../kite/utils');
 
 const initialize_slack = (app) => {
 
@@ -341,9 +340,17 @@ async function logMessageToCSV(channel_name, message) {
 		const logDir = path.dirname(CSV_LOG_PATH);
 		await fs.mkdir(logDir, { recursive: true });
 		
-		const timestamp = getDateStringIND(new Date())
+		const istDate = new Date(new Date().toLocaleString("en-US", {timeZone: "Asia/Kolkata"}));
+		const timestamp = istDate.toISOString().replace('T', ' ').substring(0, 19);
 		
-		const csvLine = `${timestamp},${channel_name},${message}\n`;
+		const messageText = Array.isArray(message) 
+			? message.map(s => typeof(s) == 'object' ? JSON.stringify(s) : String(s)).join(' ')
+			: String(message);
+		
+		const fullMessage = `${channel_name} ${messageText}`;
+		const escapedMessage = `"${fullMessage.replace(/"/g, '""')}"`;
+		const escapedChannel = `"${channel_name.replace(/"/g, '""')}"`;
+		const csvLine = `${timestamp},${escapedChannel},${escapedMessage}\n`;
 		
 		try {
 			await fs.access(CSV_LOG_PATH);
@@ -362,6 +369,19 @@ async function logMessageToCSV(channel_name, message) {
 async function sendMessageToChannel(channel_name='bot-status-updates-5', ...message) {
 	try {
 
+        if (LOG_TO_CSV) {
+            let actualChannelName = channel_name;
+            let actualMessage = message;
+            
+            if (!slack_channel_ids[channel_name]) {
+                actualChannelName = 'bot-status-updates-5';
+                actualMessage = [channel_name, ...message];
+            }
+            
+            await logMessageToCSV(actualChannelName, actualMessage);
+            return console.log('[CSV MODE]', actualChannelName, ...actualMessage);
+        }
+
         if (!slack_app || process.env.NODE_ENV !== 'production')
             return console.log('[SLACK MSG]', channel_name, ...message)
 
@@ -375,18 +395,6 @@ async function sendMessageToChannel(channel_name='bot-status-updates-5', ...mess
         if (process.env.NODE_ENV !== 'production') channelId = slack_channel_ids['dev-test']
         message = message.map(s => typeof(s) == 'object' ? JSON.stringify(s, null, 4) : String(s))
         message = message.join(' ')
-
-        if (LOG_TO_CSV) {
-            let actualChannelName = channel_name;
-            let actualMessage = message;
-            
-            if (!slack_channel_ids[channel_name]) {
-                actualChannelName = 'bot-status-updates-5';
-            }
-            
-            await logMessageToCSV(actualChannelName, actualMessage);
-            return console.log('[CSV MODE]', actualChannelName, ...actualMessage);
-        }
     
 		await slack_app.client.chat.postMessage({
 			channel: channelId,
