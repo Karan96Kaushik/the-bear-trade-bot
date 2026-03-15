@@ -121,6 +121,13 @@ async function thirdRequest(req_id, token, ref_url) {
 			}
 		);
 		
+		console.log('response', response)
+		console.log('response.data', response.data)
+		console.log('response.data.data', response.data.data)
+		console.log('response.data.data.request_id', response.data.data.request_id)
+		console.log('response.data.data.twofa_value', response.data.data.twofa_value)
+		console.log('response.data.data.twofa_type', response.data.data.twofa_type)
+		console.log('response.data.data.twofa_value', response.data.data.twofa_value)
 		console.info('Response from 3 request:', response.data);
 	} catch (error) {
 		console.error('Error during 3 request:', error.message);
