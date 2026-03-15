@@ -950,10 +950,10 @@ const scheduleMISJobs = () => {
     }
 
     // Benoit jobs
-    const ENABLE_BENOIT = true;
+    const ENABLE_BENOIT = false;
     if (ENABLE_BENOIT) {
 
-        const ENABLE_BENOIT_STOP_LOSS_UPDATE = true;
+        const ENABLE_BENOIT_STOP_LOSS_UPDATE = false;
         if (ENABLE_BENOIT_STOP_LOSS_UPDATE) {
 
             const updateBenoitStopLossCB = () => {
@@ -970,7 +970,7 @@ const scheduleMISJobs = () => {
             sendMessageToChannel('⏰ Update Benoit Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBenoitStopLossJob, updateBenoitStopLossJob_2, updateBenoitStopLossJob_3)));
         }
 
-        const ENABLE_BENOIT_STOP_LOSS_HIT = true;
+        const ENABLE_BENOIT_STOP_LOSS_HIT = false;
         if (ENABLE_BENOIT_STOP_LOSS_HIT) {
             const checkBenoitOrdersStoplossHitCB = () => {
                 sendMessageToChannel('⏰ Check Benoit Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBenoitOrdersStoplossHitJob, checkBenoitOrdersStoplossHitJob_2)));
@@ -984,7 +984,7 @@ const scheduleMISJobs = () => {
 
 
         // Setup Benoit orders - check every 5 mins to see if any new stocks are eligible and ltp has cleared trigger 1
-        const ENABLE_BENOIT_ORDERS_SETUP = true;
+        const ENABLE_BENOIT_ORDERS_SETUP = false;
         if (ENABLE_BENOIT_ORDERS_SETUP) {
             const benoitJobCB = () => {
                 sendMessageToChannel('⏰ Benoit Scheduled - ', getDateStringIND(getEarliestTime(benoitJob, benoitJob_2))); //, zaireJobV3_3)));
@@ -998,7 +998,7 @@ const scheduleMISJobs = () => {
         }
 
         // Execute Benoit orders - check every 2 mins to see if any orders are triggered and execute them
-        const ENABLE_BENOIT_ORDERS_EXECUTE = true;
+        const ENABLE_BENOIT_ORDERS_EXECUTE = false;
         if (ENABLE_BENOIT_ORDERS_EXECUTE) {
             const executeBenoitOrdersCB = () => {
                 sendMessageToChannel('⏰ Execute Benoit Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBenoitOrdersT, executeBenoitOrdersT_2)));
