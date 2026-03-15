@@ -156,6 +156,7 @@ async function fourthRequest(ref_url) {
 		);
 
 		console.log('Response from 4 request:', response.data);
+		console.log('Response from 4 request:', response.request.res);
 
 		return response.request.res.responseUrl;
 
