@@ -12,6 +12,7 @@ const ALLOWED_FILES = [
 	'slack-messages.csv',
 	'baxter_trades.csv',
 	'baxter_orders_debug.csv',
+	'baxter_orders.csv',
 	'sample_export.csv',
 ];
 
