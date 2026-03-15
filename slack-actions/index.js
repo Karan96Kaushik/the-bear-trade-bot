@@ -1,5 +1,8 @@
 let slack_app
 
+const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || true;
+const CSV_LOG_PATH = process.env.CSV_LOG_PATH || './logs/slack-messages.csv';
+
 const initialize_slack = (app) => {
 
     slack_app = app
@@ -329,8 +332,44 @@ const slack_channel_ids = {
     'bot-status-updates-5': 'C09MR11KVJT'
 }
 
+async function logMessageToCSV(channel_name, message) {
+	try {
+		const fs = require('fs').promises;
+		const path = require('path');
+		
+		const logDir = path.dirname(CSV_LOG_PATH);
+		await fs.mkdir(logDir, { recursive: true });
+		
+		const timestamp = new Date().toISOString();
+		const messageText = Array.isArray(message) 
+			? message.map(s => typeof(s) == 'object' ? JSON.stringify(s) : String(s)).join(' ')
+			: String(message);
+		
+		const escapedMessage = `"${messageText.replace(/"/g, '""')}"`;
+		const escapedChannel = `"${channel_name.replace(/"/g, '""')}"`;
+		const csvLine = `${timestamp},${escapedChannel},${escapedMessage}\n`;
+		
+		try {
+			await fs.access(CSV_LOG_PATH);
+		} catch {
+			const header = 'timestamp,channel,message\n';
+			await fs.writeFile(CSV_LOG_PATH, header, 'utf8');
+		}
+		
+		await fs.appendFile(CSV_LOG_PATH, csvLine, 'utf8');
+		console.log(`[CSV LOG] Message logged to ${CSV_LOG_PATH}`);
+	} catch (error) {
+		console.error(`Error logging to CSV: ${error}`);
+	}
+}
+
 async function sendMessageToChannel(channel_name='bot-status-updates-5', ...message) {
 	try {
+
+        if (LOG_TO_CSV) {
+            await logMessageToCSV(channel_name, message);
+            return console.log('[CSV MODE]', channel_name, ...message);
+        }
 
         if (!slack_app || process.env.NODE_ENV !== 'production')
             return console.log('[SLACK MSG]', channel_name, ...message)

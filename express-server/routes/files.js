@@ -9,6 +9,9 @@ const LOGS_DIR = path.join(__dirname, '..', '..', 'logs');
 // Hardcoded allowlist of filenames that can be listed and served
 const ALLOWED_FILES = [
 	'baxter_debug.csv',
+	'slack-messages.csv',
+	'baxter_trades.csv',
+	'baxter_orders_debug.csv',
 	'sample_export.csv',
 ];
 
