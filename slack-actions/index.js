@@ -345,7 +345,8 @@ async function logMessageToCSV(channel_name, message) {
 			? message.map(s => typeof(s) == 'object' ? JSON.stringify(s) : String(s)).join(' ')
 			: String(message);
 		
-		const escapedMessage = `"${messageText.replace(/"/g, '""')}"`;
+		const fullMessage = `[${channel_name}] ${messageText}`;
+		const escapedMessage = `"${fullMessage.replace(/"/g, '""')}"`;
 		const escapedChannel = `"${channel_name.replace(/"/g, '""')}"`;
 		const csvLine = `${timestamp},${escapedChannel},${escapedMessage}\n`;
 		
