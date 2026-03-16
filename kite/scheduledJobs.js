@@ -24,7 +24,7 @@ const { Lambda, InvokeCommand } = require("@aws-sdk/client-lambda");
 const { updateBenoitStopLoss, setupBenoitOrders, 
     checkBenoitDoubleConfirmation, executeBenoitOrders, checkBenoitOrdersStoplossHit } = require('./benoit');
 const { setupBaxterOrders, updateBaxterStopLoss, 
-    checkBaxterOrdersStoplossHit, executeBaxterOrders } = require('./baxter');
+    checkBaxterOrdersStoplossHit } = require('./baxter');
 
 // Initialize Lambda client
 const lambdaClient = new Lambda({
@@ -1026,13 +1026,29 @@ const scheduleMISJobs = () => {
     const ENABLE_BAXTER = true;
     if (ENABLE_BAXTER) {
 
+        const ENABLE_BAXTER_ORDERS_SETUP = true;
+        if (ENABLE_BAXTER_ORDERS_SETUP) {
+            const baxterJobCB = () => {
+                sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
+                setupBaxterOrders();
+            };
+            // First run at 3:55 AM, then every 15 minutes during trading hours
+            // Cancels all pending orders before creating new ones
+            const baxterJob = schedule.scheduleJob('45 55 3 * * 1-5', baxterJobCB);
+            const baxterJob_2 = schedule.scheduleJob('45 */15 4,5,6,7,8 * * 1-5', baxterJobCB);
+            sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
+        }
+
+        // NOTE: Execute Orders job removed - SL orders now placed via webhook
+        // in processor.js (processSuccessfulOrder) when trigger completes
+
         const ENABLE_BAXTER_STOP_LOSS_UPDATE = true;
         if (ENABLE_BAXTER_STOP_LOSS_UPDATE) {
-
             const updateBaxterStopLossCB = () => {
                 sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
                 updateBaxterStopLoss();
             }
+            // Cancels old SL orders and places new ones in API
             const updateBaxterStopLossJob = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', updateBaxterStopLossCB);
             const updateBaxterStopLossJob_2 = schedule.scheduleJob('10 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBaxterStopLossCB);
             const updateBaxterStopLossJob_3 = undefined
@@ -1040,39 +1056,19 @@ const scheduleMISJobs = () => {
             sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
         }
 
+        // Safety monitor - checks if SL orders exist, places if missing
         const ENABLE_BAXTER_STOP_LOSS_HIT = true;
         if (ENABLE_BAXTER_STOP_LOSS_HIT) {
             const checkBaxterOrdersStoplossHitCB = () => {
-                sendMessageToChannel('⏰ Check Baxter Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
+                sendMessageToChannel('⏰ Check Baxter Orders Safety Monitor Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
                 checkBaxterOrdersStoplossHit();
             }
             
-            const checkBaxterOrdersStoplossHitJob = schedule.scheduleJob('40 * 4,5,6,7,8 * * 1-5', checkBaxterOrdersStoplossHitCB);
-            const checkBaxterOrdersStoplossHitJob_2 = schedule.scheduleJob('40 ' + zeroToXMinsStr(0,46) + ' 9 * * 1-5', checkBaxterOrdersStoplossHitCB);
-            sendMessageToChannel('⏰ Check Baxter Orders Stoploss Hit Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
-        }
-
-        const ENABLE_BAXTER_ORDERS_SETUP = true;
-        if (ENABLE_BAXTER_ORDERS_SETUP) {
-            const baxterJobCB = () => {
-                sendMessageToChannel('⏰ Baxter Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
-                setupBaxterOrders();
-            };
-            const baxterJob = schedule.scheduleJob('45 55 3 * * 1-5', baxterJobCB);
-            const baxterJob_2 = schedule.scheduleJob('45 */15 4,5,6,7,8 * * 1-5', baxterJobCB);
-            sendMessageToChannel('⏰ Baxter Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
-
-        }
-
-        const ENABLE_BAXTER_ORDERS_EXECUTE = true;
-        if (ENABLE_BAXTER_ORDERS_EXECUTE) {
-            const executeBaxterOrdersCB = () => {
-                sendMessageToChannel('⏰ Execute Baxter Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBaxterOrdersT, executeBaxterOrdersT_2)));
-                executeBaxterOrders();
-            };
-            const executeBaxterOrdersT = schedule.scheduleJob('25 56,57,58,59 3 * * 1-5', executeBaxterOrdersCB);
-            const executeBaxterOrdersT_2 = schedule.scheduleJob('25 * 4,5,6,7,8 * * 1-5', executeBaxterOrdersCB);
-            sendMessageToChannel('⏰ Execute Baxter Orders Scheduled - ', getDateStringIND(getEarliestTime(executeBaxterOrdersT, executeBaxterOrdersT_2)));
+            // Reduced frequency since this is now just a safety monitor (API handles actual SL)
+            // Checks every 30 minutes instead of every minute
+            const checkBaxterOrdersStoplossHitJob = schedule.scheduleJob('40 */30 4,5,6,7,8 * * 1-5', checkBaxterOrdersStoplossHitCB);
+            const checkBaxterOrdersStoplossHitJob_2 = schedule.scheduleJob('40 0,30 9 * * 1-5', checkBaxterOrdersStoplossHitCB);
+            sendMessageToChannel('⏰ Check Baxter Orders Safety Monitor Scheduled - ', getDateStringIND(getEarliestTime(checkBaxterOrdersStoplossHitJob, checkBaxterOrdersStoplossHitJob_2)));
         }
     }
 
