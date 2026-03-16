@@ -132,6 +132,24 @@ async function setupBaxterOrders() {
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
 
+        // Cancel all existing TRIGGER PENDING Baxter orders before setup
+        const pendingBaxterOrders = orders.filter(o => 
+            o.tag?.includes('baxter') && 
+            (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+        );
+        
+        if (pendingBaxterOrders.length > 0) {
+            await sendMessageToChannel(`🗑️ Cancelling ${pendingBaxterOrders.length} pending Baxter orders before new setup`);
+            for (const order of pendingBaxterOrders) {
+                try {
+                    await kiteSession.kc.cancelOrder("regular", order.order_id);
+                    await sendMessageToChannel(`❎ Cancelled pending order: ${order.tradingsymbol}`);
+                } catch (cancelError) {
+                    await sendMessageToChannel(`⚠️ Failed to cancel order ${order.order_id}:`, cancelError?.message);
+                }
+            }
+        }
+
         const completed_baxter_orders = orders.filter(order => 
             order.tag?.includes('baxter') &&
             !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
@@ -334,7 +352,8 @@ async function createBaxterOrdersEntries(stock) {
             sheetUpdated = true;
             symbolToRollback = stock.sym;
 
-            let orderResponse;
+            let triggerOrderResponse, stopLossOrderResponse;
+            
             if (stock.direction === 'BULLISH') {
                 if (ltp > triggerPrice) {
                     logOrderDebug('ORDER_PLACED', stock.sym, {
@@ -343,14 +362,20 @@ async function createBaxterOrdersEntries(stock) {
                         triggerPrice,
                         stopLossPrice,
                         quantity,
-                        orderType: 'MARKET',
-                        orderAction: 'BUY',
-                        reason: 'LTP already above trigger'
+                        orderType: 'MARKET + SL',
+                        orderAction: 'BUY + SL-M',
+                        reason: 'LTP already above trigger, placing market + SL orders'
                     });
                     
-                    orderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, `trigger-m-baxter`);
-                    await logOrder('PLACED', 'TRIGGER', orderResponse);
-                    await sendMessageToChannel('✅ Baxter market order placed', ltp, stock.sym, quantity, stock.direction);
+                    // Place market order for trigger
+                    triggerOrderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, `trigger-m-baxter`);
+                    await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
+                    
+                    // Place SL-M order for stop loss
+                    stopLossOrderResponse = await placeOrder('SELL', 'SL-M', stopLossPrice, quantity, stock, `sl-baxter`);
+                    await logOrder('PLACED', 'STOPLOSS', stopLossOrderResponse);
+                    
+                    await sendMessageToChannel('✅ Baxter market + SL orders placed', ltp, stock.sym, quantity, stock.direction);
                     
                     const baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000')
                     const rowHeaders = baxterSheetData.map(a => a[1])
@@ -369,13 +394,14 @@ async function createBaxterOrdersEntries(stock) {
                         triggerPrice,
                         stopLossPrice,
                         quantity,
-                        orderType: 'SL-M',
+                        orderType: 'SL-M (trigger only)',
                         orderAction: 'BUY',
-                        reason: 'LTP below trigger, waiting for trigger'
+                        reason: 'LTP below trigger, waiting for trigger. SL will be placed after trigger.'
                     });
                     
-                    orderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, `trigger-baxter`);
-                    await logOrder('PLACED', 'TRIGGER', orderResponse);
+                    // Place SL-M order for trigger only
+                    triggerOrderResponse = await placeOrder('BUY', 'SL-M', triggerPrice, quantity, stock, `trigger-baxter`);
+                    await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
                     await sendMessageToChannel('✅ Baxter trigger order placed', stock.sym, quantity, triggerPrice, stock.direction);
                 }
             } else {
@@ -386,14 +412,20 @@ async function createBaxterOrdersEntries(stock) {
                         triggerPrice,
                         stopLossPrice,
                         quantity,
-                        orderType: 'MARKET',
-                        orderAction: 'SELL',
-                        reason: 'LTP already below trigger'
+                        orderType: 'MARKET + SL',
+                        orderAction: 'SELL + SL-M',
+                        reason: 'LTP already below trigger, placing market + SL orders'
                     });
                     
-                    orderResponse = await placeOrder('SELL', 'MARKET', null, Math.abs(quantity), stock, `trigger-m-baxter`);
-                    await logOrder('PLACED', 'TRIGGER', orderResponse);
-                    await sendMessageToChannel('✅ Baxter market order placed', ltp, stock.sym, quantity, stock.direction);
+                    // Place market order for trigger
+                    triggerOrderResponse = await placeOrder('SELL', 'MARKET', null, Math.abs(quantity), stock, `trigger-m-baxter`);
+                    await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
+                    
+                    // Place SL-M order for stop loss
+                    stopLossOrderResponse = await placeOrder('BUY', 'SL-M', stopLossPrice, Math.abs(quantity), stock, `sl-baxter`);
+                    await logOrder('PLACED', 'STOPLOSS', stopLossOrderResponse);
+                    
+                    await sendMessageToChannel('✅ Baxter market + SL orders placed', ltp, stock.sym, quantity, stock.direction);
                     
                     const baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000')
                     const rowHeaders = baxterSheetData.map(a => a[1])
@@ -412,13 +444,14 @@ async function createBaxterOrdersEntries(stock) {
                         triggerPrice,
                         stopLossPrice,
                         quantity,
-                        orderType: 'SL-M',
+                        orderType: 'SL-M (trigger only)',
                         orderAction: 'SELL',
-                        reason: 'LTP above trigger, waiting for trigger'
+                        reason: 'LTP above trigger, waiting for trigger. SL will be placed after trigger.'
                     });
                     
-                    orderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, Math.abs(quantity), stock, `trigger-baxter`);
-                    await logOrder('PLACED', 'TRIGGER', orderResponse);
+                    // Place SL-M order for trigger only
+                    triggerOrderResponse = await placeOrder('SELL', 'SL-M', triggerPrice, Math.abs(quantity), stock, `trigger-baxter`);
+                    await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
                     await sendMessageToChannel('✅ Baxter trigger order placed', stock.sym, quantity, triggerPrice, stock.direction);
                 }
             }
@@ -502,8 +535,19 @@ async function executeBaxterOrders() {
                         logOrderDebug('ORDER_EXECUTED', order.symbol, {
                             direction,
                             status: 'triggered',
-                            reason: 'Trigger order completed'
+                            reason: 'Trigger order completed, placing SL order'
                         });
+                        
+                        // Place SL order now that trigger has executed
+                        const qty = Math.abs(order.quantity);
+                        let slOrderResponse;
+                        
+                        if (direction === 'BULLISH') {
+                            slOrderResponse = await placeOrder('SELL', 'SL-M', order.stop_loss, qty, order, `sl-baxter`);
+                        } else {
+                            slOrderResponse = await placeOrder('BUY', 'SL-M', order.stop_loss, qty, order, `sl-baxter`);
+                        }
+                        await logOrder('PLACED', 'STOPLOSS', slOrderResponse);
                         
                         const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
                         const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
@@ -516,7 +560,7 @@ async function executeBaxterOrders() {
                             values: [[+new Date()]], 
                         })
                         await bulkUpdateCells(updates)
-                        await sendMessageToChannel('✅ Baxter order executed', order.symbol, order.quantity, order.status);
+                        await sendMessageToChannel('✅ Baxter order executed + SL placed', order.symbol, order.quantity, order.status);
                         
                     } else if (FAILED_STATUSES.includes(triggerOrder.status)) {
                         // Handle rejected/cancelled orders
@@ -605,6 +649,7 @@ async function checkBaxterOrdersStoplossHit() {
         baxterSheetData = processSheetWithHeaders(baxterSheetData)
 
         const positions = await kiteSession.kc.getPositions();
+        const orders = await kiteSession.kc.getOrders();
 
         for (const order of baxterSheetData) {
             try {
@@ -613,8 +658,35 @@ async function checkBaxterOrdersStoplossHit() {
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
 
                 const activePosition = positions.net.find(p => p.tradingsymbol === order.symbol && p.quantity != 0)
+                
+                // Check if position exited
                 if (!activePosition) {
-                    await sendMessageToChannel('⁉️ Baxter order not in position', order.symbol, order.quantity, order.status);
+                    // Verify if SL order was executed
+                    const slOrder = orders.find(o => 
+                        o.tradingsymbol === order.symbol && 
+                        o.tag?.includes('sl-baxter') &&
+                        o.status === 'COMPLETE'
+                    );
+                    
+                    if (slOrder) {
+                        // SL order executed successfully
+                        await sendMessageToChannel('✅ Baxter SL order executed', order.symbol, order.quantity);
+                        
+                        let updates = [];
+                        const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
+                        const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
+                        updates.push({
+                            range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
+                            values: [['stopped']], 
+                        })
+                        updates.push({
+                            range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
+                            values: [[+new Date()]], 
+                        })
+                        await bulkUpdateCells(updates)
+                    } else {
+                        await sendMessageToChannel('⁉️ Baxter position exited but no SL order found', order.symbol);
+                    }
                     continue;
                 }
                 
@@ -629,63 +701,45 @@ async function checkBaxterOrdersStoplossHit() {
                         actual: actualQuantity,
                         reason: 'Possible partial fill'
                     });
-                    // Continue using actual quantity from position
                 }
 
                 const direction = Number(order.quantity) > 0 ? 'BULLISH' : 'BEARISH';
-
                 const sym = `NSE:${order.symbol}`
                 let ltp = await getLTPWithRetry(sym);
 
-                let exited = false;
-                let updates = [];
-                
-                if (direction === 'BULLISH') {
-                    if (ltp <= order.stop_loss) {
-                        exited = true;
-                        logOrderDebug('STOPLOSS_HIT', order.symbol, {
-                            direction,
-                            ltp,
-                            stopLossPrice: order.stop_loss,
-                            reason: 'LTP hit or crossed below stop loss'
-                        });
-                        
-                        await sendMessageToChannel('❎ Baxter order stopped:', order.symbol, order.quantity, order.status);
-                        await placeOrder('SELL', 'MARKET', null, order.quantity, order, `sl-baxter`);
-                        await logOrder('PLACED', 'STOPLOSS', order);
+                // Check if SL order exists in API
+                const pendingSlOrder = orders.find(o => 
+                    o.tradingsymbol === order.symbol && 
+                    o.tag?.includes('sl-baxter') &&
+                    (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+                );
+
+                if (!pendingSlOrder) {
+                    // Missing SL order - place it as safety
+                    await sendMessageToChannel(`⚠️ Missing SL order for ${order.symbol}, placing safety SL`);
+                    logOrderDebug('MISSING_SL_ORDER', order.symbol, {
+                        direction,
+                        stopLossPrice: order.stop_loss,
+                        ltp,
+                        reason: 'SL order not found in API, placing safety order'
+                    });
+                    
+                    const qty = Math.abs(order.quantity);
+                    try {
+                        if (direction === 'BULLISH') {
+                            await placeOrder('SELL', 'SL-M', order.stop_loss, qty, order, `sl-baxter`);
+                        } else {
+                            await placeOrder('BUY', 'SL-M', order.stop_loss, qty, order, `sl-baxter`);
+                        }
+                        await sendMessageToChannel(`✅ Safety SL order placed for ${order.symbol}`);
+                    } catch (placeError) {
+                        await sendMessageToChannel(`🚨 Failed to place safety SL for ${order.symbol}:`, placeError?.message);
                     }
-                }
-                else if (direction === 'BEARISH') {
-                    if (ltp >= order.stop_loss) {
-                        exited = true;
-                        logOrderDebug('STOPLOSS_HIT', order.symbol, {
-                            direction,
-                            ltp,
-                            stopLossPrice: order.stop_loss,
-                            reason: 'LTP hit or crossed above stop loss'
-                        });
-                        
-                        await sendMessageToChannel('❎ Baxter order stopped:', order.symbol, order.quantity, order.status);
-                        await placeOrder('BUY', 'MARKET', null, Math.abs(order.quantity), order, `sl-baxter`);
-                        await logOrder('PLACED', 'STOPLOSS', order);
-                    }
+                } else {
+                    // SL order exists, just log status
+                    sendMessageToChannel('🔎 Baxter SL check', `${order.symbol} LTP:${ltp} SL:${order.stop_loss} [API Order: ${pendingSlOrder.order_id}]`)
                 }
 
-                sendMessageToChannel('🔎 Baxter stoploss check', `E-${exited} ${order.symbol} LTP:${ltp} SL:${order.stop_loss}`)
-
-                if (exited) {
-                    const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
-                    const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
-                    updates.push({
-                        range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
-                        values: [['stopped']], 
-                    })
-                    updates.push({
-                        range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
-                        values: [[+new Date()]], 
-                    })
-                    await bulkUpdateCells(updates)
-                }
             } catch (error) {
                 console.error(error)
                 await sendMessageToChannel('🚨 Error checking Baxter orders stoploss hit:', order.symbol, order.quantity, error?.message);
@@ -756,6 +810,7 @@ async function updateBaxterStopLoss() {
         const colHeaders = baxterSheetData[0]
         baxterSheetData = processSheetWithHeaders(baxterSheetData)
 
+        const orders = await kiteSession.kc.getOrders();
         let updates = []
 
         for (const order of baxterSheetData) {
@@ -794,6 +849,49 @@ async function updateBaxterStopLoss() {
                         reason: `Trailing SL ${isBearish ? 'downward' : 'upward'}`
                     });
 
+                    // Find existing SL order
+                    const existingSlOrder = orders.find(o => 
+                        o.tradingsymbol === order.symbol && 
+                        o.tag?.includes('sl-baxter') &&
+                        (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+                    );
+
+                    // Cancel existing SL order if it exists
+                    if (existingSlOrder) {
+                        try {
+                            await kiteSession.kc.cancelOrder("regular", existingSlOrder.order_id);
+                            await sendMessageToChannel(`❎ Cancelled old SL order for ${sym}: ${existingStopLoss}`);
+                        } catch (cancelError) {
+                            await sendMessageToChannel(`⚠️ Failed to cancel SL order for ${sym}:`, cancelError?.message);
+                            logOrderDebug('CANCEL_FAILED', order.symbol, {
+                                orderId: existingSlOrder.order_id,
+                                reason: cancelError?.message
+                            });
+                            continue;
+                        }
+                    }
+
+                    // Place new SL order with updated stop loss
+                    const qty = Math.abs(order.quantity);
+                    try {
+                        let slOrderResponse;
+                        if (isBearish) {
+                            slOrderResponse = await placeOrder('BUY', 'SL-M', newPrice, qty, order, `sl-baxter`);
+                        } else {
+                            slOrderResponse = await placeOrder('SELL', 'SL-M', newPrice, qty, order, `sl-baxter`);
+                        }
+                        await logOrder('PLACED', 'STOPLOSS_UPDATE', slOrderResponse);
+                        await sendMessageToChannel(`✅ New SL order placed for ${sym}:`, `Old: ${existingStopLoss}`, `New: ${newPrice}`, `LTP: ${ltp}`);
+                    } catch (placeError) {
+                        await sendMessageToChannel(`🚨 Failed to place new SL order for ${sym}:`, placeError?.message);
+                        logOrderDebug('PLACE_SL_FAILED', order.symbol, {
+                            newStopLoss: newPrice,
+                            reason: placeError?.message
+                        });
+                        continue;
+                    }
+
+                    // Update sheet with new SL
                     const [row, col] = getStockLoc(order.symbol, 'Stop Loss', rowHeaders, colHeaders)
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
