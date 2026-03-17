@@ -1,6 +1,6 @@
 let slack_app
 
-const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || true;
+const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || false;
 const CSV_LOG_PATH = process.env.CSV_LOG_PATH || './logs/slack-messages.csv';
 
 const initialize_slack = (app) => {
