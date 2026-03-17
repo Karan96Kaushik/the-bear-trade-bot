@@ -182,8 +182,8 @@ const setToIgnoreInSheet = async (order, message) => {
 
 const processSuccessfulOrder = async (order) => {
     try {
-        // Handle failed/rejected/cancelled Baxter orders
-        if (order.tag?.includes('baxter') && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {
+        // Handle failed/rejected/cancelled Baxter orders - except for SL orders
+        if (order.tag?.includes('baxter') && !order.tag?.includes('sl-baxter') && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {
             try {
                 await sendMessageToChannel('❌ Baxter order failed', order.tradingsymbol, order.status, order.status_message || '');
                 await logOrder('FAILED', 'BAXTER_ORDER_FAILED', order);
