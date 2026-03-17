@@ -265,7 +265,9 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCach
 				// console.log(df)
 				// df = processMoneycontrolData(df, interval, useCached);
 
-				console.log(df[0], df[df.length - 1])
+				console.log('start date:', startDate)
+				console.log('end date:', endDate)
+				console.log('last candle:', df[df.length - 1], new Date(df[df.length - 1].time).toISOString())
 				
 				if (!df || df.length === 0) {
 					if (DEBUG) console.log('No data for', sym);
