@@ -312,7 +312,7 @@ const processSuccessfulOrder = async (order) => {
             if (order.tag?.includes('sl-baxter') && order.tag?.includes('baxter')) {
                 try {
                     await sendMessageToChannel('🛑 Baxter SL executed', order.tradingsymbol, order.filled_quantity, order.average_price);
-                    await logOrder('COMPLETED', 'BAXTER_STOPLOSS_HIT', order);
+                    // await logOrder('COMPLETED', 'BAXTER_STOPLOSS_HIT', order);
                     
                     // Update sheet status to stopped
                     try {
