@@ -121,11 +121,11 @@ async function setupBaxterOrders() {
         let selectedStocks = [];
         
         if (bullishStockList.length > 0) {
-            const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, null, '15m', false, {}, 'BULLISH');
+            const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, null, null, false, {}, 'BULLISH');
             selectedStocks.push(...bullishSelected);
         }
         if (bearishStockList.length > 0) {
-            const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, null, '15m', false, {}, 'BEARISH');
+            const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, null, null, false, {}, 'BEARISH');
             selectedStocks.push(...bearishSelected);
         }
 

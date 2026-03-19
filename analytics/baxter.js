@@ -9,8 +9,8 @@ const ENABLE_CSV_DEBUG_LOGGER = process.env.ENABLE_CSV_DEBUG_LOGGER || true;
 
 const DEFAULT_PARAMS = {
 	TOUCHING_SMA_TOLERANCE: 0.002,
-	NARROW_RANGE_TOLERANCE: 0.0046,
-	MA_WINDOW: 44,
+	NARROW_RANGE_TOLERANCE: 0.01,
+	MA_WINDOW: 200,
 }
 
 let debugLogData = new Map();
@@ -233,7 +233,7 @@ function clearDebugLog() {
  * 4. Candle size: ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
  * 5. Entry point: BULLISH → [0] high > [-1] high; BEARISH → [0] low < [-1] low (breakout/breakdown - The Queen)
  */
-async function scanBaxterStocks(stockList, endDateNew, interval = '15m', useCached = false, params = DEFAULT_PARAMS, direction = 'BULLISH') {
+async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCached = false, params = DEFAULT_PARAMS, direction = 'BULLISH') {
 	const selectedStocks = [];
 	const BATCH_SIZE = 5;
 
