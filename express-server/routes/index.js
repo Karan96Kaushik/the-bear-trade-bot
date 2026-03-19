@@ -7,5 +7,6 @@ module.exports = {
     db_orders: require('./db_orders'),
     simulation: require('./simulation'),
     files: require('./files'),
+    manual_order: require('./manual_order'),
 }
 

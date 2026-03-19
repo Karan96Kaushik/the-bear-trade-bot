@@ -183,9 +183,12 @@ const setToIgnoreInSheet = async (order, message) => {
 const processSuccessfulOrder = async (order) => {
     try {
         // Handle failed/rejected/cancelled Baxter orders - except for SL orders
-        if (order.tag?.includes('baxter') && !order.tag?.includes('sl-baxter') && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {
+        const isBaxterOrManual = order.tag?.includes('baxter') || order.tag?.includes('manual');
+        const isSLOrder = order.tag?.includes('sl-baxter') || order.tag?.includes('sl-manual');
+        if (isBaxterOrManual && !isSLOrder && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {
             try {
-                await sendMessageToChannel('❌ Baxter order failed', order.tradingsymbol, order.status, order.status_message || '');
+                const sourceLabel = order.tag?.includes('manual') ? 'manual' : 'baxter';
+                await sendMessageToChannel(`❌ ${sourceLabel} order failed`, order.tradingsymbol, order.status, order.status_message || '');
                 await logOrder('FAILED', 'BAXTER_ORDER_FAILED', order);
                 
                 // Update sheet to mark as failed
@@ -213,7 +216,7 @@ const processSuccessfulOrder = async (order) => {
                 ];
                 
                 await bulkUpdateCells(updates);
-                await sendMessageToChannel('✅ Sheet updated - Baxter order marked as failed', order.tradingsymbol);
+                await sendMessageToChannel('✅ Sheet updated - Order marked as failed', order.tradingsymbol);
             } catch (error) {
                 await sendMessageToChannel('💥 Error handling failed Baxter order', order.tradingsymbol, error?.message);
                 console.error("💥 Error handling failed Baxter order: ", order.tradingsymbol, error?.message);
@@ -253,26 +256,43 @@ const processSuccessfulOrder = async (order) => {
                 return
             }
 
-            // Handle Baxter trigger orders - place SL orders immediately upon trigger completion
-            if (order.tag?.includes('trigger') && order.tag?.includes('baxter')) {
+            // Handle trigger orders - place SL orders immediately upon trigger completion
+            if (order.tag?.includes('trigger') && (order.tag?.includes('baxter') || order.tag?.includes('manual'))) {
                 try {
-                    await sendMessageToChannel('🎯 Baxter trigger completed, placing SL order', order.tradingsymbol, order.filled_quantity, order.average_price);
+                    const source = (stock?.source || (order.tag?.includes('manual') ? 'manual' : 'baxter')).toLowerCase();
+                    await sendMessageToChannel(`${source === 'manual' ? '🎯 Manual' : '🎯 Baxter'} trigger completed, placing SL order`, order.tradingsymbol, order.filled_quantity, order.average_price);
                     
                     // Get stop loss from sheet
                     if (stock && stock.stopLossPrice) {
                         const direction = order.transaction_type === 'BUY' ? 'BULLISH' : 'BEARISH';
                         const qty = Math.abs(order.filled_quantity);
                         
-                        // Place SL-M order
-                        let slOrderResponse;
-                        if (direction === 'BULLISH') {
-                            slOrderResponse = await placeOrder('SELL', 'SL-M', stock.stopLossPrice, qty, stock, `sl-baxter`);
+                        // Avoid duplicating SL if SL was already placed (e.g., MARKET + SL branch)
+                        const existingOrders = await kiteSession.kc.getOrders();
+                        const existingSlOrder = existingOrders.find(o =>
+                            o.tradingsymbol === order.tradingsymbol &&
+                            o.tag?.includes(`sl-${source}`) &&
+                            (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+                        );
+
+                        if (existingSlOrder) {
+                            await sendMessageToChannel(
+                                `ℹ️ ${source} SL order already exists, skipping placement`,
+                                order.tradingsymbol,
+                                existingSlOrder.order_id,
+                            );
                         } else {
-                            slOrderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, qty, stock, `sl-baxter`);
+                            // Place SL-M order
+                            let slOrderResponse;
+                            if (direction === 'BULLISH') {
+                                slOrderResponse = await placeOrder('SELL', 'SL-M', stock.stopLossPrice, qty, stock, `sl-${source}`);
+                            } else {
+                                slOrderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, qty, stock, `sl-${source}`);
+                            }
+                            
+                            await logOrder('PLACED', 'STOPLOSS_ON_TRIGGER', slOrderResponse);
+                            await sendMessageToChannel(`✅ ${source === 'manual' ? 'Manual' : 'Baxter'} SL order placed`, order.tradingsymbol, qty, stock.stopLossPrice, direction);
                         }
-                        
-                        await logOrder('PLACED', 'STOPLOSS_ON_TRIGGER', slOrderResponse);
-                        await sendMessageToChannel('✅ Baxter SL order placed', order.tradingsymbol, qty, stock.stopLossPrice, direction);
                         
                         // Update sheet status to triggered
                         try {
@@ -296,22 +316,23 @@ const processSuccessfulOrder = async (order) => {
                             
                             await bulkUpdateCells(updates);
                         } catch (sheetError) {
-                            await sendMessageToChannel('⚠️ Failed to update sheet for Baxter trigger', order.tradingsymbol, sheetError?.message);
+                            await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} trigger`, order.tradingsymbol, sheetError?.message);
                         }
                     } else {
-                        await sendMessageToChannel('⚠️ Cannot place Baxter SL - stock data or SL price missing', order.tradingsymbol);
+                        await sendMessageToChannel(`⚠️ Cannot place SL for ${source} - stock data or SL price missing`, order.tradingsymbol);
                     }
                 } catch (error) {
-                    await sendMessageToChannel('💥 Error placing Baxter SL order', order.tradingsymbol, error?.message);
-                    console.error("💥 Error placing Baxter SL order: ", order.tradingsymbol, error?.message);
+                    await sendMessageToChannel(`💥 Error placing ${source} SL order`, order.tradingsymbol, error?.message);
+                    console.error(`💥 Error placing ${source} SL order: `, order.tradingsymbol, error?.message);
                 }
-                return; // Don't process further for Baxter trigger orders
+                return; // Don't process further for trigger orders
             }
 
-            // Handle Baxter SL orders - update sheet when stop loss executes
-            if (order.tag?.includes('sl-baxter') && order.tag?.includes('baxter')) {
+            // Handle SL orders - update sheet when stop loss executes
+            if ((order.tag?.includes('sl-baxter') || order.tag?.includes('sl-manual')) && (order.tag?.includes('baxter') || order.tag?.includes('manual'))) {
                 try {
-                    await sendMessageToChannel('🛑 Baxter SL executed', order.tradingsymbol, order.filled_quantity, order.average_price);
+                    const source = order.tag?.includes('sl-manual') ? 'manual' : 'baxter';
+                    await sendMessageToChannel(`🛑 ${source} SL executed`, order.tradingsymbol, order.filled_quantity, order.average_price);
                     // await logOrder('COMPLETED', 'BAXTER_STOPLOSS_HIT', order);
                     
                     // Update sheet status to stopped
@@ -340,15 +361,16 @@ const processSuccessfulOrder = async (order) => {
                         ];
                         
                         await bulkUpdateCells(updates);
-                        await sendMessageToChannel('✅ Sheet updated - Baxter position stopped', order.tradingsymbol);
+                        await sendMessageToChannel(`✅ Sheet updated - ${source} position stopped`, order.tradingsymbol);
                     } catch (sheetError) {
-                        await sendMessageToChannel('⚠️ Failed to update sheet for Baxter SL', order.tradingsymbol, sheetError?.message);
+                        await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} SL`, order.tradingsymbol, sheetError?.message);
                     }
                 } catch (error) {
-                    await sendMessageToChannel('💥 Error handling Baxter SL execution', order.tradingsymbol, error?.message);
-                    console.error("💥 Error handling Baxter SL execution: ", order.tradingsymbol, error?.message);
+                    const source = order.tag?.includes('sl-manual') ? 'manual' : 'baxter';
+                    await sendMessageToChannel(`💥 Error handling ${source} SL execution`, order.tradingsymbol, error?.message);
+                    console.error(`💥 Error handling ${source} SL execution: `, order.tradingsymbol, error?.message);
                 }
-                return; // Don't process further for Baxter SL orders
+                return; // Don't process further for SL orders
             }
 
             try {
