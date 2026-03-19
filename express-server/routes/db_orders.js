@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const OrderLog = require('../../models/OrderLog');
-const { getRetrospective, getTradeAnalysis } = require('../../analytics/orders');
+const { getRetrospective, getTradeAnalysis, getSLProgression } = require('../../analytics/orders');
 const { calculatePnLForPairs } = require('../../analytics/orders');
 // Get all orders with pagination and filtering
 router.get('/logs', async (req, res) => {
@@ -100,6 +100,25 @@ router.get('/trade-analysis', async (req, res) => {
     } catch (error) {
         console.error('Error fetching trade analysis:', error);
         console.trace(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+router.get('/sl-progression', async (req, res) => {
+    try {
+        const { date } = req.query;
+        const startDate = new Date(date);
+        startDate.setUTCHours(0, 0, 0, 0);
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 1);
+        const results = await getSLProgression(startDate, endDate);
+
+        console.log('SL Progression');
+        console.log(results);
+
+        res.json(results);
+    } catch (error) {
+        console.error('Error fetching SL progression:', error);
         res.status(500).json({ message: 'Server error' });
     }
 });
