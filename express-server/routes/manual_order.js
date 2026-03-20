@@ -25,6 +25,7 @@ router.post('/', async (req, res) => {
             quantity,
             riskAmount,
             reviseSL,
+            slInterval,
         } = req.body || {};
 
         if (!symbol) {
@@ -47,6 +48,7 @@ router.post('/', async (req, res) => {
             quantity: quantity !== undefined ? Number(quantity) : undefined,
             riskAmount: riskAmount !== undefined ? Number(riskAmount) : undefined,
             reviseSL: reviseSL !== undefined ? Number(reviseSL) : undefined,
+            slInterval: slInterval !== undefined ? Number(slInterval) : undefined,
         };
 
         const hasLevels = Number.isFinite(parsed.high) && Number.isFinite(parsed.low);
@@ -69,6 +71,8 @@ router.post('/', async (req, res) => {
 
         await authenticateWithRetry();
         await kiteSession.authenticate();
+
+        console.log('parsed:', parsed);
 
         const result = await createManualOrdersEntries(parsed);
         if (!result) {

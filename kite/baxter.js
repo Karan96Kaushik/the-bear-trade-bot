@@ -639,6 +639,7 @@ async function createManualOrdersEntries(stock) {
         sheetEntry.stopLossPrice = stopLossPrice;
         sheetEntry.triggerPrice = triggerPrice;
         sheetEntry.quantity = quantity;
+        sheetEntry.slInterval = stock.slInterval;
 
         let sheetUpdated = false;
         let symbolToRollback = null;
