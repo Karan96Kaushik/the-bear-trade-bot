@@ -249,18 +249,6 @@ async function createBaxterOrdersEntries(stock) {
 
         let triggerPrice, targetPrice, stopLossPrice, quantity;
 
-        // Optional take-profit price (LIMIT). If not provided, we won't place a target order.
-        let rawTargetPrice = stock?.targetPrice ?? stock?.target_price ?? stock?.target;
-        targetPrice = Number(rawTargetPrice);
-        // Sheet parsing maps empty cells to 0, so treat 0 as "no target configured".
-        if (!Number.isFinite(targetPrice) || targetPrice === 0) {
-            targetPrice = '';
-        } else {
-            // Clamp to circuit limits to avoid invalid prices.
-            if (targetPrice > upper_circuit_limit) targetPrice = upper_circuit_limit - 0.1;
-            if (targetPrice < lower_circuit_limit) targetPrice = lower_circuit_limit + 0.1;
-        }
-
         let triggerPadding = 1;
         if (stock.high < 20)
             triggerPadding = 0.1;
@@ -276,6 +264,8 @@ async function createBaxterOrdersEntries(stock) {
         if (stock.direction == 'BULLISH') {
             triggerPrice = stock.high + triggerPadding;
             stopLossPrice = stock.low - triggerPadding;
+            // Target is 5x the candleLength
+            targetPrice = stock.high + (stock.high - stock.low) * 5 + triggerPadding;
 
             // For BULLISH: SL is below, so only check lower circuit
             if (stopLossPrice < lower_circuit_limit) {
@@ -284,8 +274,15 @@ async function createBaxterOrdersEntries(stock) {
                 sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.sym, stopLossPrice)
             }
 
+            if (targetPrice > upper_circuit_limit) {
+                targetPrice = upper_circuit_limit - 0.1
+                circuitAdjustment = `Target adjusted from ${targetPrice} to ${upper_circuit_limit} (upper circuit: ${upper_circuit_limit})`;
+                sendMessageToChannel('🚪 Target Updated based on circuit limit', stock.sym, targetPrice)
+            }
+
             triggerPrice = Math.round(triggerPrice * 10) / 10;
             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
+            targetPrice = Math.round(targetPrice * 10) / 10;
 
             quantity = Math.ceil(BAXTER_RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
             quantity = Math.abs(quantity);
@@ -293,6 +290,8 @@ async function createBaxterOrdersEntries(stock) {
         } else {
             triggerPrice = stock.low - triggerPadding;
             stopLossPrice = stock.high + triggerPadding;
+            // Target is 5x the candleLength
+            targetPrice = stock.low - (stock.high - stock.low) * 5 - triggerPadding;
 
             // For BEARISH: SL is above, so only check upper circuit
             if (stopLossPrice > upper_circuit_limit) {
@@ -301,8 +300,15 @@ async function createBaxterOrdersEntries(stock) {
                 sendMessageToChannel('🚪 SL Updated based on circuit limit', stock.sym, stopLossPrice)
             }
 
+            if (targetPrice < lower_circuit_limit) {
+                targetPrice = lower_circuit_limit + 0.1
+                circuitAdjustment = `Target adjusted from ${targetPrice} to ${lower_circuit_limit} (lower circuit: ${lower_circuit_limit})`;
+                sendMessageToChannel('🚪 Target Updated based on circuit limit', stock.sym, targetPrice)
+            }
+
             triggerPrice = Math.round(triggerPrice * 10) / 10;
             stopLossPrice = Math.round(stopLossPrice * 10) / 10;
+            targetPrice = Math.round(targetPrice * 10) / 10;
 
             quantity = Math.ceil(BAXTER_RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
             quantity = Math.abs(quantity);

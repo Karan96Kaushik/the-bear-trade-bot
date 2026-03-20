@@ -309,42 +309,72 @@ const processSuccessfulOrder = async (order) => {
 
                     // Place target LIMIT order (if configured on sheet)
                     if (hasTarget) {
-                        // Clamp to circuit limits to avoid invalid prices.
+                        // Validate and clamp to circuit limits to avoid invalid prices.
                         let targetPrice = parsedTargetPrice;
-                        if (Number.isFinite(upper_circuit_limit) && targetPrice > upper_circuit_limit) targetPrice = upper_circuit_limit - 0.1;
-                        if (Number.isFinite(lower_circuit_limit) && targetPrice < lower_circuit_limit) targetPrice = lower_circuit_limit + 0.1;
 
-                        const existingTargetOrder = existingOrders.find(o =>
-                            o.tradingsymbol === order.tradingsymbol &&
-                            o.tag?.includes(`target-${source}`) &&
-                            (o.status === 'OPEN' || o.status === 'TRIGGER PENDING')
-                        );
-
-                        if (existingTargetOrder) {
+                        const hasCircuitLimits = Number.isFinite(lower_circuit_limit) && Number.isFinite(upper_circuit_limit);
+                        if (!hasCircuitLimits) {
                             await sendMessageToChannel(
-                                `ℹ️ ${source} target order already exists, skipping placement`,
-                                order.tradingsymbol,
-                                existingTargetOrder.order_id,
+                                `⚠️ Cannot place target for ${source} - missing circuit limits`,
+                                order.tradingsymbol
                             );
                         } else {
-                            const targetTransactionType = direction === 'BULLISH' ? 'SELL' : 'BUY';
-                            const targetOrderResponse = await placeOrder(
-                                targetTransactionType,
-                                'LIMIT',
-                                targetPrice,
-                                qty,
-                                stock,
-                                `target-${source}`,
-                            );
-                            await logOrder('PLACED', 'TARGET_ON_TRIGGER', targetOrderResponse);
-                            await sendMessageToChannel(
-                                `✅ ${source === 'manual' ? 'Manual' : 'Baxter'} target order placed`,
-                                order.tradingsymbol,
-                                qty,
-                                targetPrice,
-                                direction
-                            );
+                            if (targetPrice > upper_circuit_limit) {
+                                const old = targetPrice;
+                                targetPrice = upper_circuit_limit - 0.1;
+                                await sendMessageToChannel('🚪 Target adjusted based on circuit limit', order.tradingsymbol, old, targetPrice);
+                            }
+                            if (targetPrice < lower_circuit_limit) {
+                                const old = targetPrice;
+                                targetPrice = lower_circuit_limit + 0.1;
+                                await sendMessageToChannel('🚪 Target adjusted based on circuit limit', order.tradingsymbol, old, targetPrice);
+                            }
+
+                            // Final sanity check
+                            if (targetPrice < lower_circuit_limit || targetPrice > upper_circuit_limit) {
+                                await sendMessageToChannel(
+                                    `🚫 Target price still out of circuit for ${source}, skipping target placement`,
+                                    order.tradingsymbol,
+                                    targetPrice,
+                                    `LCL:${lower_circuit_limit}`,
+                                    `UCL:${upper_circuit_limit}`
+                                );
+                            } else {
+                                const existingTargetOrder = existingOrders.find(o =>
+                                    o.tradingsymbol === order.tradingsymbol &&
+                                    o.tag?.includes(`target-${source}`) &&
+                                    (o.status === 'OPEN' || o.status === 'TRIGGER PENDING')
+                                );
+
+                                if (existingTargetOrder) {
+                                    await sendMessageToChannel(
+                                        `ℹ️ ${source} target order already exists, skipping placement`,
+                                        order.tradingsymbol,
+                                        existingTargetOrder.order_id,
+                                    );
+                                } else {
+                                    const targetTransactionType = direction === 'BULLISH' ? 'SELL' : 'BUY';
+                                    const targetOrderResponse = await placeOrder(
+                                        targetTransactionType,
+                                        'LIMIT',
+                                        targetPrice,
+                                        qty,
+                                        stock,
+                                        `target-${source}`,
+                                    );
+                                    await logOrder('PLACED', 'TARGET_ON_TRIGGER', targetOrderResponse);
+                                    await sendMessageToChannel(
+                                        `✅ ${source === 'manual' ? 'Manual' : 'Baxter'} target order placed`,
+                                        order.tradingsymbol,
+                                        qty,
+                                        targetPrice,
+                                        direction
+                                    );
+                                }
+                            }
                         }
+
+                        // Note: existingTargetOrder/placement handled only when circuit limits are valid.
                     }
 
                     // Update sheet status to triggered
