@@ -194,6 +194,7 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
             const quote = result.indicators.quote[0];
 
             const filteredTimestamps = result.timestamp.filter(t => t*1000 < +requestedDate);
+            // console.log('filteredTimestamps:', filteredTimestamps.slice(-5).map(t => getDateStringIND(t*1000)))
             // console.log('old', result.timestamp.slice(-5).map(t => getDateStringIND(t*1000)))
             // console.log('new', filteredTimestamps.slice(-5).map(t => getDateStringIND(t*1000)))
             // console.log(getDateStringIND(requestedDate))
@@ -208,6 +209,8 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
                 low: quote.low.slice(0, newLength),
                 volume: quote.volume.slice(0, newLength)
             };
+
+            return {chart: {result: [result]}};
         }
 
         return response.data;
