@@ -249,6 +249,18 @@ async function createBaxterOrdersEntries(stock) {
 
         let triggerPrice, targetPrice, stopLossPrice, quantity;
 
+        // Optional take-profit price (LIMIT). If not provided, we won't place a target order.
+        let rawTargetPrice = stock?.targetPrice ?? stock?.target_price ?? stock?.target;
+        targetPrice = Number(rawTargetPrice);
+        // Sheet parsing maps empty cells to 0, so treat 0 as "no target configured".
+        if (!Number.isFinite(targetPrice) || targetPrice === 0) {
+            targetPrice = '';
+        } else {
+            // Clamp to circuit limits to avoid invalid prices.
+            if (targetPrice > upper_circuit_limit) targetPrice = upper_circuit_limit - 0.1;
+            if (targetPrice < lower_circuit_limit) targetPrice = lower_circuit_limit + 0.1;
+        }
+
         let triggerPadding = 1;
         if (stock.high < 20)
             triggerPadding = 0.1;
@@ -264,7 +276,6 @@ async function createBaxterOrdersEntries(stock) {
         if (stock.direction == 'BULLISH') {
             triggerPrice = stock.high + triggerPadding;
             stopLossPrice = stock.low - triggerPadding;
-            targetPrice = '';
 
             // For BULLISH: SL is below, so only check lower circuit
             if (stopLossPrice < lower_circuit_limit) {
@@ -282,7 +293,6 @@ async function createBaxterOrdersEntries(stock) {
         } else {
             triggerPrice = stock.low - triggerPadding;
             stopLossPrice = stock.high + triggerPadding;
-            targetPrice = '';
 
             // For BEARISH: SL is above, so only check upper circuit
             if (stopLossPrice > upper_circuit_limit) {
@@ -352,7 +362,7 @@ async function createBaxterOrdersEntries(stock) {
             sheetUpdated = true;
             symbolToRollback = stock.sym;
 
-            let triggerOrderResponse, stopLossOrderResponse;
+            let triggerOrderResponse;
             
             if (stock.direction === 'BULLISH') {
                 if (ltp > triggerPrice) {
@@ -362,20 +372,17 @@ async function createBaxterOrdersEntries(stock) {
                         triggerPrice,
                         stopLossPrice,
                         quantity,
-                        orderType: 'MARKET + SL',
-                        orderAction: 'BUY + SL-M',
-                        reason: 'LTP already above trigger, placing market + SL orders'
+                        orderType: 'MARKET trigger',
+                        orderAction: 'BUY',
+                        reason: 'LTP already above trigger, placing market trigger order'
                     });
                     
                     // Place market order for trigger
                     triggerOrderResponse = await placeOrder('BUY', 'MARKET', null, quantity, stock, `trigger-m-baxter`);
                     await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
-                    
-                    // Place SL-M order for stop loss
-                    stopLossOrderResponse = await placeOrder('SELL', 'SL-M', stopLossPrice, quantity, stock, `sl-baxter`);
-                    await logOrder('PLACED', 'STOPLOSS', stopLossOrderResponse);
-                    
-                    await sendMessageToChannel('✅ Baxter market + SL orders placed', ltp, stock.sym, quantity, stock.direction);
+
+                    // SL/Target orders are placed after trigger completion in `processSuccessfulOrder`
+                    await sendMessageToChannel('✅ Baxter market trigger order placed', ltp, stock.sym, quantity, stock.direction);
                     
                     const baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000')
                     const rowHeaders = baxterSheetData.map(a => a[1])
@@ -412,20 +419,17 @@ async function createBaxterOrdersEntries(stock) {
                         triggerPrice,
                         stopLossPrice,
                         quantity,
-                        orderType: 'MARKET + SL',
-                        orderAction: 'SELL + SL-M',
-                        reason: 'LTP already below trigger, placing market + SL orders'
+                        orderType: 'MARKET trigger',
+                        orderAction: 'SELL',
+                        reason: 'LTP already below trigger, placing market trigger order'
                     });
                     
                     // Place market order for trigger
                     triggerOrderResponse = await placeOrder('SELL', 'MARKET', null, Math.abs(quantity), stock, `trigger-m-baxter`);
                     await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
-                    
-                    // Place SL-M order for stop loss
-                    stopLossOrderResponse = await placeOrder('BUY', 'SL-M', stopLossPrice, Math.abs(quantity), stock, `sl-baxter`);
-                    await logOrder('PLACED', 'STOPLOSS', stopLossOrderResponse);
-                    
-                    await sendMessageToChannel('✅ Baxter market + SL orders placed', ltp, stock.sym, quantity, stock.direction);
+
+                    // SL/Target orders are placed after trigger completion in `processSuccessfulOrder`
+                    await sendMessageToChannel('✅ Baxter market trigger order placed', ltp, stock.sym, quantity, stock.direction);
                     
                     const baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000')
                     const rowHeaders = baxterSheetData.map(a => a[1])
@@ -533,7 +537,18 @@ async function createManualOrdersEntries(stock) {
         let lower_circuit_limit = quote[sym]?.lower_circuit_limit;
 
         let triggerPrice, targetPrice, stopLossPrice, quantity;
-        targetPrice = '';
+
+        // Optional take-profit price (LIMIT). If not provided, we won't place a target order.
+        let rawTargetPrice = stock?.targetPrice ?? stock?.target_price ?? stock?.target;
+        targetPrice = Number(rawTargetPrice);
+        // Sheet parsing maps empty cells to 0, so treat 0 as "no target configured".
+        if (!Number.isFinite(targetPrice) || targetPrice === 0) {
+            targetPrice = '';
+        } else {
+            // Clamp to circuit limits to avoid invalid prices.
+            if (targetPrice > upper_circuit_limit) targetPrice = upper_circuit_limit - 0.1;
+            if (targetPrice < lower_circuit_limit) targetPrice = lower_circuit_limit + 0.1;
+        }
 
         if (Number.isFinite(stock.triggerPrice) && Number.isFinite(stock.stopLossPrice)) {
             // Mode 2: direct prices -> use as-is
@@ -624,7 +639,7 @@ async function createManualOrdersEntries(stock) {
             sheetUpdated = true;
             symbolToRollback = stock.sym;
 
-            let triggerOrderResponse, stopLossOrderResponse;
+            let triggerOrderResponse;
 
             if (direction === 'BULLISH') {
                 if (ltp > triggerPrice) {
@@ -638,17 +653,8 @@ async function createManualOrdersEntries(stock) {
                     );
                     await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
 
-                    stopLossOrderResponse = await placeOrder(
-                        'SELL',
-                        'SL-M',
-                        stopLossPrice,
-                        quantity,
-                        stock,
-                        `sl-${source}`,
-                    );
-                    await logOrder('PLACED', 'STOPLOSS', stopLossOrderResponse);
-
-                    await sendMessageToChannel('✅ Manual market + SL orders placed', ltp, stock.sym, quantity, stock.direction);
+                    // SL/Target orders are placed after trigger completion in `processSuccessfulOrder`
+                    await sendMessageToChannel('✅ Manual market trigger order placed', ltp, stock.sym, quantity, stock.direction);
 
                     const baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000');
                     const rowHeaders = baxterSheetData.map(a => a[1]);
@@ -685,17 +691,8 @@ async function createManualOrdersEntries(stock) {
                     );
                     await logOrder('PLACED', 'TRIGGER', triggerOrderResponse);
 
-                    stopLossOrderResponse = await placeOrder(
-                        'BUY',
-                        'SL-M',
-                        stopLossPrice,
-                        Math.abs(quantity),
-                        stock,
-                        `sl-${source}`,
-                    );
-                    await logOrder('PLACED', 'STOPLOSS', stopLossOrderResponse);
-
-                    await sendMessageToChannel('✅ Manual market + SL orders placed', ltp, stock.sym, Math.abs(quantity), stock.direction);
+                    // SL/Target orders are placed after trigger completion in `processSuccessfulOrder`
+                    await sendMessageToChannel('✅ Manual market trigger order placed', ltp, stock.sym, Math.abs(quantity), stock.direction);
 
                     const baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000');
                     const rowHeaders = baxterSheetData.map(a => a[1]);
@@ -726,7 +723,7 @@ async function createManualOrdersEntries(stock) {
 
             return {
                 triggerOrderId: triggerOrderResponse?.order_id || null,
-                stopLossOrderId: stopLossOrderResponse?.order_id || null,
+                stopLossOrderId: null,
                 triggerPrice,
                 stopLossPrice,
                 quantity,

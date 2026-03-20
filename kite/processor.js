@@ -184,8 +184,8 @@ const processSuccessfulOrder = async (order) => {
     try {
         // Handle failed/rejected/cancelled Baxter orders - except for SL orders
         const isBaxterOrManual = order.tag?.includes('baxter') || order.tag?.includes('manual');
-        const isSLOrder = order.tag?.includes('sl-baxter') || order.tag?.includes('sl-manual');
-        if (isBaxterOrManual && !isSLOrder && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {
+        const isSlOrTargetOrder = order.tag?.includes('sl-baxter') || order.tag?.includes('sl-manual') || order.tag?.includes('target-baxter') || order.tag?.includes('target-manual');
+        if (isBaxterOrManual && !isSlOrTargetOrder && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {
             try {
                 const sourceLabel = order.tag?.includes('manual') ? 'manual' : 'baxter';
                 await sendMessageToChannel(`❌ ${sourceLabel} order failed`, order.tradingsymbol, order.status, order.status_message || '');
@@ -256,19 +256,30 @@ const processSuccessfulOrder = async (order) => {
                 return
             }
 
-            // Handle trigger orders - place SL orders immediately upon trigger completion
+            // Handle trigger orders - place SL and optional target upon trigger completion
             if (order.tag?.includes('trigger') && (order.tag?.includes('baxter') || order.tag?.includes('manual'))) {
                 try {
                     const source = (stock?.source || (order.tag?.includes('manual') ? 'manual' : 'baxter')).toLowerCase();
-                    await sendMessageToChannel(`${source === 'manual' ? '🎯 Manual' : '🎯 Baxter'} trigger completed, placing SL order`, order.tradingsymbol, order.filled_quantity, order.average_price);
-                    
-                    // Get stop loss from sheet
-                    if (stock && stock.stopLossPrice) {
-                        const direction = order.transaction_type === 'BUY' ? 'BULLISH' : 'BEARISH';
-                        const qty = Math.abs(order.filled_quantity);
-                        
-                        // Avoid duplicating SL if SL was already placed (e.g., MARKET + SL branch)
-                        const existingOrders = await kiteSession.kc.getOrders();
+                    const direction = order.transaction_type === 'BUY' ? 'BULLISH' : 'BEARISH';
+                    const qty = Math.abs(order.filled_quantity);
+
+                    const rawTargetPrice = stock?.targetPrice;
+                    const parsedTargetPrice = Number(rawTargetPrice);
+                    // Sheet parsing maps empty cells to `0`, so treat `0` as "no target configured".
+                    const hasTarget = Number.isFinite(parsedTargetPrice) && parsedTargetPrice !== 0;
+
+                    await sendMessageToChannel(
+                        `${source === 'manual' ? '🎯 Manual' : '🎯 Baxter'} trigger completed, placing SL${hasTarget ? ' and target' : ''} orders`,
+                        order.tradingsymbol,
+                        qty,
+                        order.average_price,
+                    );
+
+                    // Avoid duplicating orders if SL/Target were already placed.
+                    const existingOrders = await kiteSession.kc.getOrders();
+
+                    // Place SL-M order (if configured on sheet)
+                    if (stock?.stopLossPrice) {
                         const existingSlOrder = existingOrders.find(o =>
                             o.tradingsymbol === order.tradingsymbol &&
                             o.tag?.includes(`sl-${source}`) &&
@@ -282,50 +293,150 @@ const processSuccessfulOrder = async (order) => {
                                 existingSlOrder.order_id,
                             );
                         } else {
-                            // Place SL-M order
                             let slOrderResponse;
                             if (direction === 'BULLISH') {
                                 slOrderResponse = await placeOrder('SELL', 'SL-M', stock.stopLossPrice, qty, stock, `sl-${source}`);
                             } else {
                                 slOrderResponse = await placeOrder('BUY', 'SL-M', stock.stopLossPrice, qty, stock, `sl-${source}`);
                             }
-                            
+
                             await logOrder('PLACED', 'STOPLOSS_ON_TRIGGER', slOrderResponse);
                             await sendMessageToChannel(`✅ ${source === 'manual' ? 'Manual' : 'Baxter'} SL order placed`, order.tradingsymbol, qty, stock.stopLossPrice, direction);
                         }
-                        
-                        // Update sheet status to triggered
-                        try {
-                            let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
-                            const rowHeaders = sheetData.map(a => a[1])
-                            const colHeaders = sheetData[0]
-                            
-                            const [rowStatus, colStatus] = getStockLoc(order.tradingsymbol, 'Status', rowHeaders, colHeaders)
-                            const [rowTime, colTime] = getStockLoc(order.tradingsymbol, 'Time', rowHeaders, colHeaders)
-                            
-                            const updates = [
-                                {
-                                    range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
-                                    values: [['triggered']], 
-                                },
-                                {
-                                    range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
-                                    values: [[+new Date()]], 
-                                }
-                            ];
-                            
-                            await bulkUpdateCells(updates);
-                        } catch (sheetError) {
-                            await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} trigger`, order.tradingsymbol, sheetError?.message);
-                        }
                     } else {
-                        await sendMessageToChannel(`⚠️ Cannot place SL for ${source} - stock data or SL price missing`, order.tradingsymbol);
+                        await sendMessageToChannel(`⚠️ Cannot place SL for ${source} - SL price missing`, order.tradingsymbol);
+                    }
+
+                    // Place target LIMIT order (if configured on sheet)
+                    if (hasTarget) {
+                        // Clamp to circuit limits to avoid invalid prices.
+                        let targetPrice = parsedTargetPrice;
+                        if (Number.isFinite(upper_circuit_limit) && targetPrice > upper_circuit_limit) targetPrice = upper_circuit_limit - 0.1;
+                        if (Number.isFinite(lower_circuit_limit) && targetPrice < lower_circuit_limit) targetPrice = lower_circuit_limit + 0.1;
+
+                        const existingTargetOrder = existingOrders.find(o =>
+                            o.tradingsymbol === order.tradingsymbol &&
+                            o.tag?.includes(`target-${source}`) &&
+                            (o.status === 'OPEN' || o.status === 'TRIGGER PENDING')
+                        );
+
+                        if (existingTargetOrder) {
+                            await sendMessageToChannel(
+                                `ℹ️ ${source} target order already exists, skipping placement`,
+                                order.tradingsymbol,
+                                existingTargetOrder.order_id,
+                            );
+                        } else {
+                            const targetTransactionType = direction === 'BULLISH' ? 'SELL' : 'BUY';
+                            const targetOrderResponse = await placeOrder(
+                                targetTransactionType,
+                                'LIMIT',
+                                targetPrice,
+                                qty,
+                                stock,
+                                `target-${source}`,
+                            );
+                            await logOrder('PLACED', 'TARGET_ON_TRIGGER', targetOrderResponse);
+                            await sendMessageToChannel(
+                                `✅ ${source === 'manual' ? 'Manual' : 'Baxter'} target order placed`,
+                                order.tradingsymbol,
+                                qty,
+                                targetPrice,
+                                direction
+                            );
+                        }
+                    }
+
+                    // Update sheet status to triggered
+                    try {
+                        let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+                        const rowHeaders = sheetData.map(a => a[1])
+                        const colHeaders = sheetData[0]
+
+                        const [rowStatus, colStatus] = getStockLoc(order.tradingsymbol, 'Status', rowHeaders, colHeaders)
+                        const [rowTime, colTime] = getStockLoc(order.tradingsymbol, 'Time', rowHeaders, colHeaders)
+
+                        const updates = [
+                            {
+                                range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus),
+                                values: [['triggered']],
+                            },
+                            {
+                                range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime),
+                                values: [[+new Date()]],
+                            }
+                        ];
+
+                        await bulkUpdateCells(updates);
+                    } catch (sheetError) {
+                        await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} trigger`, order.tradingsymbol, sheetError?.message);
                     }
                 } catch (error) {
-                    await sendMessageToChannel(`💥 Error placing ${source} SL order`, order.tradingsymbol, error?.message);
-                    console.error(`💥 Error placing ${source} SL order: `, order.tradingsymbol, error?.message);
+                    await sendMessageToChannel(`💥 Error placing ${source} SL/Target orders`, order.tradingsymbol, error?.message);
+                    console.error(`💥 Error placing ${source} SL/Target orders: `, order.tradingsymbol, error?.message);
                 }
                 return; // Don't process further for trigger orders
+            }
+
+            // Handle target orders - cancel SL when target completes
+            if ((order.tag?.includes('target-baxter') || order.tag?.includes('target-manual')) && (order.tag?.includes('baxter') || order.tag?.includes('manual'))) {
+                try {
+                    const source = order.tag?.includes('target-manual') ? 'manual' : 'baxter';
+                    await sendMessageToChannel(`🎯 ${source} target executed`, order.tradingsymbol, order.filled_quantity, order.average_price);
+
+                    // Cancel SL-M if it's still pending
+                    try {
+                        const existingOrders = await kiteSession.kc.getOrders();
+                        const existingSlOrder = existingOrders.find(o =>
+                            o.tradingsymbol === order.tradingsymbol &&
+                            o.tag?.includes(`sl-${source}`) &&
+                            (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
+                        );
+
+                        if (existingSlOrder) {
+                            await kiteSession.kc.cancelOrder("regular", existingSlOrder.order_id);
+                            await logOrder('CANCELLED', 'PROCESS SUCCESS', existingSlOrder);
+                            await sendMessageToChannel(`ℹ️ Cancelled ${source} SL after target execution`, order.tradingsymbol);
+                        }
+                    } catch (cancelError) {
+                        await sendMessageToChannel(`⚠️ Failed to cancel ${source} SL after target execution`, order.tradingsymbol, cancelError?.message);
+                    }
+
+                    // Update sheet status to stopped
+                    try {
+                        let sheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+                        const rowHeaders = sheetData.map(a => a[1])
+                        const colHeaders = sheetData[0]
+
+                        const [rowStatus, colStatus] = getStockLoc(order.tradingsymbol, 'Status', rowHeaders, colHeaders)
+                        const [rowTime, colTime] = getStockLoc(order.tradingsymbol, 'Time', rowHeaders, colHeaders)
+                        const [rowLastAction, colLastAction] = getStockLoc(order.tradingsymbol, 'Last Action', rowHeaders, colHeaders)
+
+                        const updates = [
+                            {
+                                range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus),
+                                values: [['stopped']],
+                            },
+                            {
+                                range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime),
+                                values: [[+new Date()]],
+                            },
+                            {
+                                range: 'MIS-ALPHA!' + numberToExcelColumn(colLastAction) + String(rowLastAction),
+                                values: [[order.transaction_type + '-' + order.average_price]],
+                            }
+                        ];
+
+                        await bulkUpdateCells(updates);
+                        await sendMessageToChannel(`✅ Sheet updated - ${source} target position stopped`, order.tradingsymbol);
+                    } catch (sheetError) {
+                        await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} target`, order.tradingsymbol, sheetError?.message);
+                    }
+                } catch (error) {
+                    await sendMessageToChannel(`💥 Error handling ${source} target execution`, order.tradingsymbol, error?.message);
+                    console.error(`💥 Error handling ${source} target execution: `, order.tradingsymbol, error?.message);
+                }
+                return; // Don't process further for target orders
             }
 
             // Handle SL orders - update sheet when stop loss executes
@@ -364,6 +475,24 @@ const processSuccessfulOrder = async (order) => {
                         await sendMessageToChannel(`✅ Sheet updated - ${source} position stopped`, order.tradingsymbol);
                     } catch (sheetError) {
                         await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} SL`, order.tradingsymbol, sheetError?.message);
+                    }
+
+                    // Cancel target LIMIT order if it's still pending
+                    try {
+                        const existingOrders = await kiteSession.kc.getOrders();
+                        const existingTargetOrder = existingOrders.find(o =>
+                            o.tradingsymbol === order.tradingsymbol &&
+                            o.tag?.includes(`target-${source}`) &&
+                            (o.status === 'OPEN' || o.status === 'TRIGGER PENDING')
+                        );
+
+                        if (existingTargetOrder) {
+                            await kiteSession.kc.cancelOrder("regular", existingTargetOrder.order_id);
+                            await logOrder('CANCELLED', 'PROCESS SUCCESS', existingTargetOrder);
+                            await sendMessageToChannel(`ℹ️ Cancelled ${source} target after SL execution`, order.tradingsymbol);
+                        }
+                    } catch (cancelError) {
+                        await sendMessageToChannel(`⚠️ Failed to cancel ${source} target after SL execution`, order.tradingsymbol, cancelError?.message);
                     }
                 } catch (error) {
                     const source = order.tag?.includes('sl-manual') ? 'manual' : 'baxter';
