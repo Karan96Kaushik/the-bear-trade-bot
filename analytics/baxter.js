@@ -258,21 +258,16 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				
 				// Fetch 15-minute data
 				let df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
-				console.log('df before processing:', df.timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
+				// console.log('df before processing:', df.chart.result[0].timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
 				df = processYahooData(df, interval, useCached);
 
-				console.log('df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
+				// console.log('df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
 
 				const resolution = parseInt(interval)
 				// let df = await getDataFromMoneycontrol(sym, startDate, endDate, resolution, useCached);
 				// console.log(df)
 				// df = processMoneycontrolData(df, interval, useCached);
 
-				console.log('start date:', startDate)
-				console.log('end date:', endDate)
-				console.log('last candle:', df[df.length - 2], new Date(df[df.length - 2].time).toISOString())
-				console.log('last candle:', df[df.length - 1], new Date(df[df.length - 1].time).toISOString())
-				
 				if (!df || df.length === 0) {
 					if (DEBUG) console.log('No data for', sym);
 					logStockDebug(sym, null, 'DATA_FETCH', 'FAILED', { notes: 'No data returned' });

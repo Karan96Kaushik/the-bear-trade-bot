@@ -55,18 +55,18 @@ const run = async () => {
 		else {
 			await kiteSession.authenticate()
 
-			const positions = await kiteSession.kc.getPositions()
-			console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
+			// const positions = await kiteSession.kc.getPositions()
+			// console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
 
-			const orders = await kiteSession.kc.getOrders()
-			console.log(orders)
+			// const orders = await kiteSession.kc.getOrders()
+			// console.log(orders)
 
-			const symbol = 'RELIANCE'
-			const sym = `NSE:${symbol}`
-			let ltp = await kiteSession.kc.getLTP([sym]);
-			ltp = ltp[sym].last_price
+			// const symbol = 'RELIANCE'
+			// const sym = `NSE:${symbol}`
+			// let ltp = await kiteSession.kc.getLTP([sym]);
+			// ltp = ltp[sym].last_price
 
-			console.log(ltp)
+			// console.log(ltp)
 
 
 		}

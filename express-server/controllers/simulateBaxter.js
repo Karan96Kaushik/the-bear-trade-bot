@@ -167,11 +167,11 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                     let selectedStocks = [];
 
                     if (bullishStockList.length > 0) {
-                        const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, candleDate, interval, true, selectionParams, 'BULLISH');
+                        const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, candleDate, undefined, true, selectionParams, 'BULLISH');
                         selectedStocks.push(...bullishSelected);
                     }
                     if (bearishStockList.length > 0) {
-                        const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, candleDate, interval, true, selectionParams, 'BEARISH');
+                        const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, candleDate, undefined, true, selectionParams, 'BEARISH');
                         selectedStocks.push(...bearishSelected);
                     }
 
