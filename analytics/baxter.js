@@ -32,7 +32,7 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 			high: '',
 			low: '',
 			open: '',
-			sma44: '',
+			sma: '',
 			previousHigh: '',
 			previousLow: '',
 			previousClose: '',
@@ -61,7 +61,7 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 	if (details.high) entry.high = details.high;
 	if (details.low) entry.low = details.low;
 	if (details.open) entry.open = details.open;
-	if (details.sma44) entry.sma44 = details.sma44;
+	if (details.sma) entry.sma = details.sma;
 	if (details.previousHigh) entry.previousHigh = details.previousHigh;
 	if (details.previousLow) entry.previousLow = details.previousLow;
 	if (details.previousClose) entry.previousClose = details.previousClose;
@@ -166,7 +166,7 @@ function writeDebugLogToCSV(filename = 'baxter_debug.csv') {
 		'high',
 		'low',
 		'open',
-		'sma44',
+		'sma',
 		'previousHigh',
 		'previousLow',
 		'previousClose',
@@ -282,9 +282,9 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					logStockDebug(sym, null, 'DATA_LENGTH', 'FAILED', { notes: `Only ${df.length} candles, need 45` });
 					return null;
 				}
-				
+
 				// Add 44-period SMA
-				df = addMovingAverage(df, 'close', params.MA_WINDOW, 'sma44');
+				df = addMovingAverage(df, 'close', params.MA_WINDOW, 'sma');
 				df = df.filter(r => r.close);
 				
 				// Get current and previous candles
@@ -298,7 +298,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					high: currentCandle.high,
 					low: currentCandle.low,
 					open: currentCandle.open,
-					sma44: currentCandle.sma44,
+					sma: currentCandle.sma,
 					notes: `${df.length} candles available`
 				});
 				
@@ -350,12 +350,12 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				});
 				
 				// Condition 2: Placement on moving average
-				// [0] low * 0.998 <= [0] sma44 AND [0] high * 1.002 >= [0] sma44
-				const currentSma = currentCandle.sma44;
+				// [0] low * 0.998 <= [0] sma AND [0] high * 1.002 >= [0] sma
+				const currentSma = currentCandle.sma;
 				if (!currentSma) {
 					if (DEBUG) console.log('No SMA for', sym);
 					logStockDebug(sym, timestamp, 'SMA_AVAILABLE', 'FAILED', {
-						notes: 'SMA44 not calculated'
+						notes: 'SMA not calculated'
 					});
 					return null;
 				}
@@ -369,7 +369,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					logStockDebug(sym, timestamp, 'TOUCHING_SMA', 'FAILED', {
 						high: currentCandle.high,
 						low: currentCandle.low,
-						sma44: currentSma,
+						sma: currentSma,
 						lowBound: lowBound,
 						highBound: highBound,
 						notes: `SMA ${currentSma.toFixed(2)} not between ${lowBound.toFixed(2)} and ${highBound.toFixed(2)}`
@@ -380,7 +380,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				logStockDebug(sym, timestamp, 'TOUCHING_SMA', 'PASSED', {
 					high: currentCandle.high,
 					low: currentCandle.low,
-					sma44: currentSma,
+					sma: currentSma,
 					lowBound: lowBound,
 					highBound: highBound,
 					notes: `SMA ${currentSma.toFixed(2)} between ${lowBound.toFixed(2)} and ${highBound.toFixed(2)}`
@@ -438,7 +438,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					close: currentCandle.close,
 					high: currentCandle.high,
 					low: currentCandle.low,
-					sma44: currentCandle.sma44,
+					sma: currentCandle.sma,
 					notes: 'Stock selected for Baxter strategy'
 				});
 				
@@ -452,13 +452,13 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					low: currentCandle.low,
 					time: getDateStringIND(currentCandle.time),
 					direction: resultDirection,
-					sma44: currentCandle.sma44,
+					sma: currentCandle.sma,
 					previousCandle: {
 						open: previousCandle.open,
 						close: previousCandle.close,
 						high: previousCandle.high,
 						low: previousCandle.low,
-						sma44: previousCandle.sma44
+						sma: previousCandle.sma
 					}
 				};
 			} catch (error) {

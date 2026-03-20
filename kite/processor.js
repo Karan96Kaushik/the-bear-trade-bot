@@ -495,10 +495,6 @@ async function createZaireOrders(stock, tag='zaire') {
             reviseSL: '',
             ignore: true,    // '' = false
             status: 'new',    // '' = false
-            sma44_0: stock.sma44_0,
-            sma44_1: stock.sma44_1,
-            sma44_2: stock.sma44_2,
-            sma44_3: stock.sma44_3,
         }
 
         const sym = `NSE:${stock.sym}`
