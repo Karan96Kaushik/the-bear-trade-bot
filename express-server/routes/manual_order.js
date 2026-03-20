@@ -20,6 +20,7 @@ router.post('/', async (req, res) => {
             // Direct mode
             triggerPrice,
             stopLossPrice,
+            targetPrice,
             // Sizing / optional
             quantity,
             riskAmount,
@@ -42,6 +43,7 @@ router.post('/', async (req, res) => {
             low: low !== undefined ? Number(low) : undefined,
             triggerPrice: triggerPrice !== undefined ? Number(triggerPrice) : undefined,
             stopLossPrice: stopLossPrice !== undefined ? Number(stopLossPrice) : undefined,
+            targetPrice: targetPrice !== undefined ? Number(targetPrice) : undefined,
             quantity: quantity !== undefined ? Number(quantity) : undefined,
             riskAmount: riskAmount !== undefined ? Number(riskAmount) : undefined,
             reviseSL: reviseSL !== undefined ? Number(reviseSL) : undefined,
@@ -70,13 +72,24 @@ router.post('/', async (req, res) => {
 
         const result = await createManualOrdersEntries(parsed);
         if (!result) {
-            return res.status(422).json({ success: false, message: 'Failed to create order. Check logs.' });
+            return res.status(422).json({ success: false, message: 'Failed to create order.' });
         }
 
         return res.status(200).json({ success: true, result });
     } catch (error) {
         console.error('Error creating manual order:', error);
-        return res.status(500).json({ success: false, message: error?.message || 'Server error' });
+        const responseMessage =
+            error?.response?.data?.message ||
+            error?.response?.data?.error ||
+            error?.message ||
+            'Server error';
+
+        // Most failures here are user-input / domain-validation related.
+        const statusCode =
+            error?.statusCode ||
+            /invalid|missing|provide either/i.test(responseMessage) ? 400 : 422;
+
+        return res.status(statusCode).json({ success: false, message: responseMessage });
     } finally {
         if (didAcquireLock && lockKey) releaseLock(lockKey);
     }

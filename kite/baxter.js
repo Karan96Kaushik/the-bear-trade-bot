@@ -536,7 +536,7 @@ async function createManualOrdersEntries(stock) {
                 reason: 'LTP not available from quote',
             });
             await sendMessageToChannel('🔕 LTP not found for', stock.sym);
-            return;
+            throw new Error(`LTP not available from quote for ${stock.sym}`);
         }
 
         let upper_circuit_limit = quote[sym]?.upper_circuit_limit;
@@ -608,7 +608,10 @@ async function createManualOrdersEntries(stock) {
             });
             await sendMessageToChannel('🚫 Validation failed', stock.sym, validationError.message);
             writeOrderDebugLogToCSV();
-            return;
+            // Throw so the caller can propagate a user-friendly message to the UI.
+            throw validationError instanceof Error
+                ? validationError
+                : new Error(String(validationError?.message || validationError));
         }
 
         logOrderDebug('PRICE_CALCULATED', stock.sym, {
@@ -762,7 +765,8 @@ async function createManualOrdersEntries(stock) {
         });
         writeOrderDebugLogToCSV();
         await sendMessageToChannel(`🚨 Error creating Manual orders`, error?.message);
-        return;
+        // Throw so the backend route can send the actual reason to the client.
+        throw error instanceof Error ? error : new Error(String(error?.message || error));
     }
 }
 
