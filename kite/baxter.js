@@ -855,9 +855,9 @@ async function createManualOrdersEntries(stock) {
 // NOTE: executeBaxterOrders function removed - SL orders are now placed immediately
 // via webhook in processor.js when trigger orders complete (processSuccessfulOrder)
 
-async function checkBaxterOrdersStoplossHit() {
+async function checkBaxterOrdersStoplossSafety() {
     try {
-        await sendMessageToChannel('⌛️ Executing Check Baxter Orders Stoploss Hit Job');
+        await sendMessageToChannel('⌛️ Executing Check Baxter Orders Stoploss Safety Job');
 
         let baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000')
         const rowHeaders = baxterSheetData.map(a => a[1])
@@ -967,7 +967,7 @@ async function checkBaxterOrdersStoplossHit() {
     } catch (error) {
         console.error(error);
         writeOrderDebugLogToCSV();
-        await sendMessageToChannel(`🚨 Error checking Baxter orders stoploss hit`, error?.message);
+        await sendMessageToChannel(`🚨 Error checking Baxter orders stoploss safety`, error?.message);
     }
 }
 
@@ -1234,5 +1234,5 @@ module.exports = {
     cancelBaxterOrders,
     updateBaxterStopLoss,
     setupBaxterOrders,
-    checkBaxterOrdersStoplossHit
+    checkBaxterOrdersStoplossSafety
 };
