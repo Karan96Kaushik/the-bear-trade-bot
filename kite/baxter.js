@@ -317,8 +317,8 @@ async function createBaxterOrdersEntries(stock) {
         
         // Validate prices and quantity
         try {
-            validatePrices(triggerPrice, stopLossPrice, quantity, ltp, stock.sym);
-            validateCircuitLimits(triggerPrice, stopLossPrice, stock.direction, lower_circuit_limit, upper_circuit_limit);
+            validatePrices(triggerPrice, stopLossPrice, quantity, ltp, stock.sym, stock.direction, targetPrice);
+            validateCircuitLimits(triggerPrice, stopLossPrice, stock.direction, lower_circuit_limit, upper_circuit_limit, targetPrice);
         } catch (validationError) {
             logOrderDebug('VALIDATION_FAILED', stock.sym, {
                 direction: stock.direction,
@@ -595,8 +595,8 @@ async function createManualOrdersEntries(stock) {
 
         // Validate prices and quantity
         try {
-            validatePrices(triggerPrice, stopLossPrice, quantity, ltp, stock.sym);
-            validateCircuitLimits(triggerPrice, stopLossPrice, direction, lower_circuit_limit, upper_circuit_limit);
+            validatePrices(triggerPrice, stopLossPrice, quantity, ltp, stock.sym, direction, targetPrice);
+            validateCircuitLimits(triggerPrice, stopLossPrice, direction, lower_circuit_limit, upper_circuit_limit, targetPrice);
         } catch (validationError) {
             logOrderDebug('VALIDATION_FAILED', stock.sym, {
                 direction,

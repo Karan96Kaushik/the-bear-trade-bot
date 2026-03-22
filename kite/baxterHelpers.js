@@ -68,7 +68,13 @@ async function authenticateWithRetry(maxRetries = 3) {
     }
 }
 
-function validatePrices(triggerPrice, stopLossPrice, quantity, ltp, symbol) {
+/** Sheet / API often use 0 or empty for "no take-profit"; skip target validation in that case. */
+function hasConfiguredTargetPrice(targetPrice) {
+    const n = Number(targetPrice);
+    return Number.isFinite(n) && n !== 0;
+}
+
+function validatePrices(triggerPrice, stopLossPrice, quantity, ltp, symbol, direction, targetPrice) {
     const errors = [];
     
     const spread = Math.abs(triggerPrice - stopLossPrice);
@@ -107,6 +113,25 @@ function validatePrices(triggerPrice, stopLossPrice, quantity, ltp, symbol) {
     if (isNaN(triggerPrice) || isNaN(stopLossPrice)) {
         errors.push(`Invalid price values: trigger=${triggerPrice}, sl=${stopLossPrice}`);
     }
+
+    if (direction && hasConfiguredTargetPrice(targetPrice)) {
+        const tp = Number(targetPrice);
+        if (direction === 'BULLISH') {
+            if (tp <= triggerPrice) {
+                errors.push(`Target ${tp} must be above trigger ${triggerPrice} for BULLISH`);
+            }
+            if (tp <= stopLossPrice) {
+                errors.push(`Target ${tp} must be above stop loss ${stopLossPrice} for BULLISH`);
+            }
+        } else if (direction === 'BEARISH') {
+            if (tp >= triggerPrice) {
+                errors.push(`Target ${tp} must be below trigger ${triggerPrice} for BEARISH`);
+            }
+            if (tp >= stopLossPrice) {
+                errors.push(`Target ${tp} must be below stop loss ${stopLossPrice} for BEARISH`);
+            }
+        }
+    }
     
     if (errors.length > 0) {
         const errorMsg = `Price validation failed for ${symbol}: ${errors.join('; ')}`;
@@ -116,8 +141,9 @@ function validatePrices(triggerPrice, stopLossPrice, quantity, ltp, symbol) {
     return true;
 }
 
-function validateCircuitLimits(triggerPrice, stopLossPrice, direction, lower_circuit_limit, upper_circuit_limit) {
+function validateCircuitLimits(triggerPrice, stopLossPrice, direction, lower_circuit_limit, upper_circuit_limit, targetPrice) {
     const errors = [];
+    const limitsKnown = Number.isFinite(lower_circuit_limit) && Number.isFinite(upper_circuit_limit);
     
     if (direction === 'BULLISH') {
         if (triggerPrice < lower_circuit_limit || triggerPrice > upper_circuit_limit) {
@@ -132,6 +158,13 @@ function validateCircuitLimits(triggerPrice, stopLossPrice, direction, lower_cir
         }
         if (stopLossPrice > upper_circuit_limit + 10) {
             errors.push(`Stop loss ${stopLossPrice} too far above upper circuit ${upper_circuit_limit}`);
+        }
+    }
+
+    if (limitsKnown && direction && hasConfiguredTargetPrice(targetPrice)) {
+        const tp = Number(targetPrice);
+        if (tp < lower_circuit_limit || tp > upper_circuit_limit) {
+            errors.push(`Target price ${tp} outside circuit limits [${lower_circuit_limit}, ${upper_circuit_limit}]`);
         }
     }
     
