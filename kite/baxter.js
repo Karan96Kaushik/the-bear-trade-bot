@@ -26,11 +26,88 @@ const BAXTER_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
 const MAX_ACTIVE_ORDERS = 1;
 const UPDATE_SL_INTERVAL = 15;
+/** Lookback minutes for trailing SL when SL Interval column is missing/invalid. */
+const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = UPDATE_SL_INTERVAL;
+/** Minimum minutes between SL revisions when Revise SL column is missing/invalid. */
+const DEFAULT_TRAILING_SL_FREQUENCY_MINUTES = UPDATE_SL_INTERVAL;
 const ENABLE_ORDER_DEBUG_LOGGER = process.env.ENABLE_ORDER_DEBUG_LOGGER || true;
 const TERMINAL_STATUSES = ['COMPLETE', 'REJECTED', 'CANCELLED'];
 const FAILED_STATUSES = ['REJECTED', 'CANCELLED'];
 
 let orderDebugLogData = [];
+
+/**
+ * Same resolution for baxter and manual rows: lookback from SL Interval, or legacy single column, or default;
+ * frequency from Revise SL when SL Interval is set, else default (never leaves frequency undefined).
+ */
+function resolveTrailingSlMinutes(order) {
+    const slRaw = String(order.sl_interval ?? '').trim();
+    const revRaw = String(order.revise_sl ?? '').trim();
+    const slParsed = parseInt(slRaw, 10);
+    const revParsed = parseInt(revRaw, 10);
+    const slValid = Number.isFinite(slParsed) && slParsed > 0;
+    const revValid = Number.isFinite(revParsed) && revParsed > 0;
+
+    if (slValid) {
+        return {
+            lookbackMinutes: slParsed,
+            frequencyMinutes: revValid ? revParsed : DEFAULT_TRAILING_SL_FREQUENCY_MINUTES,
+        };
+    }
+    if (revValid) {
+        return {
+            lookbackMinutes: revParsed,
+            frequencyMinutes: DEFAULT_TRAILING_SL_FREQUENCY_MINUTES,
+        };
+    }
+    return {
+        lookbackMinutes: DEFAULT_TRAILING_SL_LOOKBACK_MINUTES,
+        frequencyMinutes: DEFAULT_TRAILING_SL_FREQUENCY_MINUTES,
+    };
+}
+
+/**
+ * Clamp SL trigger to circuit band, match exchange tick, keep "tighten only" vs sheet SL, basic LTP sanity.
+ * @returns {{ price: number } | { price: null, reason: string }}
+ */
+function sanitizeTrailingStopLossPrice(isBearish, rawPrice, ltp, lowerCircuit, upperCircuit, existingStopLoss) {
+    if (!Number.isFinite(rawPrice) || rawPrice <= 0) {
+        return { price: null, reason: 'invalid computed price' };
+    }
+
+    let p = rawPrice;
+
+    if (Number.isFinite(lowerCircuit) && Number.isFinite(upperCircuit)) {
+        const lo = lowerCircuit + 0.1;
+        const hi = upperCircuit - 0.1;
+        if (lo >= hi) {
+            return { price: null, reason: 'circuit band too narrow' };
+        }
+        if (p < lo) p = lo;
+        if (p > hi) p = hi;
+    }
+
+    p = Math.round(p * 20) / 20;
+
+    if (!isBearish) {
+        if (p <= existingStopLoss) {
+            return { price: null, reason: 'not tighter than sheet SL after clamp' };
+        }
+    } else if (p >= existingStopLoss) {
+        return { price: null, reason: 'not tighter than sheet SL after clamp' };
+    }
+
+    if (Number.isFinite(ltp) && ltp > 0) {
+        if (!isBearish && p >= ltp) {
+            return { price: null, reason: 'long SL must stay below LTP' };
+        }
+        if (isBearish && p <= ltp) {
+            return { price: null, reason: 'short SL must stay above LTP' };
+        }
+    }
+
+    return { price: p };
+}
 
 function logOrderDebug(eventType, sym, details = {}) {
     if (!ENABLE_ORDER_DEBUG_LOGGER) return;
@@ -350,15 +427,16 @@ async function createBaxterOrdersEntries(stock) {
             source: source,
             stockSymbol: stock.sym,
             reviseSL: UPDATE_SL_INTERVAL.toString(),
+            slInterval: UPDATE_SL_INTERVAL.toString(),
             ignore: '',
             status: 'new',
             time: +new Date(),
-        }
+        };
 
-        sheetEntry.targetPrice = targetPrice
-        sheetEntry.stopLossPrice = stopLossPrice
-        sheetEntry.triggerPrice = triggerPrice
-        sheetEntry.quantity = quantity
+        sheetEntry.targetPrice = targetPrice;
+        sheetEntry.stopLossPrice = stopLossPrice;
+        sheetEntry.triggerPrice = triggerPrice;
+        sheetEntry.quantity = quantity;
 
         let sheetUpdated = false;
         let symbolToRollback = null;
@@ -639,7 +717,10 @@ async function createManualOrdersEntries(stock) {
         sheetEntry.stopLossPrice = stopLossPrice;
         sheetEntry.triggerPrice = triggerPrice;
         sheetEntry.quantity = quantity;
-        sheetEntry.slInterval = stock.slInterval;
+        sheetEntry.slInterval =
+            stock.slInterval != null && String(stock.slInterval).trim() !== ''
+                ? String(stock.slInterval)
+                : String(UPDATE_SL_INTERVAL);
 
         let sheetUpdated = false;
         let symbolToRollback = null;
@@ -958,62 +1039,75 @@ async function updateBaxterStopLoss() {
 
                 if (order.symbol[0] == '*' || order.symbol[0] == '-') continue;
 
-                const isManual = source === 'manual';
                 const nowMs = +new Date();
+                const { lookbackMinutes, frequencyMinutes } = resolveTrailingSlMinutes(order);
 
-                // Manual SL settings:
-                // - SL Interval (lookback minutes) => order.sl_interval
-                // - Revise SL (min minutes between revisions) => order.revise_sl
-                // Backward-compat:
-                // - If SL Interval column isn't present, treat revise_sl as interval and disable frequency gating.
-                let slIntervalMinutes = UPDATE_SL_INTERVAL;
-                let frequencyMinutes = 0;
-                if (isManual) {
-                    const slIntervalRaw = order.sl_interval ?? '';
-                    const reviseSlRaw = order.revise_sl ?? '';
-
-                    if (slIntervalRaw !== '') {
-                        slIntervalMinutes = parseInt(slIntervalRaw, 10);
-                        if (isNaN(slIntervalMinutes) || slIntervalMinutes <= 0) slIntervalMinutes = UPDATE_SL_INTERVAL;
-
-                        frequencyMinutes = parseInt(reviseSlRaw, 10);
-                        if (isNaN(frequencyMinutes) || frequencyMinutes < 0) frequencyMinutes = 0;
-                    } else {
-                        // Older sheet layout: only one value exists.
-                        const maybeInterval = parseInt(reviseSlRaw, 10);
-                        if (!isNaN(maybeInterval) && maybeInterval > 0) slIntervalMinutes = maybeInterval;
-                        frequencyMinutes = 0;
-                    }
-
-                    const lastRevisionMs = Number(order.time);
-                    if (
-                        frequencyMinutes > 0 &&
-                        Number.isFinite(lastRevisionMs) &&
-                        lastRevisionMs > 0 &&
-                        nowMs - lastRevisionMs < frequencyMinutes * 60 * 1000
-                    ) {
-                        continue;
-                    }
+                const lastRevisionMs = Number(order.time);
+                if (
+                    frequencyMinutes > 0 &&
+                    Number.isFinite(lastRevisionMs) &&
+                    lastRevisionMs > 0 &&
+                    nowMs - lastRevisionMs < frequencyMinutes * 60 * 1000
+                ) {
+                    continue;
                 }
 
                 const sym = order.symbol;
                 const isBearish = parseFloat(order.quantity) < 0;
-                
-                ltp = await getLTPWithRetry(sym);
 
-                newPrice = isBearish 
-                    ? await calculateExtremePriceWithFallback(sym, 'highest', slIntervalMinutes, ltp)
-                    : await calculateExtremePriceWithFallback(sym, 'lowest', slIntervalMinutes, ltp);
+                const nseSym = `NSE:${sym}`;
+                let quotePack;
+                try {
+                    const q = await kiteSession.kc.getQuote([nseSym]);
+                    quotePack = q[nseSym];
+                } catch (quoteErr) {
+                    logOrderDebug('QUOTE_FAILED', sym, { reason: quoteErr?.message });
+                }
+                ltp = quotePack?.last_price;
+                const lowerCircuit = quotePack?.lower_circuit_limit;
+                const upperCircuit = quotePack?.upper_circuit_limit;
+                if (!ltp) {
+                    ltp = await getLTPWithRetry(sym);
+                }
+
+                newPrice = isBearish
+                    ? await calculateExtremePriceWithFallback(sym, 'highest', lookbackMinutes, ltp)
+                    : await calculateExtremePriceWithFallback(sym, 'lowest', lookbackMinutes, ltp);
 
                 const existingStopLoss = parseFloat(order.stop_loss);
                 if (isNaN(existingStopLoss)) continue;
 
-                shouldUpdate = isBearish 
+                shouldUpdate = isBearish
                     ? newPrice < existingStopLoss
                     : newPrice > existingStopLoss;
 
                 if (shouldUpdate) {
-                    newPrice = Math.round(newPrice * 10) / 10;
+                    const sanitized = sanitizeTrailingStopLossPrice(
+                        isBearish,
+                        newPrice,
+                        ltp,
+                        lowerCircuit,
+                        upperCircuit,
+                        existingStopLoss,
+                    );
+                    if (sanitized.price == null) {
+                        await sendMessageToChannel(
+                            `⚠️ Trailing SL skipped for ${sym} (${source})`,
+                            sanitized.reason,
+                            `raw: ${newPrice}`,
+                            `LTP: ${ltp}`,
+                        );
+                        logOrderDebug('SL_TRAIL_SKIPPED', sym, {
+                            source,
+                            reason: sanitized.reason,
+                            rawPrice: newPrice,
+                            ltp,
+                            existingStopLoss,
+                            isBearish,
+                        });
+                        continue;
+                    }
+                    newPrice = sanitized.price;
 
                     logOrderDebug('STOPLOSS_UPDATED', order.symbol, {
                         direction: isBearish ? 'BEARISH' : 'BULLISH',
@@ -1067,22 +1161,24 @@ async function updateBaxterStopLoss() {
                     }
 
                     // Update sheet with new SL
-                    const [row, col] = getStockLoc(order.symbol, 'Stop Loss', rowHeaders, colHeaders)
+                    const [row, col] = getStockLoc(order.symbol, 'Stop Loss', rowHeaders, colHeaders);
                     updates.push({
-                        range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
-                        values: [[newPrice]], 
-                    })
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row),
+                        values: [[newPrice]],
+                    });
 
-                    // For manual orders, update revision timestamp to enforce frequency gating.
-                    if (isManual) {
-                        const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders);
-                        updates.push({
-                            range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime),
-                            values: [[nowMs]],
-                        });
-                    }
+                    const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders);
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime),
+                        values: [[nowMs]],
+                    });
 
-                    await sendMessageToChannel(`🔄 Updated Baxter SL for ${sym}`, `Old: ${existingStopLoss}`, `New: ${newPrice}`, `LTP: ${ltp}`);
+                    await sendMessageToChannel(
+                        `🔄 Updated ${source} trailing SL for ${sym}`,
+                        `Old: ${existingStopLoss}`,
+                        `New: ${newPrice}`,
+                        `LTP: ${ltp}`,
+                    );
                 }
             } catch (error) {
                 console.error(error)
