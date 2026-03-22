@@ -304,7 +304,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 }
 
                 // Move to next 5-minute interval for execution checking
-                dayStartTime = new Date(dayStartTime.getTime() + 5 * 60 * 1000)
+                dayStartTime = new Date(dayStartTime.getTime() + INTERVAL_MINUTES * 60 * 1000)
             }
 
             console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: getDateStringIND(t.placedAt), placedAtUk: t.placedAt, startedAt: t.startedAt})))
