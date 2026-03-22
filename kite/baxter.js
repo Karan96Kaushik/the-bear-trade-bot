@@ -673,7 +673,7 @@ async function createManualOrdersEntries(stock) {
                     const updates = [
                         {
                             range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus),
-                            values: [['triggered']],
+                            values: [['open']],
                         },
                     ];
                     await bulkUpdateCells(updates);
@@ -711,7 +711,7 @@ async function createManualOrdersEntries(stock) {
                     const updates = [
                         {
                             range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus),
-                            values: [['triggered']],
+                            values: [['open']],
                         },
                     ];
                     await bulkUpdateCells(updates);

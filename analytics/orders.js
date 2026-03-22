@@ -3,6 +3,32 @@ const OrderLog = require('../models/OrderLog');
 const { connectToDatabase } = require('../modules/db');
 const { kiteSession } = require('../kite/setup');
 
+/**
+ * Order preserved: first matching `tagIncludes` wins (same priority as the former nested ternary).
+ * Exactly one row should set `isDefault` for tags that match no `tagIncludes`.
+ */
+const TRADE_ANALYSIS_SOURCES = [
+    // { id: 'lightyear', label: 'Lightyear', tagIncludes: 'lgy' },
+    // { id: 'zaire', label: 'Zaire', tagIncludes: 'zaire' },
+    // { id: 'bailey', label: 'Bailey', tagIncludes: 'bailey' },
+    // { id: 'benoit', label: 'Benoit', tagIncludes: 'benoit' },
+    { id: 'baxter', label: 'Baxter', tagIncludes: 'baxter' },
+    { id: 'manual', label: 'Manual', isDefault: true }
+];
+
+function sourceFromOrderTag(tag) {
+    if (!tag) {
+        return '?';
+    }
+    for (const row of TRADE_ANALYSIS_SOURCES) {
+        if (row.tagIncludes && tag.includes(row.tagIncludes)) {
+            return row.id;
+        }
+    }
+    const fallback = TRADE_ANALYSIS_SOURCES.find((r) => r.isDefault);
+    return fallback ? fallback.id : 'manual';
+}
+
 const calculatePnLForPairs = async (data) => {
     const trades = {};
     const pnlResults = [];
@@ -176,7 +202,7 @@ async function getRetrospective(startDate, endDate) {
             price: a.average_price || a.price, 
             order_type: a.order_type, 
             transaction_type: a.transaction_type,
-            source: !a.tag ? '?' : a.tag?.includes('lgy') ? 'lightyear' : a.tag?.includes('zaire') ? 'zaire' : a.tag?.includes('bailey') ? 'bailey' : a.tag?.includes('benoit') ? 'benoit' : 'sheet',
+            source: sourceFromOrderTag(a.tag),
             exitReason: a.tag?.includes('loss-UD') ? 'stoploss-u' : a.tag?.split('-')[0] || '-',
             direction: (a.tag?.includes('trigger') && (a.transaction_type === 'SELL' ? 'BEARISH' : 'BULLISH')) || '',
             isExit: a.tag?.includes('trigger') ? false : true
@@ -282,13 +308,9 @@ async function getTradeAnalysis(startDate, endDate) {
         otherExits: 0
     });
 
-    const sourceStats = {
-        zaire: initialSourceStats(),
-        bailey: initialSourceStats(),
-        lightyear: initialSourceStats(),
-        benoit: initialSourceStats(),
-        sheet: initialSourceStats()
-    };
+    const sourceStats = Object.fromEntries(
+        TRADE_ANALYSIS_SOURCES.map(({ id }) => [id, initialSourceStats()])
+    );
 
     let closedTradesCount = 0;
     let winningTradesCount = 0;
@@ -326,7 +348,22 @@ async function getTradeAnalysis(startDate, endDate) {
             stats.otherExits += 1;
         }
     });
-    
+
+    const sourceBreakdown = TRADE_ANALYSIS_SOURCES.map(({ id, label }) => {
+        const s = sourceStats[id];
+        return {
+            id,
+            label,
+            trades: s.trades,
+            winRate: s.trades ? parseFloat(((s.wins / s.trades) * 100).toFixed(2)) : 0,
+            pnl: parseFloat(s.pnl.toFixed(2)),
+            targetExits: s.targetExits,
+            stopLossExits: s.stopLossExits,
+            stopLossUDExits: s.stopLossUDExits,
+            otherExits: s.otherExits
+        };
+    });
+
     return {
         trades: analysis,
         summary: {
@@ -336,46 +373,7 @@ async function getTradeAnalysis(startDate, endDate) {
             totalPnL: parseFloat(totalPnL.toFixed(2)),
             winRate: closedTradesCount ? parseFloat(((winningTradesCount / closedTradesCount) * 100).toFixed(2)) : 0,
             realisedPnL: parseFloat(realisedPnL.toFixed(2)),
-
-            zaireTrades: sourceStats.zaire.trades,
-            zaireWinRate: sourceStats.zaire.trades ? parseFloat(((sourceStats.zaire.wins / sourceStats.zaire.trades) * 100).toFixed(2)) : 0,
-            zairePnL: parseFloat(sourceStats.zaire.pnl.toFixed(2)),
-            zaireTargetExits: sourceStats.zaire.targetExits,
-            zaireStopLossExits: sourceStats.zaire.stopLossExits,
-            zaireStopLossUDExits: sourceStats.zaire.stopLossUDExits,
-            zaireOtherExits: sourceStats.zaire.otherExits,
-
-            baileyTrades: sourceStats.bailey.trades,
-            baileyWinRate: sourceStats.bailey.trades ? parseFloat(((sourceStats.bailey.wins / sourceStats.bailey.trades) * 100).toFixed(2)) : 0,
-            baileyPnL: parseFloat(sourceStats.bailey.pnl.toFixed(2)),
-            baileyTargetExits: sourceStats.bailey.targetExits,
-            baileyStopLossExits: sourceStats.bailey.stopLossExits,
-            baileyStopLossUDExits: sourceStats.bailey.stopLossUDExits,
-            baileyOtherExits: sourceStats.bailey.otherExits,
-
-            manualTrades: sourceStats.sheet.trades,
-            manualWinRate: sourceStats.sheet.trades ? parseFloat(((sourceStats.sheet.wins / sourceStats.sheet.trades) * 100).toFixed(2)) : 0,
-            manualPnL: parseFloat(sourceStats.sheet.pnl.toFixed(2)),
-            manualTargetExits: sourceStats.sheet.targetExits,
-            manualStopLossExits: sourceStats.sheet.stopLossExits,
-            manualStopLossUDExits: sourceStats.sheet.stopLossUDExits,
-            manualOtherExits: sourceStats.sheet.otherExits,
-
-            lightyearTrades: sourceStats.lightyear.trades,
-            lightyearWinRate: sourceStats.lightyear.trades ? parseFloat(((sourceStats.lightyear.wins / sourceStats.lightyear.trades) * 100).toFixed(2)) : 0,
-            lightyearPnL: parseFloat(sourceStats.lightyear.pnl.toFixed(2)),
-            lightyearTargetExits: sourceStats.lightyear.targetExits,
-            lightyearStopLossExits: sourceStats.lightyear.stopLossExits,
-            lightyearStopLossUDExits: sourceStats.lightyear.stopLossUDExits,
-            lightyearOtherExits: sourceStats.lightyear.otherExits,
-
-            benoitTrades: sourceStats.benoit.trades,
-            benoitWinRate: sourceStats.benoit.trades ? parseFloat(((sourceStats.benoit.wins / sourceStats.benoit.trades) * 100).toFixed(2)) : 0,
-            benoitPnL: parseFloat(sourceStats.benoit.pnl.toFixed(2)),
-            benoitTargetExits: sourceStats.benoit.targetExits,
-            benoitStopLossExits: sourceStats.benoit.stopLossExits,
-            benoitStopLossUDExits: sourceStats.benoit.stopLossUDExits,
-            benoitOtherExits: sourceStats.benoit.otherExits,
+            sourceBreakdown
         }
     };
 }
@@ -443,6 +441,8 @@ async function getSLProgression(startDate, endDate) {
 }
 
 module.exports = {
+    TRADE_ANALYSIS_SOURCES,
+    sourceFromOrderTag,
     getRetrospective,
     getTradeAnalysis,
     calculatePnLForPairs,
