@@ -413,25 +413,25 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				});
 
 				// Condition 5: Breakout (bullish) or breakdown (bearish)
-				const hasBreakout = isBullishMode
-					? currentCandle.high > previousCandle.high
-					: currentCandle.low < previousCandle.low;
+				// const hasBreakout = isBullishMode
+				// 	? currentCandle.high > previousCandle.high
+				// 	: currentCandle.low < previousCandle.low;
 
-				if (!hasBreakout) {
-					if (DEBUG) console.log(`No ${isBullishMode ? 'breakout' : 'breakdown'} for`, sym);
-					logStockDebug(sym, timestamp, 'BREAKOUT', 'FAILED', {
-						notes: isBullishMode
-							? `[0] high ${currentCandle.high.toFixed(2)} <= [-1] high ${previousCandle.high.toFixed(2)}`
-							: `[0] low ${currentCandle.low.toFixed(2)} >= [-1] low ${previousCandle.low.toFixed(2)}`
-					});
-					return null;
-				}
+				// if (!hasBreakout) {
+				// 	if (DEBUG) console.log(`No ${isBullishMode ? 'breakout' : 'breakdown'} for`, sym);
+				// 	logStockDebug(sym, timestamp, 'BREAKOUT', 'FAILED', {
+				// 		notes: isBullishMode
+				// 			? `[0] high ${currentCandle.high.toFixed(2)} <= [-1] high ${previousCandle.high.toFixed(2)}`
+				// 			: `[0] low ${currentCandle.low.toFixed(2)} >= [-1] low ${previousCandle.low.toFixed(2)}`
+				// 	});
+				// 	return null;
+				// }
 
-				logStockDebug(sym, timestamp, 'BREAKOUT', 'PASSED', {
-					notes: isBullishMode
-						? `[0] high ${currentCandle.high.toFixed(2)} > [-1] high ${previousCandle.high.toFixed(2)}`
-						: `[0] low ${currentCandle.low.toFixed(2)} < [-1] low ${previousCandle.low.toFixed(2)}`
-				});
+				// logStockDebug(sym, timestamp, 'BREAKOUT', 'PASSED', {
+				// 	notes: isBullishMode
+				// 		? `[0] high ${currentCandle.high.toFixed(2)} > [-1] high ${previousCandle.high.toFixed(2)}`
+				// 		: `[0] low ${currentCandle.low.toFixed(2)} < [-1] low ${previousCandle.low.toFixed(2)}`
+				// });
 
 				logStockDebug(sym, timestamp, 'ALL_CONDITIONS', 'PASSED', {
 					close: currentCandle.close,

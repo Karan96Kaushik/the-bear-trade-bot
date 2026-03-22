@@ -182,7 +182,7 @@ const setToIgnoreInSheet = async (order, message) => {
 
 const processSuccessfulOrder = async (order) => {
     try {
-        // Handle failed/rejected/cancelled Baxter orders - except for SL orders
+        // Handle failed/rejected/cancelled Baxter orders - except for SL and target orders - these can get cancelled by the system
         const isBaxterOrManual = order.tag?.includes('baxter') || order.tag?.includes('manual');
         const isSlOrTargetOrder = order.tag?.includes('sl-baxter') || order.tag?.includes('sl-manual') || order.tag?.includes('target-baxter') || order.tag?.includes('target-manual');
         if (isBaxterOrManual && !isSlOrTargetOrder && (order.status === 'REJECTED' || order.status === 'CANCELLED')) {

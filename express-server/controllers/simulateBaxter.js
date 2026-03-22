@@ -145,9 +145,11 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
             let traded = []
 
+            const INTERVAL_MINUTES = 5;
+
             // Track last scan time to scan every 15 minutes
             let lastScanTime = new Date(dayStartTime)
-            lastScanTime.setUTCMinutes(lastScanTime.getUTCMinutes() - 15) // Force first scan
+            lastScanTime.setUTCMinutes(lastScanTime.getUTCMinutes() - INTERVAL_MINUTES) // Force first scan
 
             // Inner loop for each 5-minute interval within the day
             while (dayStartTime < dayEndTime) {
@@ -155,15 +157,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                 simulationJobs.get(jobId).currentDate = dayStartTime;
 
-                const interval = '15m'
-
-                // Scan every 15 minutes using 15m candles
+                // Scan every INTERVAL_MINUTES minutes using 15m candles
                 const minutesSinceLastScan = (dayStartTime - lastScanTime) / (1000 * 60);
                 
-                if (minutesSinceLastScan >= 15) {
+                if (minutesSinceLastScan >= INTERVAL_MINUTES) {
                     // console.log('selectionParams', selectionParams)
 
                     const candleDate = new Date(dayStartTime);
+                    console.log('candleDate', getDateStringIND(candleDate))
                     let selectedStocks = [];
 
                     if (bullishStockList.length > 0) {
