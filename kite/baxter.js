@@ -27,9 +27,9 @@ const CANCEL_AFTER_MINUTES = 10;
 const MAX_ACTIVE_ORDERS = 1;
 const UPDATE_SL_INTERVAL = 15;
 /** Lookback minutes for trailing SL when SL Interval column is missing/invalid. */
-const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = UPDATE_SL_INTERVAL;
+const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = 15;
 /** Minimum minutes between SL revisions when Revise SL column is missing/invalid. */
-const DEFAULT_TRAILING_SL_FREQUENCY_MINUTES = UPDATE_SL_INTERVAL;
+const DEFAULT_TRAILING_SL_FREQUENCY_MINUTES = 5;
 const ENABLE_ORDER_DEBUG_LOGGER = process.env.ENABLE_ORDER_DEBUG_LOGGER || true;
 const TERMINAL_STATUSES = ['COMPLETE', 'REJECTED', 'CANCELLED'];
 const FAILED_STATUSES = ['REJECTED', 'CANCELLED'];
@@ -426,8 +426,8 @@ async function createBaxterOrdersEntries(stock) {
         const sheetEntry = {
             source: source,
             stockSymbol: stock.sym,
-            reviseSL: UPDATE_SL_INTERVAL.toString(),
-            slInterval: UPDATE_SL_INTERVAL.toString(),
+            reviseSL: DEFAULT_TRAILING_SL_FREQUENCY_MINUTES.toString(),
+            slInterval: DEFAULT_TRAILING_SL_LOOKBACK_MINUTES.toString(),
             ignore: '',
             status: 'new',
             time: +new Date(),
@@ -985,7 +985,6 @@ async function cancelBaxterOrders() {
             try {
 
                 if (order.source?.toLowerCase() !== 'baxter') continue;
-                if (order.status != 'new') continue;
                 if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
                 const timeSinceScan = +new Date() - Number(order.time);
                 if (timeSinceScan < 1000 * 60 * CANCEL_AFTER_MINUTES) continue;
