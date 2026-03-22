@@ -1049,9 +1049,9 @@ const scheduleMISJobs = () => {
                 updateBaxterStopLoss();
             }
             // Cancels old SL orders and places new ones in API
-            const updateBaxterStopLossJob = schedule.scheduleJob('10 */5 4,5,6,7,8 * * 1-5', updateBaxterStopLossCB);
-            const updateBaxterStopLossJob_2 = schedule.scheduleJob('10 0,5,10,15,20,25,30,35,40,45 9 * * 1-5', updateBaxterStopLossCB);
-            const updateBaxterStopLossJob_3 = schedule.scheduleJob('10 55 3 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob = schedule.scheduleJob('10 * 4,5,6,7,8 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob_2 = schedule.scheduleJob('10 0-45 9 * * 1-5', updateBaxterStopLossCB);
+            const updateBaxterStopLossJob_3 = schedule.scheduleJob('10 55-59 3 * * 1-5', updateBaxterStopLossCB);
 
             sendMessageToChannel('⏰ Update Baxter Stop Loss Orders Scheduled - ', getDateStringIND(getEarliestTime(updateBaxterStopLossJob, updateBaxterStopLossJob_2, updateBaxterStopLossJob_3)));
         }

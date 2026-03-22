@@ -2,6 +2,7 @@ const {
     getStockLoc, readSheetData, numberToExcelColumn, bulkUpdateCells, 
     getOrderLoc, processMISSheetData, appendRowsToMISD } = require("../gsheets")
 const { sendMessageToChannel } = require("../slack-actions")
+const { sendCompletedOrderEmail } = require("../email-notifications")
 const { kiteSession } = require("./setup")
 const OrderLog = require('../models/OrderLog');
 const { getDataFromYahoo, processYahooData } = require("./utils");
@@ -238,6 +239,12 @@ const processSuccessfulOrder = async (order) => {
                 order.status,
                 order.tag
             )
+
+            try {
+                await sendCompletedOrderEmail(order)
+            } catch (err) {
+                console.error('sendCompletedOrderEmail failed', err?.message)
+            }
 
             console.log('📬 Order update', order)
 
