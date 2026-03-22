@@ -445,7 +445,7 @@ const processSuccessfulOrder = async (order) => {
                         const updates = [
                             {
                                 range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus),
-                                values: [['stopped']],
+                                values: [['target']],
                             },
                             {
                                 range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime),
