@@ -212,6 +212,7 @@ async function setupBaxterOrders() {
         // Cancel all existing TRIGGER PENDING Baxter orders before setup
         const pendingBaxterOrders = orders.filter(o => 
             o.tag?.includes('baxter') && 
+            o.tag?.includes('trigger') && 
             (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
         );
         
