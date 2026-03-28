@@ -239,6 +239,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 
 	params = { ...DEFAULT_PARAMS, ...params };
 	const isBullishMode = (direction || 'BULLISH').toUpperCase() === 'BULLISH';
+	const isBothMode = (direction || 'BOTH').toUpperCase() === 'BOTH';
 
 	// Split stockList into batches
 	const batches = [];
@@ -321,8 +322,12 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				const currentCandleMid = (currentCandle.high + currentCandle.low) / 2;
 				const isBullishCandle = currentCandle.close > currentCandleMid;
 				const isBearishCandle = currentCandle.close < currentCandleMid;
-				const sentimentOk = isBullishMode ? isBullishCandle : isBearishCandle;
+				const sentimentOk = isBothMode ? true : isBullishMode ? isBullishCandle : isBearishCandle;
 				const conditionName = isBullishMode ? 'BULLISH' : 'BEARISH';
+
+				if (isBothMode) {
+					conditionName = isBullishCandle ? 'BULLISH' : isBearishCandle ? 'BEARISH' : 'BOTH';
+				}
 
 				if (!sentimentOk) {
 					if (DEBUG) console.log(`Not ${conditionName.toLowerCase()} for`, sym);
@@ -442,7 +447,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				});
 				
 				// All conditions met - return stock data
-				const resultDirection = isBullishMode ? 'BULLISH' : 'BEARISH';
+				const resultDirection = isBothMode ? 'BOTH' : isBullishMode ? 'BULLISH' : 'BEARISH';
 				return {
 					sym,
 					open: currentCandle.open,
