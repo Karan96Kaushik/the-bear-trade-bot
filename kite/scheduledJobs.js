@@ -1029,14 +1029,15 @@ const scheduleMISJobs = () => {
         const ENABLE_BAXTER_ORDERS_SETUP = true;
         if (ENABLE_BAXTER_ORDERS_SETUP) {
             const baxterJobCB = () => {
-                sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
+                sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2, baxterJob_3)));
                 setupBaxterOrders();
             };
             // First run at 3:55 AM, then every 15 minutes during trading hours
             // Cancels all pending orders before creating new ones
             const baxterJob = schedule.scheduleJob('45 50,55 3 * * 1-5', baxterJobCB);
-            const baxterJob_2 = schedule.scheduleJob('45 */5 4,5,6 * * 1-5', baxterJobCB);
-            sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2)));
+            const baxterJob_2 = schedule.scheduleJob('45 */5 4,5,6,7,8 * * 1-5', baxterJobCB);
+            const baxterJob_3 = schedule.scheduleJob('45 0,5,10,15,20,25,30 * * 1-5', baxterJobCB);
+            sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2, baxterJob_3)));
         }
 
         // NOTE: Execute Orders job removed - SL orders now placed via webhook
