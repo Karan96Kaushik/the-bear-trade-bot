@@ -95,11 +95,12 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         }
         else {
             const symbols = symbol.split(',').map(s => s.trim()).filter(Boolean);
-            bullishStockList = symbols;
+            bullishStockList = [];
             bearishStockList = [];
+            bothStockList = symbols.filter(s => s?.length > 0);
         }
 
-        stockList = [...bullishStockList, ...bearishStockList].filter(Boolean);
+        stockList = [...bullishStockList, ...bearishStockList, ...bothStockList].filter(Boolean);
 
         // console.log(startdate, enddate)
 
@@ -196,88 +197,99 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         for (let i = 0; i < selectedStocks.length; i++) {
                             const stock = selectedStocks[i];
                             const promise = (async () => {
-                                const { _startDate, endDate } = getDateRange(dayStartTime);
-                                endDate.setUTCHours(11, 0, 0, 0);
-                                const startDate = new Date(endDate);
-                                startDate.setUTCHours(3, 0, 0, 0);
 
-                                // Fetch 5m data for precise execution monitoring
-                                let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
-                                yahooData = processGrowwData(yahooData);
+                                try {
+                                    
+                                    const { _startDate, endDate } = getDateRange(dayStartTime);
+                                    endDate.setUTCHours(11, 0, 0, 0);
+                                    const startDate = new Date(endDate);
+                                    startDate.setUTCHours(3, 0, 0, 0);
 
-                                // Same padding logic as Benoit
-                                let triggerPadding = 1;
-                                if (stock.high < 20)
-                                    triggerPadding = 0.1;
-                                else if (stock.high < 50)
-                                    triggerPadding = 0.2;
-                                else if (stock.high < 100)
-                                    triggerPadding = 0.3;
-                                else if (stock.high < 300)
-                                    triggerPadding = 0.5;
+                                    // Fetch 5m data for precise execution monitoring
+                                    let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
+                                    yahooData = processGrowwData(yahooData);
 
-                                let direction = stock.direction;
-                                let triggerPrice, targetPrice, stopLossPrice;
+                                    // Same padding logic as Benoit
+                                    let triggerPadding = 1;
+                                    if (stock.high < 20)
+                                        triggerPadding = 0.1;
+                                    else if (stock.high < 50)
+                                        triggerPadding = 0.2;
+                                    else if (stock.high < 100)
+                                        triggerPadding = 0.3;
+                                    else if (stock.high < 300)
+                                        triggerPadding = 0.5;
 
-                                let [targetMultiplier, stopLossMultiplier] = simulation.targetStopLossRatio.split(':').map(Number);
-                                let candleLength = stock.high - stock.low;
+                                    let direction = stock.direction;
+                                    let triggerPrice, targetPrice, stopLossPrice;
 
-                                if (direction === 'BULLISH') {
-                                    triggerPrice = stock.high + triggerPadding; // Buy above The Queen's high
-                                    stopLossPrice = stock.low - triggerPadding; // The Knight - initial SL
-                                    targetPrice = null;
-                                } else {
-                                    // BEARISH: short below The Queen's low, SL above high
-                                    triggerPrice = stock.low - triggerPadding;
-                                    stopLossPrice = stock.high + triggerPadding;
-                                    targetPrice = null;
+                                    let [targetMultiplier, stopLossMultiplier] = simulation.targetStopLossRatio.split(':').map(Number);
+                                    let candleLength = stock.high - stock.low;
+
+                                    if (direction === 'BULLISH') {
+                                        triggerPrice = stock.high + triggerPadding; // Buy above The Queen's high
+                                        stopLossPrice = stock.low - triggerPadding; // The Knight - initial SL
+                                        targetPrice = stock.high + (stock.high - stock.low) * 5 + triggerPadding;
+                                    } else {
+                                        // BEARISH: short below The Queen's low, SL above high
+                                        triggerPrice = stock.low - triggerPadding;
+                                        stopLossPrice = stock.high + triggerPadding;
+                                        targetPrice = stock.low - (stock.high - stock.low) * 5 - triggerPadding;
+                                    }
+
+                                    triggerPrice = Math.round(triggerPrice * 10) / 10;
+                                    stopLossPrice = Math.round(stopLossPrice * 10) / 10;
+
+                                    let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
+                                    quantity = Math.abs(quantity);
+
+                                    console.log('direction', direction)
+
+                                    const sim = new Simulator({
+                                        stockSymbol: stock.sym,
+                                        triggerPrice,
+                                        targetPrice,
+                                        stopLossPrice,
+                                        quantity,
+                                        direction,
+                                        yahooData,
+                                        orderTime: dayStartTime,
+                                        cancelInMins: simulation.cancelInMins,
+                                        updateSL: simulation.updateSL,
+                                        updateSLInterval: simulation.updateSLInterval,
+                                        updateSLFrequency: simulation.updateSLFrequency,
+                                        marketOrder: simulation.marketOrder,
+                                        enableTriggerDoubleConfirmation: simulation.enableTriggerDoubleConfirmation,
+                                        enableStopLossDoubleConfirmation: simulation.enableStopLossDoubleConfirmation,
+                                        doubleConfirmationLookbackHours: simulation.doubleConfirmationLookbackHours
+                                    });
+
+                                    sim.run();
+
+                                    if (singleDate || sim.startedAt) {
+                                        return {
+                                            startedAt: sim.startedAt,
+                                            placedAt: sim.orderTime,
+                                            pnl: sim.pnl || 0,
+                                            quantity: sim.quantity,
+                                            direction: sim.direction,
+                                            sym: sim.stockSymbol,
+                                            data: yahooData,
+                                            actions: sim.tradeActions,
+                                            exitTime: sim.exitTime || null,
+                                            exitReason: sim.exitReason || null,
+                                            triggerPrice: triggerPrice,
+                                            targetPrice: targetPrice,
+                                            stopLossPrice: stopLossPrice
+                                        };
+                                    }
+                                    return null;
                                 }
-
-                                triggerPrice = Math.round(triggerPrice * 10) / 10;
-                                stopLossPrice = Math.round(stopLossPrice * 10) / 10;
-
-                                let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
-                                quantity = Math.abs(quantity);
-
-                                const sim = new Simulator({
-                                    stockSymbol: stock.sym,
-                                    triggerPrice,
-                                    targetPrice,
-                                    stopLossPrice,
-                                    quantity,
-                                    direction,
-                                    yahooData,
-                                    orderTime: dayStartTime,
-                                    cancelInMins: simulation.cancelInMins,
-                                    updateSL: simulation.updateSL,
-                                    updateSLInterval: simulation.updateSLInterval,
-                                    updateSLFrequency: simulation.updateSLFrequency,
-                                    marketOrder: simulation.marketOrder,
-                                    enableTriggerDoubleConfirmation: simulation.enableTriggerDoubleConfirmation,
-                                    enableStopLossDoubleConfirmation: simulation.enableStopLossDoubleConfirmation,
-                                    doubleConfirmationLookbackHours: simulation.doubleConfirmationLookbackHours
-                                });
-
-                                sim.run();
-
-                                if (singleDate || sim.startedAt) {
-                                    return {
-                                        startedAt: sim.startedAt,
-                                        placedAt: sim.orderTime,
-                                        pnl: sim.pnl || 0,
-                                        quantity: sim.quantity,
-                                        direction: sim.direction,
-                                        sym: sim.stockSymbol,
-                                        data: yahooData,
-                                        actions: sim.tradeActions,
-                                        exitTime: sim.exitTime || null,
-                                        exitReason: sim.exitReason || null,
-                                        triggerPrice: triggerPrice,
-                                        targetPrice: targetPrice,
-                                        stopLossPrice: stopLossPrice
-                                    };
+                                catch (error) {
+                                    console.error('Error processing stock:', error);
+                                    console.trace(error);
+                                    return null;
                                 }
-                                return null;
                             })();
 
                             // Add promise to active set
