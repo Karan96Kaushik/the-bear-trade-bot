@@ -322,8 +322,8 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				const currentCandleMid = (currentCandle.high + currentCandle.low) / 2;
 				const isBullishCandle = currentCandle.close > currentCandleMid;
 				const isBearishCandle = currentCandle.close < currentCandleMid;
-				const sentimentOk = isBothMode ? true : isBullishMode ? isBullishCandle : isBearishCandle;
-				const conditionName = isBullishMode ? 'BULLISH' : 'BEARISH';
+				const sentimentOk = isBothMode ? (isBullishCandle || isBearishCandle) : isBullishMode ? isBullishCandle : isBearishCandle;
+				let conditionName = isBullishMode ? 'BULLISH' : 'BEARISH';
 
 				if (isBothMode) {
 					conditionName = isBullishCandle ? 'BULLISH' : isBearishCandle ? 'BEARISH' : 'BOTH';
@@ -467,6 +467,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				};
 			} catch (error) {
 				if (DEBUG) console.error(`Error processing ${sym}:`, error);
+				console.trace(error);
 				logStockDebug(sym, null, 'ERROR', 'FAILED', {
 					notes: `Exception: ${error.message}`
 				});
