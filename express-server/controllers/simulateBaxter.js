@@ -89,15 +89,15 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             console.log('No symbol provided, reading from sheet based on selectionParams', selectionParams)
             let sheetData = await readSheetData(selectionParams.STOCK_LIST || 'Baxter-StockList');
             sheetData = processSheetWithHeaders(sheetData);
-            bullishStockList = (sheetData.map(row => row.bullish).filter(s => s?.length > 0));
-            bearishStockList = (sheetData.map(row => row.bearish).filter(s => s?.length > 0));
-            bothStockList = (sheetData.map(row => row.both).filter(s => s?.length > 0));
+            bullishStockList = (sheetData.map(row => row.bullish).filter(s => s?.length > 0)).map(s => s.toUpperCase());
+            bearishStockList = (sheetData.map(row => row.bearish).filter(s => s?.length > 0)).map(s => s.toUpperCase());
+            bothStockList = (sheetData.map(row => row.both).filter(s => s?.length > 0)).map(s => s.toUpperCase());
         }
         else {
             const symbols = symbol.split(',').map(s => s.trim()).filter(Boolean);
             bullishStockList = [];
             bearishStockList = [];
-            bothStockList = symbols.filter(s => s?.length > 0);
+            bothStockList = symbols.filter(s => s?.length > 0).map(s => s.toUpperCase());
         }
 
         stockList = [...bullishStockList, ...bearishStockList, ...bothStockList].filter(Boolean);
@@ -144,7 +144,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             dayStartTime.setUTCHours(3, 50, 20, 0)
 
             // 2:35 PM IST
-            dayEndTime.setUTCHours(9, 5, 10, 0)
+            dayEndTime.setUTCHours(9, 30, 10, 0)
 
             let traded = []
 
@@ -209,12 +209,12 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                     let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                                     yahooData = processGrowwData(yahooData);
 
-                                    // Skip IRB on March 23-27 2026 - bad data issue
+                                    // Skip IRB - bad data issue in Groww
                                     if (stock.sym == 'IRB') {
-                                        let dt = startDate.toISOString().split('T')[0];
-                                        if (dt == '2026-03-23' || dt == '2026-03-24' || dt == '2026-03-25' || dt == '2026-03-27') {
+                                        // let dt = startDate.toISOString().split('T')[0];
+                                        // if (dt == '2026-03-14' || dt == '2026-03-23' || dt == '2026-03-24' || dt == '2026-03-25' || dt == '2026-03-27') {
                                             return null;
-                                        }
+                                        // }
                                     }
 
                                     // Same padding logic as Benoit
