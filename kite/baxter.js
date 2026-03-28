@@ -190,21 +190,31 @@ async function setupBaxterOrders() {
         let bullishStockList = (stockListData.map(row => row.bullish).filter(s => s?.length > 0));
         let bearishStockList = (stockListData.map(row => row.bearish).filter(s => s?.length > 0));
 
+        // both header - includes both bullish and bearish stocks
+        let bothStockList = (stockListData.map(row => row.both).filter(s => s?.length > 0));
+
         let sheetData = await readSheetDataWithRetry('MIS-ALPHA!A2:W1000')
         sheetData = processMISSheetData(sheetData)
 
         await authenticateWithRetry();
 
         let selectedStocks = [];
+
+        if (bothStockList.length > 0) {
+            const { selectedStocks: bothSelected } = await scanBaxterStocks(bothStockList, undefined, undefined, false, {}, 'BOTH');
+            selectedStocks.push(...bothSelected);
+        }
+        else {
+            if (bullishStockList.length > 0) {
+                const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, undefined, undefined, false, {}, 'BULLISH');
+                selectedStocks.push(...bullishSelected);
+            }
+            if (bearishStockList.length > 0) {
+                const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, undefined, undefined, false, {}, 'BEARISH');
+                selectedStocks.push(...bearishSelected);
+            }
+        }
         
-        if (bullishStockList.length > 0) {
-            const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, undefined, undefined, false, {}, 'BULLISH');
-            selectedStocks.push(...bullishSelected);
-        }
-        if (bearishStockList.length > 0) {
-            const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, undefined, undefined, false, {}, 'BEARISH');
-            selectedStocks.push(...bearishSelected);
-        }
 
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
@@ -1096,7 +1106,7 @@ async function checkBaxterOrdersStoplossSafety() {
 
 
 
-        
+
 
         await sendMessageToChannel('🔔 Skipping Baxter Orders Stoploss Safety Check - Pending testing');
         return
