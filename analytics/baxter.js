@@ -447,7 +447,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				});
 				
 				// All conditions met - return stock data
-				const resultDirection = isBothMode ? 'BOTH' : isBullishMode ? 'BULLISH' : 'BEARISH';
+				const resultDirection = isBothMode ? (isBullishCandle ? 'BULLISH' : isBearishCandle ? 'BEARISH' : 'UNKNOWN') : isBullishMode ? 'BULLISH' : 'BEARISH';
 				return {
 					sym,
 					open: currentCandle.open,
