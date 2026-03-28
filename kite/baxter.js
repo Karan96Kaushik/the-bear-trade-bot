@@ -24,7 +24,7 @@ const path = require('path');
 
 const BAXTER_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
-const MAX_ACTIVE_ORDERS = 1;
+const MAX_ACTIVE_ORDERS = 5;
 const UPDATE_SL_INTERVAL = 15;
 /** Lookback minutes for trailing SL when SL Interval column is missing/invalid. */
 const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = 15;
@@ -853,12 +853,258 @@ async function createManualOrdersEntries(stock) {
     }
 }
 
+/** Pending baxter/manual SL-M or target orders (tag patterns aligned with processor.js). */
+function isPendingBaxterManualSlOrTargetOrder(o) {
+    const tag = o.tag || '';
+    const tagged =
+        tag.includes('sl-baxter') || tag.includes('sl-manual') ||
+        tag.includes('target-baxter') || tag.includes('target-manual');
+    return tagged && (o.status === 'TRIGGER PENDING' || o.status === 'OPEN');
+}
+
+function hasOpenPositionForSymbol(netPositions, tradingsymbol) {
+    return netPositions.some(p => p.tradingsymbol === tradingsymbol && p.quantity != 0);
+}
+
+function getNetPositionForSymbol(netPositions, tradingsymbol) {
+    return netPositions.find(p => p.tradingsymbol === tradingsymbol && p.quantity != 0);
+}
+
+/** Same as processor: sheet empty/0 means no target. */
+function sheetHasTargetPrice(raw) {
+    const n = Number(raw);
+    return Number.isFinite(n) && n !== 0;
+}
+
+/**
+ * If MIS-ALPHA has SL/target prices and there is an open position but no matching
+ * pending SL/target order, place the missing order(s). Logic aligned with processor.js
+ * `processSuccessfulOrder` (trigger completion path).
+ */
+async function placeMissingSlTargetForOpenPositions(baxterSheetData, positions, orders) {
+    let ordersLocal = orders;
+
+    for (const row of baxterSheetData) {
+        const source = row.source?.toLowerCase();
+        if (source !== 'baxter' && source !== 'manual') continue;
+        if (!row.symbol || row.symbol[0] === '-' || row.symbol[0] === '*') continue;
+        if (row.ignore && String(row.ignore).trim().length > 0) continue;
+
+        const sym = row.symbol;
+        if (!hasOpenPositionForSymbol(positions.net, sym)) continue;
+
+        const pos = getNetPositionForSymbol(positions.net, sym);
+        const qty = Math.abs(pos.quantity);
+        const isBearish = pos.quantity < 0;
+        const direction = isBearish ? 'BEARISH' : 'BULLISH';
+
+        const slPrice = parseFloat(row.stop_loss);
+        const hasSlSheet = Number.isFinite(slPrice) && slPrice > 0;
+
+        const parsedTarget = Number(row.target_price ?? row.target);
+        const hasTarget = sheetHasTargetPrice(parsedTarget);
+
+        if (!hasSlSheet && !hasTarget) continue;
+
+        const existingSl = ordersLocal.find(
+            o =>
+                o.tradingsymbol === sym &&
+                o.tag?.includes(`sl-${source}`) &&
+                (o.status === 'TRIGGER PENDING' || o.status === 'OPEN'),
+        );
+        const existingTarget = ordersLocal.find(
+            o =>
+                o.tradingsymbol === sym &&
+                o.tag?.includes(`target-${source}`) &&
+                (o.status === 'OPEN' || o.status === 'TRIGGER PENDING'),
+        );
+
+        const nseSym = `NSE:${sym}`;
+        let quotePack;
+        try {
+            const q = await kiteSession.kc.getQuote([nseSym]);
+            quotePack = q[nseSym];
+        } catch (e) {
+            logOrderDebug('MISSING_SL_TARGET_QUOTE_FAILED', sym, { source, error: e?.message });
+            continue;
+        }
+        const ltp = quotePack?.last_price;
+        const lowerCircuit = quotePack?.lower_circuit_limit;
+        const upperCircuit = quotePack?.upper_circuit_limit;
+
+        if (!ltp) {
+            logOrderDebug('MISSING_SL_TARGET_NO_LTP', sym, { source });
+            continue;
+        }
+
+        const triggerFromSheet = parseFloat(row.trigger_price);
+        const triggerPrice =
+            Number.isFinite(triggerFromSheet) && triggerFromSheet > 0
+                ? triggerFromSheet
+                : pos.average_price || ltp;
+
+        let placed = false;
+
+        if (hasSlSheet && !existingSl) {
+            try {
+                validatePrices(
+                    triggerPrice,
+                    slPrice,
+                    qty,
+                    ltp,
+                    sym,
+                    direction,
+                    hasTarget ? parsedTarget : '',
+                );
+                validateCircuitLimits(
+                    triggerPrice,
+                    slPrice,
+                    direction,
+                    lowerCircuit,
+                    upperCircuit,
+                    hasTarget ? parsedTarget : '',
+                );
+                let slOrderResponse;
+                if (isBearish) {
+                    slOrderResponse = await placeOrder('BUY', 'SL-M', slPrice, qty, row, `sl-${source}`);
+                } else {
+                    slOrderResponse = await placeOrder('SELL', 'SL-M', slPrice, qty, row, `sl-${source}`);
+                }
+                await logOrder('PLACED', 'MISSING_SL_SAFETY_CHECK', slOrderResponse);
+                await sendMessageToChannel(
+                    `✅ Restored missing ${source} SL order (open position, sheet SL set)`,
+                    sym,
+                    qty,
+                    slPrice,
+                );
+                logOrderDebug('MISSING_SL_PLACED', sym, { source, order_id: slOrderResponse?.order_id });
+                placed = true;
+            } catch (err) {
+                await sendMessageToChannel(
+                    `⚠️ Could not place missing ${source} SL`,
+                    sym,
+                    err?.message,
+                );
+                logOrderDebug('MISSING_SL_PLACE_FAILED', sym, { source, error: err?.message });
+            }
+        }
+
+        if (hasTarget && !existingTarget) {
+            if (!hasSlSheet) {
+                await sendMessageToChannel(
+                    `⚠️ Skipping missing ${source} target — Stop Loss on sheet required`,
+                    sym,
+                );
+                logOrderDebug('MISSING_TARGET_SKIP_NO_SL', sym, { source });
+            } else {
+            let targetPrice = parsedTarget;
+            const hasCircuitLimits =
+                Number.isFinite(lowerCircuit) && Number.isFinite(upperCircuit);
+            if (!hasCircuitLimits) {
+                await sendMessageToChannel(
+                    `⚠️ Skipping missing ${source} target — no circuit limits`,
+                    sym,
+                );
+                logOrderDebug('MISSING_TARGET_SKIP_CIRCUIT', sym, { source });
+            } else {
+                if (targetPrice > upperCircuit) {
+                    const old = targetPrice;
+                    targetPrice = upperCircuit - 0.1;
+                    await sendMessageToChannel('🚪 Target adjusted (circuit)', sym, old, targetPrice);
+                }
+                if (targetPrice < lowerCircuit) {
+                    const old = targetPrice;
+                    targetPrice = lowerCircuit + 0.1;
+                    await sendMessageToChannel('🚪 Target adjusted (circuit)', sym, old, targetPrice);
+                }
+                if (targetPrice < lowerCircuit || targetPrice > upperCircuit) {
+                    await sendMessageToChannel(
+                        `🚫 Missing ${source} target still out of band, skip`,
+                        sym,
+                        targetPrice,
+                    );
+                    logOrderDebug('MISSING_TARGET_SKIP_BAND', sym, { source, targetPrice });
+                } else {
+                    try {
+                        validatePrices(
+                            triggerPrice,
+                            slPrice,
+                            qty,
+                            ltp,
+                            sym,
+                            direction,
+                            targetPrice,
+                        );
+                        validateCircuitLimits(
+                            triggerPrice,
+                            slPrice,
+                            direction,
+                            lowerCircuit,
+                            upperCircuit,
+                            targetPrice,
+                        );
+                        const targetTransactionType = isBearish ? 'BUY' : 'SELL';
+                        const targetOrderResponse = await placeOrder(
+                            targetTransactionType,
+                            'LIMIT',
+                            targetPrice,
+                            qty,
+                            row,
+                            `target-${source}`,
+                        );
+                        await logOrder('PLACED', 'MISSING_TARGET_SAFETY_CHECK', targetOrderResponse);
+                        await sendMessageToChannel(
+                            `✅ Restored missing ${source} target order (open position, sheet target set)`,
+                            sym,
+                            qty,
+                            targetPrice,
+                        );
+                        logOrderDebug('MISSING_TARGET_PLACED', sym, {
+                            source,
+                            order_id: targetOrderResponse?.order_id,
+                        });
+                        placed = true;
+                    } catch (err) {
+                        await sendMessageToChannel(
+                            `⚠️ Could not place missing ${source} target`,
+                            sym,
+                            err?.message,
+                        );
+                        logOrderDebug('MISSING_TARGET_PLACE_FAILED', sym, {
+                            source,
+                            error: err?.message,
+                        });
+                    }
+                }
+            }
+            }
+        }
+
+        if (placed) {
+            ordersLocal = await kiteSession.kc.getOrders();
+        }
+    }
+}
+
 // NOTE: executeBaxterOrders function removed - SL orders are now placed immediately
 // via webhook in processor.js when trigger orders complete (processSuccessfulOrder)
 
 async function checkBaxterOrdersStoplossSafety() {
     try {
+        
         await sendMessageToChannel('⌛️ Executing Check Baxter Orders Stoploss Safety Job');
+
+
+
+        
+
+        await sendMessageToChannel('🔔 Skipping Baxter Orders Stoploss Safety Check - Pending testing');
+        return
+
+
+
+
+
 
         let baxterSheetData = await readSheetDataWithRetry('MIS-ALPHA!A1:W1000')
         const rowHeaders = baxterSheetData.map(a => a[1])
@@ -866,103 +1112,29 @@ async function checkBaxterOrdersStoplossSafety() {
         baxterSheetData = processSheetWithHeaders(baxterSheetData)
 
         const positions = await kiteSession.kc.getPositions();
-        const orders = await kiteSession.kc.getOrders();
+        let orders = await kiteSession.kc.getOrders();
 
-        for (const order of baxterSheetData) {
+        for (const o of orders) {
+            if (!isPendingBaxterManualSlOrTargetOrder(o)) continue;
+            if (hasOpenPositionForSymbol(positions.net, o.tradingsymbol)) continue;
             try {
-                const source = order.source?.toLowerCase();
-                if (source !== 'baxter' && source !== 'manual') continue;
-                if (order.status != 'triggered') continue;
-                if (order.symbol[0] == '-' || order.symbol[0] == '*') continue;
-
-                const activePosition = positions.net.find(p => p.tradingsymbol === order.symbol && p.quantity != 0)
-                
-                // Check if position exited
-                if (!activePosition) {
-                    // Verify if SL order was executed
-                    const slOrder = orders.find(o => 
-                        o.tradingsymbol === order.symbol && 
-                        o.tag?.includes(`sl-${source}`) &&
-                        o.status === 'COMPLETE'
-                    );
-                    
-                    if (slOrder) {
-                        // SL order executed successfully
-                        await sendMessageToChannel(`✅ ${source} SL order executed`, order.symbol, order.quantity);
-                        
-                        let updates = [];
-                        const [rowStatus, colStatus] = getStockLoc(order.symbol, 'Status', rowHeaders, colHeaders)
-                        const [rowTime, colTime] = getStockLoc(order.symbol, 'Time', rowHeaders, colHeaders)
-                        updates.push({
-                            range: 'MIS-ALPHA!' + numberToExcelColumn(colStatus) + String(rowStatus), 
-                            values: [['stopped']], 
-                        })
-                        updates.push({
-                            range: 'MIS-ALPHA!' + numberToExcelColumn(colTime) + String(rowTime), 
-                            values: [[+new Date()]], 
-                        })
-                        await bulkUpdateCells(updates)
-                    } else {
-                        await sendMessageToChannel(`⁉️ ${source} position exited but no SL order found`, order.symbol);
-                    }
-                    continue;
-                }
-                
-                // Validate quantity matches
-                const expectedQuantity = Math.abs(order.quantity);
-                const actualQuantity = Math.abs(activePosition.quantity);
-                
-                if (actualQuantity !== expectedQuantity) {
-                    await sendMessageToChannel(`⚠️ Quantity mismatch: Expected ${expectedQuantity}, Got ${actualQuantity}`, order.symbol);
-                    logOrderDebug('QUANTITY_MISMATCH', order.symbol, {
-                        expected: expectedQuantity,
-                        actual: actualQuantity,
-                        reason: 'Possible partial fill'
-                    });
-                }
-
-                const direction = Number(order.quantity) > 0 ? 'BULLISH' : 'BEARISH';
-                const sym = `NSE:${order.symbol}`
-                let ltp = await getLTPWithRetry(sym);
-
-                // Check if SL order exists in API
-                const pendingSlOrder = orders.find(o => 
-                    o.tradingsymbol === order.symbol && 
-                    o.tag?.includes(`sl-${source}`) &&
-                    (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
-                );
-
-                if (!pendingSlOrder) {
-                    // Missing SL order - place it as safety
-                    await sendMessageToChannel(`⚠️ Missing SL order for ${order.symbol}, placing safety SL`);
-                    logOrderDebug('MISSING_SL_ORDER', order.symbol, {
-                        direction,
-                        stopLossPrice: order.stop_loss,
-                        ltp,
-                        reason: 'SL order not found in API, placing safety order'
-                    });
-                    
-                    const qty = Math.abs(order.quantity);
-                    try {
-                        if (direction === 'BULLISH') {
-                            await placeOrder('SELL', 'SL-M', order.stop_loss, qty, order, `sl-${source}`);
-                        } else {
-                            await placeOrder('BUY', 'SL-M', order.stop_loss, qty, order, `sl-${source}`);
-                        }
-                        await sendMessageToChannel(`✅ Safety SL order placed for ${order.symbol}`);
-                    } catch (placeError) {
-                        await sendMessageToChannel(`🚨 Failed to place safety SL for ${order.symbol}:`, placeError?.message);
-                    }
-                } else {
-                    // SL order exists, just log status
-                    sendMessageToChannel('🔎 Baxter SL check', `${order.symbol} LTP:${ltp} SL:${order.stop_loss} [API Order: ${pendingSlOrder.order_id}]`)
-                }
-
-            } catch (error) {
-                console.error(error)
-                await sendMessageToChannel('🚨 Error checking Baxter orders stoploss hit:', order.symbol, order.quantity, error?.message);
+                await kiteSession.kc.cancelOrder('regular', o.order_id);
+                await logOrder('CANCELLED', 'ORPHAN SL TARGET NO POSITION', o);
+                const kind = (o.tag || '').includes('target-') ? 'target' : 'SL';
+                await sendMessageToChannel(`🗑️ Cancelled orphaned ${kind} order (no open position)`, o.tradingsymbol, o.order_id);
+                logOrderDebug('ORPHAN_SL_TARGET_CANCELLED', o.tradingsymbol, { order_id: o.order_id, tag: o.tag });
+            } catch (cancelErr) {
+                await sendMessageToChannel(`⚠️ Failed to cancel orphaned SL/target order`, o.tradingsymbol, o.order_id, cancelErr?.message);
+                logOrderDebug('ORPHAN_SL_TARGET_CANCEL_FAILED', o.tradingsymbol, {
+                    order_id: o.order_id,
+                    tag: o.tag,
+                    error: cancelErr?.message,
+                });
             }
         }
+
+        orders = await kiteSession.kc.getOrders();
+        await placeMissingSlTargetForOpenPositions(baxterSheetData, positions, orders);
 
         writeOrderDebugLogToCSV();
     } catch (error) {
