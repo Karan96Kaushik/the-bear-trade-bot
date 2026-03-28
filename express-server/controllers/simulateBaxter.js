@@ -199,7 +199,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                             const promise = (async () => {
 
                                 try {
-                                    
+
                                     const { _startDate, endDate } = getDateRange(dayStartTime);
                                     endDate.setUTCHours(11, 0, 0, 0);
                                     const startDate = new Date(endDate);
@@ -208,6 +208,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                     // Fetch 5m data for precise execution monitoring
                                     let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
                                     yahooData = processGrowwData(yahooData);
+
+                                    // Skip IRB on March 23-27 2026 - bad data issue
+                                    if (stock.sym == 'IRB') {
+                                        let dt = startDate.toISOString().split('T')[0];
+                                        if (dt == '2026-03-23' || dt == '2026-03-24' || dt == '2026-03-25' || dt == '2026-03-27') {
+                                            return null;
+                                        }
+                                    }
 
                                     // Same padding logic as Benoit
                                     let triggerPadding = 1;
@@ -242,8 +250,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                                     let quantity = Math.ceil(RISK_AMOUNT / Math.abs(triggerPrice - stopLossPrice));
                                     quantity = Math.abs(quantity);
-
-                                    console.log('direction', direction)
 
                                     const sim = new Simulator({
                                         stockSymbol: stock.sym,
