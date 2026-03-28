@@ -83,6 +83,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         // When reading from sheet: separate lists per direction for scan; when symbol provided: single list (bullish by default)
         let bullishStockList = [];
         let bearishStockList = [];
+        let bothStockList = [];
 
         if (!symbol) {
             console.log('No symbol provided, reading from sheet based on selectionParams', selectionParams)
@@ -90,6 +91,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             sheetData = processSheetWithHeaders(sheetData);
             bullishStockList = (sheetData.map(row => row.bullish).filter(s => s?.length > 0));
             bearishStockList = (sheetData.map(row => row.bearish).filter(s => s?.length > 0));
+            bothStockList = (sheetData.map(row => row.both).filter(s => s?.length > 0));
         }
         else {
             const symbols = symbol.split(',').map(s => s.trim()).filter(Boolean);
@@ -167,13 +169,19 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                     console.log('candleDate', getDateStringIND(candleDate))
                     let selectedStocks = [];
 
-                    if (bullishStockList.length > 0) {
-                        const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, candleDate, undefined, true, selectionParams, 'BULLISH');
-                        selectedStocks.push(...bullishSelected);
+                    if (bothStockList.length > 0) {
+                        const { selectedStocks: bothSelected } = await scanBaxterStocks(bothStockList, candleDate, undefined, true, selectionParams, 'BOTH');
+                        selectedStocks.push(...bothSelected);
                     }
-                    if (bearishStockList.length > 0) {
-                        const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, candleDate, undefined, true, selectionParams, 'BEARISH');
-                        selectedStocks.push(...bearishSelected);
+                    else {
+                        if (bullishStockList.length > 0) {
+                            const { selectedStocks: bullishSelected } = await scanBaxterStocks(bullishStockList, candleDate, undefined, true, selectionParams, 'BULLISH');
+                            selectedStocks.push(...bullishSelected);
+                        }
+                        if (bearishStockList.length > 0) {
+                            const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, candleDate, undefined, true, selectionParams, 'BEARISH');
+                            selectedStocks.push(...bearishSelected);
+                        }
                     }
 
                     allSelectedStocks.push(...selectedStocks);
