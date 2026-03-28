@@ -193,6 +193,10 @@ async function setupBaxterOrders() {
         // both header - includes both bullish and bearish stocks
         let bothStockList = (stockListData.map(row => row.both).filter(s => s?.length > 0));
 
+        bullishStockList = bullishStockList.map(s => s.toUpperCase());
+        bearishStockList = bearishStockList.map(s => s.toUpperCase());
+        bothStockList = bothStockList.map(s => s.toUpperCase());
+
         let sheetData = await readSheetDataWithRetry('MIS-ALPHA!A2:W1000')
         sheetData = processMISSheetData(sheetData)
 
