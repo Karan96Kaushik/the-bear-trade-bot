@@ -4,7 +4,7 @@ const { readSheetData } = require('../gsheets');
 
 const MAX_ORDER_VALUE = 200000;
 const MIN_ORDER_VALUE = 0;
-const MIN_SPREAD = 0.5;
+const MIN_SPREAD = 0.1;
 const MAX_QUANTITY = 1000;
 const MIN_QUANTITY = 1;
 const MAX_DATA_AGE_MS = 5 * 60 * 1000; // 5 minutes
