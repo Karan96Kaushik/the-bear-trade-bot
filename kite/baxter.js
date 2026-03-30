@@ -184,7 +184,7 @@ async function setupBaxterOrders() {
     try {
         await sendMessageToChannel(`⌛️ Executing Baxter MIS Jobs`);
 
-        let stockListData = await readSheetDataWithRetry('Baxter-StockList!A1:B1000')
+        let stockListData = await readSheetDataWithRetry('Baxter-StockList!A1:C1000')
         stockListData = processSheetWithHeaders(stockListData);
         
         let bullishStockList = (stockListData.map(row => row.bullish).filter(s => s?.length > 0));
