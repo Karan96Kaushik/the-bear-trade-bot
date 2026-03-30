@@ -1,7 +1,8 @@
 let slack_app
 
-const LOG_TO_CSV = process.env.LOG_TO_CSV === 'true' || true;
 const CSV_LOG_PATH = process.env.CSV_LOG_PATH || './logs/slack-messages.csv';
+
+const ENABLE_CSV_DEBUG_LOGGER = process.env.ENABLE_CSV_DEBUG_LOGGER == undefined ? true : process.env.ENABLE_CSV_DEBUG_LOGGER == 'true';
 
 const initialize_slack = (app) => {
 
@@ -369,7 +370,7 @@ async function logMessageToCSV(channel_name, message) {
 async function sendMessageToChannel(channel_name='bot-status-updates-5', ...message) {
 	try {
 
-        if (LOG_TO_CSV) {
+        if (ENABLE_CSV_DEBUG_LOGGER) {
             let actualChannelName = channel_name;
             let actualMessage = message;
             
