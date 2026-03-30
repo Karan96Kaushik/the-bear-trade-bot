@@ -197,9 +197,6 @@ async function setupBaxterOrders() {
         bearishStockList = bearishStockList.map(s => s.toUpperCase());
         bothStockList = bothStockList.map(s => s.toUpperCase());
 
-        let sheetData = await readSheetDataWithRetry('MIS-ALPHA!A2:W1000')
-        sheetData = processMISSheetData(sheetData)
-
         await authenticateWithRetry();
 
         let selectedStocks = [];
@@ -229,17 +226,33 @@ async function setupBaxterOrders() {
             o.tag?.includes('trigger') && 
             (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
         );
+
+        let misSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
+        const rowHeaders = misSheetData.map(a => a[1])
+        const colHeaders = misSheetData[0]
+
+        const [row, col] = getStockLoc(order.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
         
+        let updates = [];
         if (pendingBaxterOrders.length > 0) {
             await sendMessageToChannel(`🗑️ Cancelling ${pendingBaxterOrders.length} pending Baxter orders before new setup`);
             for (const order of pendingBaxterOrders) {
                 try {
                     await kiteSession.kc.cancelOrder("regular", order.order_id);
                     await sendMessageToChannel(`❎ Cancelled pending order: ${order.tradingsymbol}`);
+
+                    updates.push({
+                        range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
+                        values: [['-' + order.tradingsymbol]], 
+                    })
+
                 } catch (cancelError) {
                     await sendMessageToChannel(`⚠️ Failed to cancel order ${order.order_id}:`, cancelError?.message);
                 }
             }
+        }
+        if (updates.length > 0) {
+            await bulkUpdateCells(updates)
         }
 
         const completed_baxter_orders = orders.filter(order => 
@@ -254,6 +267,10 @@ async function setupBaxterOrders() {
         })
 
         sendMessageToChannel(`🔔 Baxter MIS Stocks: `, loggingBaxterOrders);
+
+        let sheetData = await readSheetDataWithRetry('MIS-ALPHA!A2:W1000')
+        sheetData = processMISSheetData(sheetData)
+
 
         if (
             sheetData.filter(s => s.status?.toLowerCase() == 'triggered' && s.source?.toLowerCase() == 'baxter' && s.stockSymbol[0] != '-' && s.stockSymbol[0] != '*').length >= MAX_ACTIVE_ORDERS
