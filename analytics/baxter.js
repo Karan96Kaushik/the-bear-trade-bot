@@ -5,7 +5,7 @@ const path = require('path');
 
 const DEBUG = process.env.DEBUG || false;
 const MAX_STOCK_PRICE = 5000;
-const ENABLE_CSV_DEBUG_LOGGER = process.env.ENABLE_CSV_DEBUG_LOGGER || true;
+const ENABLE_CSV_DEBUG_LOGGER = process.env.ENABLE_CSV_DEBUG_LOGGER == undefined ? true : process.env.ENABLE_CSV_DEBUG_LOGGER == 'true';
 
 const DEFAULT_PARAMS = {
 	TOUCHING_SMA_TOLERANCE: 0,
