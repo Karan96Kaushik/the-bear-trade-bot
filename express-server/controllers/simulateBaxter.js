@@ -100,7 +100,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             bothStockList = symbols.filter(s => s?.length > 0).map(s => s.toUpperCase());
         }
 
-        stockList = [...bullishStockList, ...bearishStockList, ...bothStockList].filter(Boolean);
+        bothStockList = new Set(bothStockList);
+        bothStockList = Array.from(bothStockList);
+
+        bullishStockList = new Set(bullishStockList);
+        bullishStockList = Array.from(bullishStockList);
+
+        bearishStockList = new Set(bearishStockList);
+        bearishStockList = Array.from(bearishStockList);
 
         // console.log(startdate, enddate)
 
