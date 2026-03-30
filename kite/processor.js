@@ -435,6 +435,8 @@ const processSuccessfulOrder = async (order) => {
                             await logOrder('CANCELLED', 'PROCESS SUCCESS', existingSlOrder);
                             await sendMessageToChannel(`ℹ️ Cancelled ${source} SL after target execution`, order.tradingsymbol);
                         }
+
+                        await updateNameInSheetForClosedOrder(order)
                     } catch (cancelError) {
                         await sendMessageToChannel(`⚠️ Failed to cancel ${source} SL after target execution`, order.tradingsymbol, cancelError?.message);
                     }
@@ -509,6 +511,7 @@ const processSuccessfulOrder = async (order) => {
                         ];
                         
                         await bulkUpdateCells(updates);
+                        await updateNameInSheetForClosedOrder(order)
                         await sendMessageToChannel(`✅ Sheet updated - ${source} position stopped`, order.tradingsymbol);
                     } catch (sheetError) {
                         await sendMessageToChannel(`⚠️ Failed to update sheet for ${source} SL`, order.tradingsymbol, sheetError?.message);
