@@ -201,6 +201,8 @@ async function setupBaxterOrders() {
 
         let selectedStocks = [];
 
+        sendMessageToChannel('Scanning Baxter Stocks: both:', bothStockList.length, 'bullish:', bullishStockList.length, 'bearish:', bearishStockList.length);
+
         if (bothStockList.length > 0) {
             const { selectedStocks: bothSelected } = await scanBaxterStocks(bothStockList, undefined, undefined, false, {}, 'BOTH');
             selectedStocks.push(...bothSelected);
@@ -214,8 +216,7 @@ async function setupBaxterOrders() {
                 const { selectedStocks: bearishSelected } = await scanBaxterStocks(bearishStockList, undefined, undefined, false, {}, 'BEARISH');
                 selectedStocks.push(...bearishSelected);
             }
-        }
-        
+        }        
 
         const orders = await kiteSession.kc.getOrders();
         const positions = await kiteSession.kc.getPositions();
@@ -238,7 +239,7 @@ async function setupBaxterOrders() {
                 try {
                     await kiteSession.kc.cancelOrder("regular", order.order_id);
                     await sendMessageToChannel(`❎ Cancelled pending order: ${order.tradingsymbol}`);
-                    
+
                     const [row, col] = getStockLoc(order.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
 
                     updates.push({
