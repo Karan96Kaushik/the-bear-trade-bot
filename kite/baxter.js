@@ -230,8 +230,6 @@ async function setupBaxterOrders() {
         let misSheetData = await readSheetData('MIS-ALPHA!A1:W1000')
         const rowHeaders = misSheetData.map(a => a[1])
         const colHeaders = misSheetData[0]
-
-        const [row, col] = getStockLoc(order.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
         
         let updates = [];
         if (pendingBaxterOrders.length > 0) {
@@ -240,6 +238,8 @@ async function setupBaxterOrders() {
                 try {
                     await kiteSession.kc.cancelOrder("regular", order.order_id);
                     await sendMessageToChannel(`❎ Cancelled pending order: ${order.tradingsymbol}`);
+                    
+                    const [row, col] = getStockLoc(order.tradingsymbol, 'Symbol', rowHeaders, colHeaders)
 
                     updates.push({
                         range: 'MIS-ALPHA!' + numberToExcelColumn(col) + String(row), 
