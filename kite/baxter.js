@@ -255,12 +255,6 @@ async function setupBaxterOrders() {
             await bulkUpdateCells(updates)
         }
 
-        const completed_baxter_orders = orders.filter(order => 
-            order.tag?.includes('baxter') &&
-            !(order.status === 'TRIGGER PENDING' || order.status === 'OPEN')
-        );
-        const completed_baxter_orders_symbols = completed_baxter_orders.map(o => o.tradingsymbol);
-
         let loggingBaxterOrders = selectedStocks.map(s => {
             delete s.data
             return s
