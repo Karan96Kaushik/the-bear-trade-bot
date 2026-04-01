@@ -803,6 +803,7 @@ async function placeOrder(transactionType, orderType, price, quantity, stock, in
         order_type: orderType,
         product: "MIS",
         validity: "DAY",
+        market_protection: -1,
         tag: initiatedBy,
     };
 
