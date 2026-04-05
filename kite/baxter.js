@@ -288,18 +288,18 @@ async function setupBaxterOrders() {
                 const existingBaxterOrders = orders.filter(o => 
                     o.tradingsymbol === stock.sym && 
                     o.tag?.includes('baxter') &&
-                    (o.status === 'TRIGGER PENDING' || o.status === 'OPEN' || o.status === 'COMPLETE')
+                    (o.status === 'TRIGGER PENDING' || o.status === 'OPEN')
                 );
                 
                 if (existingBaxterOrders.length > 0) {
-                    await sendMessageToChannel('🔔 Ignoring coz existing baxter order', stock.sym);
+                    await sendMessageToChannel('🔔 Ignoring coz existing open baxter order', stock.sym);
                     continue;
                 }
                 
                 if (
-                    positions.net.find(p => p.tradingsymbol === stock.sym)
+                    positions.net.find(p => p.tradingsymbol === stock.sym && p.quantity != 0)
                 ) {
-                    await sendMessageToChannel('🔔 Ignoring coz already in position', stock.sym)
+                    await sendMessageToChannel('🔔 Ignoring coz already in position with qty > 0', stock.sym)
                     continue
                 }
                 
