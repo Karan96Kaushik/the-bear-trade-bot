@@ -402,7 +402,7 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
     }
 
     // console.log(data)
-    // console.log(data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time), t:d.time/(60*1000)})))
+    console.log('processed df:', data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
 
     // This is to remove incomplete candles; only applicable for live data
     if (interval && typeof interval == 'string' && !useCached && !isPostMarket) {
@@ -423,12 +423,14 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
             reqCandleDate = new Date(reqCandleDate)
             roundedTimeForReqCandle = reqCandleDate.getTime();
         }
-        data = data.filter(d => d.time <= roundedTimeForReqCandle)
+
+        console.log('reqCandleDate:', getDateStringIND(reqCandleDate))
+        data = data.filter(d => d.time <= reqCandleDate)
 
         if (data.length == 0 || !data[data.length - 1].close || !data[data.length - 1].open || !data[data.length - 1].high || !data[data.length - 1].low) {
             throw new Error(`No data found in the given time range`)
         }
-        if (data[data.length - 1].time < roundedTimeForReqCandle) {
+        if (data[data.length - 1].time < reqCandleDate) {
             throw new Error(`Last candle is not found`)
         }
     }

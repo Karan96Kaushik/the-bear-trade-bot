@@ -170,17 +170,17 @@ async function getRetrospective(startDate, endDate) {
         })
         .sort({ timestamp: 1 });
 
-        console.table(allOrders.map(a => {
-            return {
-                timestamp: a.timestamp,
-                tradingsymbol: a.tradingsymbol,
-                bear_status: a.bear_status,
-                quantity: a.quantity,
-                price: a.average_price || a.price,
-                order_type: a.order_type,
-                tag: a.tag
-            }
-        }))
+        // console.table(allOrders.map(a => {
+        //     return {
+        //         timestamp: a.timestamp,
+        //         tradingsymbol: a.tradingsymbol,
+        //         bear_status: a.bear_status,
+        //         quantity: a.quantity,
+        //         price: a.average_price || a.price,
+        //         order_type: a.order_type,
+        //         tag: a.tag
+        //     }
+        // }))
 
         allOrders = allOrders.filter(a => a.tradingsymbol);
         allOrders.sort((a, b) => a.tradingsymbol.localeCompare(b.tradingsymbol));
@@ -296,7 +296,7 @@ async function getTradeAnalysis(startDate, endDate) {
         
     const analysis = await calculatePnLForPairs(trades);
 
-    console.table(analysis)
+    // console.table(analysis)
 
     const initialSourceStats = () => ({
         trades: 0,
