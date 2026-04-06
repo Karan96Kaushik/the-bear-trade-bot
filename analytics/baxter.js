@@ -233,7 +233,7 @@ function clearDebugLog() {
  * 4. Candle size: ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
  * 5. Entry point: BULLISH → [0] high > [-1] high; BEARISH → [0] low < [-1] low (breakout/breakdown - The Queen)
  */
-async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCached = false, params = DEFAULT_PARAMS, direction = 'BULLISH') {
+async function scanBaxterStocks(stockList, endDateNew, interval = '3m', useCached = false, params = DEFAULT_PARAMS, direction = 'BULLISH') {
 	const selectedStocks = [];
 	const BATCH_SIZE = 5;
 
@@ -497,6 +497,19 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 		errored_stocks
 	};
 }
+
+// ;(async function testBaxterData() {
+// 	const { startDate, endDate } = getDateRange();
+					
+// 	// Fetch 15-minute data
+// 	let df = await getDataFromYahoo('INDIGO', 5, '3m', startDate, endDate);
+// 	// console.log('df before processing:', df.chart.result[0].timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
+// 	df = processYahooData(df, '3m');
+
+// 	// console.log(df)
+
+// })()
+
 
 module.exports = {
 	scanBaxterStocks,

@@ -159,11 +159,16 @@ async function getDataFromYahoo(sym='JPPOWER', days = 70, interval = '1d', start
         
         const period1 = Math.floor(period1Date.getTime() / 1000);
         const period2 = Math.floor(today.getTime() / 1000);
+
+        let useInterval = interval
+        if (interval == '3m') {
+            useInterval = '1m'
+        }
         
         const params = {
             period1,
             period2,
-            interval,
+            interval: useInterval,
             includePrePost: 'true',
             events: 'div|split|earn',
             lang: 'en-US',
@@ -333,6 +338,45 @@ async function searchUpstoxStocks(query, records = 15, pageNumber = 1) {
 
 
 
+const THREE_MIN_MS = 3 * 60 * 1000;
+const ONE_MIN_MS = 60 * 1000;
+
+/**
+ * Merge 1m OHLCV rows into 3m bars bucketed on UTC 3-minute boundaries
+ * (each bar's open time satisfies time % THREE_MIN_MS === 0).
+ * Only emits a bar when all three minutes (T, T+1m, T+2m) exist in the slice.
+ */
+function consolidate1mTo3mBackward(candles) {
+    if (!candles?.length) return candles;
+    const byBucket = new Map();
+    for (const c of candles) {
+        const bucketStart = Math.floor(c.time / THREE_MIN_MS) * THREE_MIN_MS;
+        if (!byBucket.has(bucketStart)) byBucket.set(bucketStart, []);
+        byBucket.get(bucketStart).push(c);
+    }
+    const starts = [...byBucket.keys()].sort((a, b) => a - b);
+    const out = [];
+    for (const start of starts) {
+        const group = byBucket.get(start).sort((x, y) => x.time - y.time);
+        if (group.length !== 3) continue;
+        const a = group[0];
+        const b = group[1];
+        const c = group[2];
+        if (a.time !== start || b.time !== start + ONE_MIN_MS || c.time !== start + 2 * ONE_MIN_MS) {
+            continue;
+        }
+        out.push({
+            time: a.time,
+            open: a.open,
+            high: Math.max(a.high, b.high, c.high),
+            low: Math.min(a.low, b.low, c.low),
+            close: c.close,
+            volume: (a.volume ?? 0) + (b.volume ?? 0) + (c.volume ?? 0),
+        });
+    }
+    return out;
+}
+
 /**
  * Process Yahoo Finance data into an ordered array of OHLCV objects
  * @param {Object} yahooData - The raw data from Yahoo Finance
@@ -352,6 +396,13 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
         close: quote.close[index],
         volume: quote.volume[index]
     }));
+
+    if (interval === '3m') {
+        data = consolidate1mTo3mBackward(data);
+    }
+
+    console.log(data)
+    console.log(data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time), t:d.time/(60*1000)})))
 
     // This is to remove incomplete candles; only applicable for live data
     if (interval && typeof interval == 'string' && !useCached && !isPostMarket) {
