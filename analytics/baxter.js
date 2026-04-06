@@ -262,7 +262,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '3m', useCache
 				// console.log('df before processing:', df.chart.result[0].timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
 				df = processYahooData(df, interval, useCached);
 
-				// console.log('df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
+				console.log('scanning df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
 
 				const resolution = parseInt(interval)
 				// let df = await getDataFromMoneycontrol(sym, startDate, endDate, resolution, useCached);

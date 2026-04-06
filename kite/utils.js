@@ -401,8 +401,8 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
         data = consolidate1mTo3mBackward(data);
     }
 
-    console.log(data)
-    console.log(data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time), t:d.time/(60*1000)})))
+    // console.log(data)
+    // console.log(data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time), t:d.time/(60*1000)})))
 
     // This is to remove incomplete candles; only applicable for live data
     if (interval && typeof interval == 'string' && !useCached && !isPostMarket) {
