@@ -402,7 +402,7 @@ function processYahooData(yahooData, interval, useCached, isPostMarket = false) 
     }
 
     // console.log(data)
-    console.log('processed df:', data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
+    // console.log('processed df:', data.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
 
     // This is to remove incomplete candles; only applicable for live data
     if (interval && typeof interval == 'string' && !useCached && !isPostMarket) {

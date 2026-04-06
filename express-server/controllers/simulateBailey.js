@@ -99,9 +99,6 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             singleDate = true;
         }
 
-        singleDate = false
-
-
         // Iterate through each day
         while (currentDate <= finalEndDate) {
             // Update current date in job status
@@ -241,6 +238,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                     data: yahooData,
                                     actions: sim.tradeActions,
                                     exitTime: sim.exitTime || null,
+                                    exitReason: sim.exitReason || null,
                                     triggerPrice: triggerPrice,
                                     targetPrice: targetPrice,
                                     stopLossPrice: stopLossPrice
@@ -281,14 +279,23 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
             // console.log(traded.map(t => [t.placedAt, t.exitTime]))
     
             if (simulation.reEnterPosition) {
-                filTraded = traded.filter(t => (singleDate && !t.pnl) ||    // Show cancelled trades if it's a single day simulation
-                                                // Remove trades that were started before an active trade
-                                                !traded.find(t1 => (
-                                                    (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && 
-                                                    (t.sym == t1.sym) && 
-                                                    (+t1.placedAt < +t.exitTime)
-                                                ))
-                                        )
+                filTraded = traded.filter(t => {
+                    if (
+                        singleDate &&
+                        (!t.startedAt ||
+                            (t.exitReason && String(t.exitReason).includes('cancelled')))
+                    ) {
+                        return true;
+                    }
+                    const earlierOpenUntil = (t1) =>
+                        t1.exitTime != null ? +t1.exitTime : Number.POSITIVE_INFINITY;
+                    return !traded.find(
+                        (t1) =>
+                            (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) &&
+                            t.sym == t1.sym &&
+                            +t.placedAt < earlierOpenUntil(t1)
+                    );
+                });
             }
             else {
                 filTraded = traded.filter(t => !traded.find(t1 => ((t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && (t.sym == t1.sym))))

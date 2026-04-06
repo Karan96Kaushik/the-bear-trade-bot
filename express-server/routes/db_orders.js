@@ -113,8 +113,8 @@ router.get('/sl-progression', async (req, res) => {
         endDate.setDate(endDate.getDate() + 1);
         const results = await getSLProgression(startDate, endDate);
 
-        console.log('SL Progression');
-        console.log(results);
+        // console.log('SL Progression');
+        // console.log(results);
 
         res.json(results);
     } catch (error) {

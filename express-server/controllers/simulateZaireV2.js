@@ -320,6 +320,7 @@ class StockProcessor {
                 data: yahooData,
                 actions: sim.tradeActions,
                 exitTime: sim.exitTime || null,
+                exitReason: sim.exitReason || null,
                 triggerPrice,
                 targetPrice,
                 stopLossPrice
@@ -380,7 +381,12 @@ class TradeFilter {
     static filterWithReEntry(trades, singleDate) {
         return trades.filter(trade => {
             // Show cancelled trades for single day simulations
-            if (singleDate && !trade.pnl) {
+            if (
+                singleDate &&
+                (!trade.startedAt ||
+                    (trade.exitReason &&
+                        String(trade.exitReason).includes('cancelled')))
+            ) {
                 return true;
             }
 
@@ -391,7 +397,11 @@ class TradeFilter {
                     +otherTrade.placedAt < +trade.placedAt;
                 
                 const isSameSymbol = trade.sym === otherTrade.sym;
-                const isOverlapping = +otherTrade.placedAt < +trade.exitTime;
+                const earlierOpenUntil =
+                    otherTrade.exitTime != null
+                        ? +otherTrade.exitTime
+                        : Number.POSITIVE_INFINITY;
+                const isOverlapping = +trade.placedAt < earlierOpenUntil;
 
                 return isEarlierTrade && isSameSymbol && isOverlapping;
             });
