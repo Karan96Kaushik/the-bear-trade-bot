@@ -1034,9 +1034,9 @@ const scheduleMISJobs = () => {
             };
             // First run at 3:54 AM, then every 3 minutes during trading hours
             // Cancels all pending orders before creating new ones
-            const baxterJob = schedule.scheduleJob('15 54,57 3 * * 1-5', baxterJobCB);
-            const baxterJob_2 = schedule.scheduleJob('15 */3 4,5,6,7,8 * * 1-5', baxterJobCB);
-            const baxterJob_3 = schedule.scheduleJob('15 0-30/3 9 * * 1-5', baxterJobCB);
+            const baxterJob = schedule.scheduleJob('25 54,57 3 * * 1-5', baxterJobCB);
+            const baxterJob_2 = schedule.scheduleJob('25 */3 4,5,6,7,8 * * 1-5', baxterJobCB);
+            const baxterJob_3 = schedule.scheduleJob('25 0-30/3 9 * * 1-5', baxterJobCB);
             sendMessageToChannel('⏰ Baxter Setup Scheduled - ', getDateStringIND(getEarliestTime(baxterJob, baxterJob_2, baxterJob_3)));
         }
 
