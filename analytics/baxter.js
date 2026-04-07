@@ -457,13 +457,13 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '3m', useCache
 					time: getDateStringIND(currentCandle.time),
 					direction: resultDirection,
 					sma: currentCandle.sma,
-					previousCandle: {
-						open: previousCandle.open,
-						close: previousCandle.close,
-						high: previousCandle.high,
-						low: previousCandle.low,
-						sma: previousCandle.sma
-					}
+					// previousCandle: {
+					// 	open: previousCandle.open,
+					// 	close: previousCandle.close,
+					// 	high: previousCandle.high,
+					// 	low: previousCandle.low,
+					// 	sma: previousCandle.sma
+					// }
 				};
 			} catch (error) {
 				if (DEBUG) console.error(`Error processing ${sym}:`, error);
