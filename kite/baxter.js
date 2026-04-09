@@ -25,9 +25,9 @@ const path = require('path');
 const BAXTER_RISK_AMOUNT = 200;
 const CANCEL_AFTER_MINUTES = 10;
 const MAX_ACTIVE_ORDERS = 5;
-const UPDATE_SL_INTERVAL = 15;
+const UPDATE_SL_INTERVAL = 30;
 /** Lookback minutes for trailing SL when SL Interval column is missing/invalid. */
-const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = 15;
+const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = 30;
 /** Minimum minutes between SL revisions when Revise SL column is missing/invalid. */
 const DEFAULT_TRAILING_SL_FREQUENCY_MINUTES = 5;
 const ENABLE_ORDER_DEBUG_LOGGER = process.env.ENABLE_ORDER_DEBUG_LOGGER || true;
