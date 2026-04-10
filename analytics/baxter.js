@@ -284,7 +284,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				}
 
 				// Add 44-period SMA
-				df = addMovingAverage(df, 'close', params.MA_WINDOW, 'sma');
+				df = addMovingAverage(df, 'close', Number(params.MA_WINDOW), 'sma');
 				df = df.filter(r => r.close);
 				
 				// Get current and previous candles
@@ -364,8 +364,8 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					return null;
 				}
 				
-				const lowBound = currentCandle.low * (1 - params.TOUCHING_SMA_TOLERANCE);
-				const highBound = currentCandle.high * (1 + params.TOUCHING_SMA_TOLERANCE);
+				const lowBound = currentCandle.low * (1 - Number(params.TOUCHING_SMA_TOLERANCE));
+				const highBound = currentCandle.high * (1 + Number(params.TOUCHING_SMA_TOLERANCE));
 				const isTouchingSma = lowBound <= currentSma && highBound >= currentSma;
 				
 				if (!isTouchingSma) {
@@ -394,7 +394,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				// ([0] high - [0] low) <= ([0] high + [0] low) / 2 * 0.0046
 				const currentRange = currentCandle.high - currentCandle.low;
 				const currentAvgPrice = (currentCandle.high + currentCandle.low) / 2;
-				const maxAllowedRange = currentAvgPrice * params.NARROW_RANGE_TOLERANCE;
+				const maxAllowedRange = currentAvgPrice * Number(params.NARROW_RANGE_TOLERANCE);
 				const isNarrowRange = currentRange <= maxAllowedRange;
 				
 				if (!isNarrowRange) {
