@@ -258,7 +258,7 @@ async function setupBaxterOrders() {
 
         let loggingBaxterOrders = selectedStocks.map(s => {
             delete s.data
-            return s
+            return s.display || s
         })
 
         sendMessageToChannel(`🔔 Baxter MIS Stocks: `, loggingBaxterOrders);

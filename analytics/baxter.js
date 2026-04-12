@@ -286,10 +286,11 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				// Add 44-period SMA
 				df = addMovingAverage(df, 'close', Number(params.MA_WINDOW), 'sma');
 				df = df.filter(r => r.close);
-				
+
 				// Get current and previous candles
 				const currentCandle = df[df.length - 1];  // [0] - The Queen
-				const previousCandle = df[df.length - 2]; // [-1]
+				const t1Candle = df[df.length - 2]; // [-1]
+				const t2Candle = df[df.length - 3]; // [-2]
 				
 				const timestamp = getDateStringIND(currentCandle.time);
 				
@@ -457,6 +458,23 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					time: getDateStringIND(currentCandle.time),
 					direction: resultDirection,
 					sma: currentCandle.sma,
+					data: {
+						currentCandle: currentCandle,
+						volRatio: currentCandle.volume / avgVol,
+						t1Candle: t1Candle,
+						t2Candle: t2Candle,
+						avgVol: avgVol,
+					},
+					display:{
+						sym,
+						open: currentCandle.open,
+						close: currentCandle.close,
+						high: currentCandle.high,
+						low: currentCandle.low,
+						time: getDateStringIND(currentCandle.time),
+						direction: resultDirection,
+						sma: currentCandle.sma,
+					}
 					// previousCandle: {
 					// 	open: previousCandle.open,
 					// 	close: previousCandle.close,
