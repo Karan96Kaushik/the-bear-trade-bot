@@ -460,10 +460,10 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					sma: currentCandle.sma,
 					data: {
 						currentCandle: currentCandle,
-						volRatio: currentCandle.volume / avgVol,
+						// volRatio: currentCandle.volume / avgVol,
 						t1Candle: t1Candle,
 						t2Candle: t2Candle,
-						avgVol: avgVol,
+						// avgVol: avgVol,
 					},
 					display:{
 						sym,
