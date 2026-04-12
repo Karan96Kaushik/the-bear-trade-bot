@@ -244,13 +244,13 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
                                     if (direction === 'BULLISH') {
                                         triggerPrice = stock.high + triggerPadding; // Buy above The Queen's high
-                                        stopLossPrice = stock.low - triggerPadding; // The Knight - initial SL
-                                        targetPrice = stock.high + (stock.high - stock.low) * 5 + triggerPadding;
+                                        stopLossPrice = stock.low - (candleLength * (stopLossMultiplier - 1)) - triggerPadding; // The Knight - initial SL
+                                        targetPrice = stock.high + (stock.high - stock.low) * targetMultiplier + triggerPadding;
                                     } else {
                                         // BEARISH: short below The Queen's low, SL above high
                                         triggerPrice = stock.low - triggerPadding;
-                                        stopLossPrice = stock.high + triggerPadding;
-                                        targetPrice = stock.low - (stock.high - stock.low) * 5 - triggerPadding;
+                                        stopLossPrice = stock.high + (candleLength * (stopLossMultiplier - 1)) + triggerPadding;
+                                        targetPrice = stock.low - (stock.high - stock.low) * targetMultiplier - triggerPadding;
                                     }
 
                                     triggerPrice = Math.round(triggerPrice * 10) / 10;
@@ -294,7 +294,8 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                             exitReason: sim.exitReason || null,
                                             triggerPrice: triggerPrice,
                                             targetPrice: targetPrice,
-                                            stopLossPrice: stopLossPrice
+                                            stopLossPrice: stopLossPrice,
+                                            scanData: stock.data || null
                                         };
                                     }
                                     return null;
@@ -393,12 +394,12 @@ const checkIfMarketClosed = (date) => {
     const year = date.getFullYear();
 
     const marketClosed = [
-        {day: 18, month: 4}, // April 18, 2025
-        {day: 14, month: 4}, // April 14, 2025
-        {day: 10, month: 4}, // April 10, 2025
-        {day: 1, month: 5}, // May 01, 2025
-        {day: 15, month: 8}, // August 15, 2025 
-        {day: 27, month: 8}, // August 27, 2025 
+        // {day: 18, month: 4}, // April 18, 2025
+        // {day: 14, month: 4}, // April 14, 2025
+        // {day: 10, month: 4}, // April 10, 2025
+        // {day: 1, month: 5}, // May 01, 2025
+        // {day: 15, month: 8}, // August 15, 2025 
+        // {day: 27, month: 8}, // August 27, 2025 
     ]
     
     return marketClosed.find(m => m.day == day && m.month == month);
