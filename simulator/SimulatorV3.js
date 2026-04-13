@@ -272,6 +272,7 @@ class Simulator {
                     time > +this.orderTime
                 ) {
                     this.exitReason = EXIT_REASONS.CANCELLED_LTP_BELOW_KNIGHT;
+                    this.exitTime = time;
                     this.logAction(
                         time,
                         TRADE_ACTIONS.CANCELLED_LTP_BELOW_KNIGHT,
@@ -289,6 +290,7 @@ class Simulator {
                     openTriggerOrder
                 ) {
                     this.exitReason = EXIT_REASONS.CANCELLED;
+                    this.exitTime = time;
                     this.logAction(time, TRADE_ACTIONS.CANCELLED, 0);
                     openTriggerOrder = false;
                     break;

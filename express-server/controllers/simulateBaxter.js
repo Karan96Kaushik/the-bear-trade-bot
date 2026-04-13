@@ -8,6 +8,8 @@ const { logSimulationResult } = require("../../analytics/baxterLogger")
 
 const RISK_AMOUNT = 200;
 
+const fs = require('fs');
+
 // Store ongoing simulations
 const simulationJobs = new Map();
 
@@ -121,7 +123,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
         if (currentDate.toISOString() == finalEndDate.toISOString()) {
             singleDate = true;
         }
-        singleDate = false;
+        // singleDate = false;
 
         // Iterate through each day
         while (currentDate <= finalEndDate) {
@@ -342,27 +344,42 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                 dayStartTime = new Date(dayStartTime.getTime() + INTERVAL_MINUTES * 60 * 1000)
             }
 
-            console.table(traded.map(t => ({sym: t.sym, pnl: t.pnl, placedAt: getDateStringIND(t.placedAt), placedAtUk: t.placedAt, startedAt: t.startedAt})))
+            console.table(traded.map(t => ({
+                sym: t.sym, 
+                pnl: t.pnl, 
+                placedAt: getDateStringIND(t.placedAt), 
+                // placedAtUk: t.placedAt, 
+                startedAt: t.startedAt ? getDateStringIND(new Date(t.startedAt)) : null,
+                exitTime: getDateStringIND(t.exitTime)
+            })))
 
             let filTraded = []
+
+            // If single date, don't filter out cancelled trades
+            let filterOutCancelled = singleDate ? false : true;
+
+            fs.writeFileSync('baxter-traded.json', JSON.stringify(traded,null,4))
+
     
             if (simulation.reEnterPosition) {
                 filTraded = traded.filter(t => {
                     if (
-                        singleDate &&
+                        filterOutCancelled &&
                         (!t.startedAt ||
-                            (t.exitReason && String(t.exitReason).includes('cancelled')))
+                            (t.exitReason && String(t.exitReason).includes('cancel')))
                     ) {
-                        return true;
+                        return false;
                     }
-                    const earlierOpenUntil = (t1) =>
-                        t1.exitTime != null ? +t1.exitTime : Number.POSITIVE_INFINITY;
-                    return !traded.find(
-                        (t1) =>
-                            (t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) &&
-                            t.sym == t1.sym &&
-                            +t.placedAt < earlierOpenUntil(t1)
+                    const surroundingTrade = traded.find(
+                        (ot) =>
+                            ot.sym == t.sym &&
+                            +new Date(ot.placedAt) < +new Date(t.placedAt) &&
+                            +ot.exitTime > +new Date(t.placedAt)
                     );
+                    // console.log(t.placedAt, surroundingTrade.placedAt, surroundingTrade.exitTime, +t.placedAt)
+                    // if (surroundingTrade)
+                    //     console.log('surroundingTrade', surroundingTrade.sym, getDateStringIND(new Date(t.placedAt)), '-', getDateStringIND(new Date(surroundingTrade.placedAt)), getDateStringIND(new Date(surroundingTrade.exitTime)))
+                    return !surroundingTrade;
                 });
             }
             else {
