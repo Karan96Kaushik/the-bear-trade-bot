@@ -302,18 +302,23 @@ async function setupBaxterOrders() {
                     continue;
                 }
 
-                // Check for completed triggers in the past 2 hours
-                const completedBaxterTriggerOrders = orders.filter(o => 
-                    o.tradingsymbol === stock.sym && 
-                    o.tag?.includes('baxter') && 
-                    o.tag?.includes('trigger') && 
-                    o.status === 'COMPLETE' &&
-                    getUtcFromIST(o.order_timestamp) > new Date(Date.now() - HOURS_TO_CHECK_COMPLETED_TRIGGERS * 60 * 60 * 1000)
-                );
-                
-                if (completedBaxterTriggerOrders.length > MAX_COMPLETED_TRIGGERS) {
-                    await sendMessageToChannel('🔔 Ignoring coz completed trigger order in the past 2 hours are more than ' + MAX_COMPLETED_TRIGGERS, stock.sym);
-                    continue;
+                try {
+                    // Check for completed triggers in the past 2 hours
+                    const completedBaxterTriggerOrders = orders.filter(o => 
+                        o.tradingsymbol === stock.sym && 
+                        o.tag?.includes('baxter') && 
+                        o.tag?.includes('trigger') && 
+                        o.status === 'COMPLETE' &&
+                        getUtcFromIST(o.order_timestamp) > new Date(Date.now() - HOURS_TO_CHECK_COMPLETED_TRIGGERS * 60 * 60 * 1000)
+                    );
+                    
+                    if (completedBaxterTriggerOrders.length > MAX_COMPLETED_TRIGGERS) {
+                        await sendMessageToChannel('🔔 Ignoring coz completed trigger order in the past 2 hours are more than ' + MAX_COMPLETED_TRIGGERS, stock.sym);
+                        continue;
+                    }
+
+                } catch (error) {
+                    await sendMessageToChannel('🚨 Error checking completed triggers', stock.sym, error?.message);
                 }
 
                 if (
