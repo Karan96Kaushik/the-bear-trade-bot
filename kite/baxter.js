@@ -33,6 +33,8 @@ const DEFAULT_TRAILING_SL_FREQUENCY_MINUTES = 5;
 const ENABLE_ORDER_DEBUG_LOGGER = process.env.ENABLE_ORDER_DEBUG_LOGGER || true;
 const TERMINAL_STATUSES = ['COMPLETE', 'REJECTED', 'CANCELLED'];
 const FAILED_STATUSES = ['REJECTED', 'CANCELLED'];
+const MAX_COMPLETED_TRIGGERS = 2;
+const HOURS_TO_CHECK_COMPLETED_TRIGGERS = 2;
 
 let orderDebugLogData = [];
 
@@ -120,6 +122,10 @@ function logOrderDebug(eventType, sym, details = {}) {
     };
     
     orderDebugLogData.push(logEntry);
+}
+
+function getUtcFromIST(istTimestamp) {
+    return new Date(new Date(istTimestamp).getTime() - 5.5 * 60 * 60 * 1000);
 }
 
 function writeOrderDebugLogToCSV(filename = 'baxter_orders_debug.csv') {
@@ -295,7 +301,21 @@ async function setupBaxterOrders() {
                     await sendMessageToChannel('🔔 Ignoring coz existing open baxter order', stock.sym);
                     continue;
                 }
+
+                // Check for completed triggers in the past 2 hours
+                const completedBaxterTriggerOrders = orders.filter(o => 
+                    o.tradingsymbol === stock.sym && 
+                    o.tag?.includes('baxter') && 
+                    o.tag?.includes('trigger') && 
+                    o.status === 'COMPLETE' &&
+                    getUtcFromIST(o.order_timestamp) > new Date(Date.now() - HOURS_TO_CHECK_COMPLETED_TRIGGERS * 60 * 60 * 1000)
+                );
                 
+                if (completedBaxterTriggerOrders.length > MAX_COMPLETED_TRIGGERS) {
+                    await sendMessageToChannel('🔔 Ignoring coz completed trigger order in the past 2 hours are more than ' + MAX_COMPLETED_TRIGGERS, stock.sym);
+                    continue;
+                }
+
                 if (
                     positions.net.find(p => p.tradingsymbol === stock.sym && p.quantity != 0)
                 ) {
