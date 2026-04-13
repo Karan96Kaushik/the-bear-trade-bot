@@ -216,8 +216,10 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                                     startDate.setUTCHours(3, 0, 0, 0);
 
                                     // Fetch 5m data for precise execution monitoring
-                                    let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
-                                    yahooData = processGrowwData(yahooData);
+                                    // let yahooData = await getGrowwChartData(stock.sym, startDate, endDate, 1, true);
+                                    // yahooData = processGrowwData(yahooData);
+                                    let yahooData = await getDataFromYahoo(stock.sym, 6, '1m', startDate, endDate, true);
+                                    yahooData = processYahooData(yahooData, '1m', true);
 
                                     // Skip IRB - bad data issue in Groww
                                     if (stock.sym == 'IRB') {
@@ -362,7 +364,7 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
 
     
             if (simulation.reEnterPosition) {
-                filTraded = traded.filter(t => {
+                const eligible = traded.filter((t) => {
                     if (
                         filterOutCancelled &&
                         (!t.startedAt ||
@@ -370,17 +372,44 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                     ) {
                         return false;
                     }
-                    const surroundingTrade = traded.find(
-                        (ot) =>
-                            ot.sym == t.sym &&
-                            +new Date(ot.placedAt) < +new Date(t.placedAt) &&
-                            +ot.exitTime > +new Date(t.placedAt)
-                    );
-                    // console.log(t.placedAt, surroundingTrade.placedAt, surroundingTrade.exitTime, +t.placedAt)
-                    // if (surroundingTrade)
-                    //     console.log('surroundingTrade', surroundingTrade.sym, getDateStringIND(new Date(t.placedAt)), '-', getDateStringIND(new Date(surroundingTrade.placedAt)), getDateStringIND(new Date(surroundingTrade.exitTime)))
-                    return !surroundingTrade;
+                    return true;
                 });
+                const bySym = new Map();
+                for (const t of eligible) {
+                    if (!bySym.has(t.sym)) bySym.set(t.sym, []);
+                    bySym.get(t.sym).push(t);
+                }
+                filTraded = [];
+                for (const arr of bySym.values()) {
+                    arr.sort((a, b) => +new Date(a.placedAt) - +new Date(b.placedAt));
+                    const openStack = [];
+                    for (const t of arr) {
+                        const placed = +new Date(t.placedAt);
+                        while (
+                            openStack.length &&
+                            +openStack[openStack.length - 1].exitTime <= placed
+                        ) {
+                            openStack.pop();
+                        }
+                        const surroundingTrade = openStack[openStack.length - 1];
+                        if (surroundingTrade) {
+                            console.log(
+                                'surroundingTrade',
+                                surroundingTrade.sym,
+                                getDateStringIND(new Date(t.placedAt)),
+                                '-',
+                                getDateStringIND(new Date(surroundingTrade.placedAt)),
+                                getDateStringIND(new Date(surroundingTrade.exitTime))
+                            );
+                            continue;
+                        }
+                        openStack.push(t);
+                        filTraded.push(t);
+                    }
+                }
+                filTraded.sort(
+                    (a, b) => +new Date(a.placedAt) - +new Date(b.placedAt)
+                );
             }
             else {
                 filTraded = traded.filter(t => !traded.find(t1 => ((t1.startedAt < t.startedAt || +t1.placedAt < +t.placedAt) && (t.sym == t1.sym))))
