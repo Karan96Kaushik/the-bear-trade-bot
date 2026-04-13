@@ -69,6 +69,7 @@ const calculatePnLForPairs = async (data) => {
                 pnlResults.push({
                     symbol,
                     entryTime: entryTrade._timestamp,
+                    entryTimeIST: entryTrade.timestamp,
                     exitTime: exitTrade._timestamp,
                     quantity: entryTrade.quantity,
                     entryPrice: entryTrade.price,
@@ -86,6 +87,7 @@ const calculatePnLForPairs = async (data) => {
                 pnlResults.push({
                     symbol,
                     entryTime: entryTrade._timestamp,
+                    entryTimeIST: entryTrade.timestamp,
                     exitTime: null,
                     quantity: entryTrade.quantity,
                     entryPrice: entryTrade.price,
