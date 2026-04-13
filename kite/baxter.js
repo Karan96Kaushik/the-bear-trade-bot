@@ -9,9 +9,9 @@ const {
     getOrderLoc, processMISSheetData, appendRowsToMISD, processSheetWithHeaders
 } = require("../gsheets");
 const { sendMessageToChannel } = require("../slack-actions")
-const { getDataFromYahoo, processYahooData, calculateExtremePrice } = require('../kite/utils');
+// const { getDataFromYahoo, processYahooData, calculateExtremePrice } = require('../kite/utils');
 const { scanBaxterStocks } = require("../analytics/baxter");
-const { getDateStringIND } = require('../kite/utils');
+const { getDateStringIND, getUtcFromIST } = require('../kite/utils');
 const { 
     getLTPWithRetry, readSheetDataWithRetry, authenticateWithRetry,
     validatePrices, validateCircuitLimits, isDataStale, getDataAge,
@@ -33,6 +33,8 @@ const DEFAULT_TRAILING_SL_FREQUENCY_MINUTES = 5;
 const ENABLE_ORDER_DEBUG_LOGGER = process.env.ENABLE_ORDER_DEBUG_LOGGER || true;
 const TERMINAL_STATUSES = ['COMPLETE', 'REJECTED', 'CANCELLED'];
 const FAILED_STATUSES = ['REJECTED', 'CANCELLED'];
+
+// Limit for reentry
 const MAX_COMPLETED_TRIGGERS = 2;
 const HOURS_TO_CHECK_COMPLETED_TRIGGERS = 2;
 
@@ -122,10 +124,6 @@ function logOrderDebug(eventType, sym, details = {}) {
     };
     
     orderDebugLogData.push(logEntry);
-}
-
-function getUtcFromIST(istTimestamp) {
-    return new Date(new Date(istTimestamp).getTime() - 5.5 * 60 * 60 * 1000);
 }
 
 function writeOrderDebugLogToCSV(filename = 'baxter_orders_debug.csv') {
@@ -312,8 +310,8 @@ async function setupBaxterOrders() {
                         getUtcFromIST(o.order_timestamp) > new Date(Date.now() - HOURS_TO_CHECK_COMPLETED_TRIGGERS * 60 * 60 * 1000)
                     );
                     
-                    if (completedBaxterTriggerOrders.length > MAX_COMPLETED_TRIGGERS) {
-                        await sendMessageToChannel('🔔 Ignoring coz completed trigger order in the past 2 hours are more than ' + MAX_COMPLETED_TRIGGERS, stock.sym);
+                    if (completedBaxterTriggerOrders.length >= MAX_COMPLETED_TRIGGERS) {
+                        await sendMessageToChannel('🔔 Ignoring coz completed trigger order in the past 2 hours are eq/more than ' + MAX_COMPLETED_TRIGGERS, stock.sym);
                         continue;
                     }
 

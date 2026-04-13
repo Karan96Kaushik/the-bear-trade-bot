@@ -15,6 +15,10 @@ const getDateStringIND = (date) => {
     return date[0] + ' ' + date[1].split('.')[0]
 }
 
+const getUtcFromIST = (istTimestamp) => {
+    return new Date(new Date(istTimestamp).getTime() - IND_OFFSET)
+}
+
 let redis = null
 
 let kiteSession = null
@@ -879,5 +883,6 @@ module.exports = {
     memoize,
     skipBackDateHolidays,
     calculateExtremePrice,
-    zeroToXMinsStr
+    zeroToXMinsStr,
+    getUtcFromIST
 };
