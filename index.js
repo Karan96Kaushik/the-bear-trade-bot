@@ -59,7 +59,6 @@ const run = async () => {
 			// console.log(positions.net)//.filter(p => p.product == 'MIS')) //.filter(p => p.tradingsymbol == 'RELIANCE'))
 
 			// const orders = await kiteSession.kc.getOrders()
-			// console.log(orders)
 
 			// const symbol = 'RELIANCE'
 			// const sym = `NSE:${symbol}`

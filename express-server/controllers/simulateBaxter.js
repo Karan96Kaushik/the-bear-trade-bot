@@ -393,14 +393,14 @@ const simulate = async (startdate, enddate, symbol, simulation, jobId, selection
                         }
                         const surroundingTrade = openStack[openStack.length - 1];
                         if (surroundingTrade) {
-                            console.log(
-                                'surroundingTrade',
-                                surroundingTrade.sym,
-                                getDateStringIND(new Date(t.placedAt)),
-                                '-',
-                                getDateStringIND(new Date(surroundingTrade.placedAt)),
-                                getDateStringIND(new Date(surroundingTrade.exitTime))
-                            );
+                            // console.log(
+                            //     'surroundingTrade',
+                            //     surroundingTrade.sym,
+                            //     getDateStringIND(new Date(t.placedAt)),
+                            //     '-',
+                            //     getDateStringIND(new Date(surroundingTrade.placedAt)),
+                            //     getDateStringIND(new Date(surroundingTrade.exitTime))
+                            // );
                             continue;
                         }
                         openStack.push(t);
