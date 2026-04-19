@@ -51,6 +51,10 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 			candleRange: '',
 			maxAllowedRange: '',
 			breakout: '',
+			vwapUpper: '',
+			vwapLower: '',
+			isVWAPAboveUpper: '',
+			isVWAPBelowLower: '',
 			allConditionsPassed: 'NO'
 		});
 	}
@@ -73,6 +77,10 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 	if (details.highBound) entry.smaHighBound = details.highBound;
 	if (details.candleRange) entry.candleRange = details.candleRange;
 	if (details.maxAllowedRange) entry.maxAllowedRange = details.maxAllowedRange;
+	if (details.vwapUpper) entry.vwapUpper = details.vwapUpper;
+	if (details.vwapLower) entry.vwapLower = details.vwapLower;
+	if (details.isVWAPAboveUpper) entry.isVWAPAboveUpper = details.isVWAPAboveUpper;
+	if (details.isVWAPBelowLower) entry.isVWAPBelowLower = details.isVWAPBelowLower;
 	
 	switch(condition) {
 		case 'DATA_FETCH':
@@ -183,6 +191,10 @@ function writeDebugLogToCSV(filename = 'baxter_debug.csv') {
 		'candleRange',
 		'maxAllowedRange',
 		'breakout',
+		'vwapUpper',
+		'vwapLower',
+		'isVWAPAboveUpper',
+		'isVWAPBelowLower',
 		'allConditionsPassed',
 		'failedCondition',
 		'failedReason'
@@ -219,6 +231,69 @@ function writeDebugLogToCSV(filename = 'baxter_debug.csv') {
  */
 function clearDebugLog() {
 	debugLogData.clear();
+}
+
+function getIndianSessionDate(time) {
+	if (!time) return null;
+	return getDateStringIND(time).split(' ')[0];
+}
+
+function calculateVWAP(
+	df,
+	priceColumn = 'hlc3',
+	volumeColumn = 'volume',
+	outputColumn = 'vwap',
+	stdDevMultiplier = 1
+) {
+	let cumulativePriceVolume = 0;
+	let cumulativePriceSquaredVolume = 0;
+	let cumulativeVolume = 0;
+	let currentSession = null;
+
+	return df.map((row) => {
+		const session = getIndianSessionDate(row?.time);
+
+		if (session !== currentSession) {
+			currentSession = session;
+			cumulativePriceVolume = 0;
+			cumulativePriceSquaredVolume = 0;
+			cumulativeVolume = 0;
+		}
+
+		const volume = Number(row?.[volumeColumn] ?? 0);
+		const fallbackPrice = (Number(row?.high ?? 0) + Number(row?.low ?? 0) + Number(row?.close ?? 0)) / 3;
+
+		let rawPrice = null;
+		if (priceColumn === 'hlc3') {
+			rawPrice = (Number(row?.high ?? 0) + Number(row?.low ?? 0) + Number(row?.close ?? 0)) / 3;
+			row.hlc3 = rawPrice;
+		}
+		else {
+			rawPrice = row?.[priceColumn];
+		}
+		const price = Number.isFinite(Number(rawPrice)) ? Number(rawPrice) : fallbackPrice;
+
+		if (Number.isFinite(volume) && Number.isFinite(price) && volume > 0) {
+			cumulativePriceVolume += price * volume;
+			cumulativePriceSquaredVolume += (price * price) * volume;
+			cumulativeVolume += volume;
+		}
+
+		const vwap = cumulativeVolume > 0 ? cumulativePriceVolume / cumulativeVolume : null;
+		const weightedMeanSquare = cumulativeVolume > 0 ? cumulativePriceSquaredVolume / cumulativeVolume : null;
+		const variance = vwap != null && weightedMeanSquare != null
+			? Math.max(weightedMeanSquare - (vwap * vwap), 0)
+			: null;
+		const stdDev = variance != null ? Math.sqrt(variance) : null;
+		const bandDistance = stdDev != null ? stdDev * Number(stdDevMultiplier) : null;
+
+		return {
+			...row,
+			[outputColumn]: vwap,
+			[`${outputColumn}_upper`]: vwap != null && bandDistance != null ? vwap + bandDistance : null,
+			[`${outputColumn}_lower`]: vwap != null && bandDistance != null ? vwap - bandDistance : null
+		};
+	});
 }
 
 /**
@@ -283,9 +358,24 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					return null;
 				}
 
-				// Add 44-period SMA
+				// Add SMA
 				df = addMovingAverage(df, 'close', Number(params.MA_WINDOW), 'sma');
 				df = df.filter(r => r.close);
+
+				// Add VWAP to df
+				df = calculateVWAP(df, 'hlc3', 'volume');
+				if (DEBUG) {
+					console.table(
+						df.slice(-5).map((r) => ({
+							time: getDateStringIND(r.time),
+							hlc3: r.hlc3,
+							volume: r.volume,
+							vwap: r.vwap != null ? Number(r.vwap.toFixed(4)) : null,
+							vwap_upper: r.vwap_upper != null ? Number(r.vwap_upper.toFixed(4)) : null,
+							vwap_lower: r.vwap_lower != null ? Number(r.vwap_lower.toFixed(4)) : null,
+						}))
+					);
+				}
 
 				// Get current and previous candles
 				const currentCandle = df[df.length - 1];  // [0] - The Queen
@@ -418,6 +508,37 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					notes: `Range ${currentRange.toFixed(2)} <= Max ${maxAllowedRange.toFixed(2)}`
 				});
 
+				// Condition 6: VWAP condition above upper or below lower
+				const vwapUpper = currentCandle.vwap_upper;
+				const vwapLower = currentCandle.vwap_lower;
+				const isVWAPAboveUpper = currentCandle.close > vwapUpper;
+				const isVWAPBelowLower = currentCandle.close < vwapLower;
+				if (isVWAPAboveUpper) {
+					conditionName = 'BEARISH';
+				}
+				else if (isVWAPBelowLower) {
+					conditionName = 'BULLISH';
+				}
+				else {
+					if (DEBUG) console.log(`VWAP not above upper or below lower ${vwapUpper} and ${vwapLower} for`, sym);
+					logStockDebug(sym, timestamp, 'VWAP', 'FAILED', {
+						vwapUpper: vwapUpper,
+						vwapLower: vwapLower,
+						isVWAPAboveUpper: isVWAPAboveUpper,
+						isVWAPBelowLower: isVWAPBelowLower,
+						notes: `VWAP ${currentCandle.close.toFixed(2)} is between ${vwapUpper.toFixed(2)} and ${vwapLower.toFixed(2)}`
+					});
+					return null;
+				}
+
+				logStockDebug(sym, timestamp, 'VWAP', 'PASSED', {
+					vwapUpper: vwapUpper,
+					vwapLower: vwapLower,
+					isVWAPAboveUpper: isVWAPAboveUpper,
+					isVWAPBelowLower: isVWAPBelowLower,
+					notes: `VWAP ${currentCandle.close.toFixed(2)} between ${vwapUpper.toFixed(2)} and ${vwapLower.toFixed(2)}`
+				});
+
 				// Condition 5: Breakout (bullish) or breakdown (bearish)
 				// const hasBreakout = isBullishMode
 				// 	? currentCandle.high > previousCandle.high
@@ -516,18 +637,54 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 	};
 }
 
-// ;(async function testBaxterData() {
-// 	const { startDate, endDate } = getDateRange();
-					
-// 	// Fetch 15-minute data
-// 	let df = await getDataFromYahoo('INDIGO', 5, '3m', startDate, endDate);
-// 	// console.log('df before processing:', df.chart.result[0].timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
-// 	df = processYahooData(df, '3m');
+/**
+ * Fetch INDIGO 3m from Yahoo (same pattern as scan), run VWAP, log a table.
+ * Run: node analytics/baxter.js
+ */
+async function runBaxterVwapWithYahooSample() {
+	const { startDate, endDate } = getDateRange(new Date('2026-04-18'));
+	console.log(startDate, endDate);
+	let df = await getDataFromYahoo('INDIGO', 1, '5m', startDate, endDate, true);
+	console.time('processYahooData');
+	df = processYahooData(df, '5m', true);
+	console.timeEnd('processYahooData');
+	if (!df || df.length === 0) {
+		console.error('No Yahoo data for INDIGO');
+		process.exitCode = 1;
+		return;
+	}
+	df = df.filter((r) => r.close);
+	console.table(df.slice(-75,-65));
+	console.time('calculateVWAP');	
+	df = calculateVWAP(df, 'hlc3', 'volume');
+	console.timeEnd('calculateVWAP');
+	console.log(`INDIGO Yahoo + VWAP (last 45 of ${df.length} rows):`);
+	console.table(
+		df.slice(-75,-45).map((r) => ({
+			time: getDateStringIND(r.time),
+			high: r.high,
+			low: r.low,
+			close: r.close,
+			hlc3: r.hlc3 != null ? Number(Number(r.hlc3).toFixed(4)) : null,
+			volume: r.volume,
+			vwap: r.vwap != null ? Number(r.vwap.toFixed(4)) : null,
+			vwap_upper: r.vwap_upper != null ? Number(r.vwap_upper.toFixed(4)) : null,
+			vwap_lower: r.vwap_lower != null ? Number(r.vwap_lower.toFixed(4)) : null,
+		}))
+	);
+}
 
-// 	// console.log(df)
-
-// })()
-
+if (require.main === module) {
+	(async () => {
+		try {
+			await runBaxterVwapWithYahooSample();
+		} catch (err) {
+			console.error(err);
+			process.exitCode = 1;
+		}
+		process.exit(typeof process.exitCode === 'number' && process.exitCode !== 0 ? process.exitCode : 0);
+	})();
+}
 
 module.exports = {
 	scanBaxterStocks,
