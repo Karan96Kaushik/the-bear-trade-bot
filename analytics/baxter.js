@@ -1,5 +1,5 @@
 const { getDateStringIND, getDataFromYahoo, processYahooData, getDataFromMoneycontrol, processMoneycontrolData } = require("../kite/utils");
-const { getDateRange, addMovingAverage } = require("./index");
+const { getDateRange, addMovingAverage, addRSI } = require("./index");
 const fs = require('fs');
 const path = require('path');
 
@@ -11,6 +11,7 @@ const DEFAULT_PARAMS = {
 	TOUCHING_SMA_TOLERANCE: 0,
 	NARROW_RANGE_TOLERANCE: 0.01,
 	MA_WINDOW: 200,
+	RSI_WINDOW: 10,
 }
 
 let debugLogData = new Map();
@@ -53,8 +54,9 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 			breakout: '',
 			vwapUpper: '',
 			vwapLower: '',
-			isVWAPAboveUpper: '',
-			isVWAPBelowLower: '',
+			// isVWAPAboveUpper: '',
+			// isVWAPBelowLower: '',
+			rsi: '',
 			allConditionsPassed: 'NO'
 		});
 	}
@@ -79,9 +81,7 @@ function logStockDebug(sym, timestamp, condition, status, details = {}) {
 	if (details.maxAllowedRange) entry.maxAllowedRange = details.maxAllowedRange;
 	if (details.vwapUpper) entry.vwapUpper = details.vwapUpper;
 	if (details.vwapLower) entry.vwapLower = details.vwapLower;
-	if (details.isVWAPAboveUpper) entry.isVWAPAboveUpper = details.isVWAPAboveUpper;
-	if (details.isVWAPBelowLower) entry.isVWAPBelowLower = details.isVWAPBelowLower;
-	
+	if (details.rsi) entry.rsi = details.rsi;
 	switch(condition) {
 		case 'DATA_FETCH':
 			if (status === 'PASSED' && details.notes) {
@@ -193,8 +193,7 @@ function writeDebugLogToCSV(filename = 'baxter_debug.csv') {
 		'breakout',
 		'vwapUpper',
 		'vwapLower',
-		'isVWAPAboveUpper',
-		'isVWAPBelowLower',
+		'rsi',
 		'allConditionsPassed',
 		'failedCondition',
 		'failedReason'
@@ -330,6 +329,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 	for (const batch of batches) {
 		const batchPromises = batch.map(async (sym) => {
 			try {
+				// console.time('batch' + sym + String(endDateNew));
 				const { startDate, endDate } = getDateRange(endDateNew);
 				
 				// Fetch 15-minute data
@@ -365,17 +365,22 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				// Add VWAP to df
 				df = calculateVWAP(df, 'hlc3', 'volume');
 				if (DEBUG) {
+					const withRsi = addRSI(df, 14);
 					console.table(
-						df.slice(-5).map((r) => ({
+						withRsi.slice(-5).map((r) => ({
 							time: getDateStringIND(r.time),
+							close: r.close,
 							hlc3: r.hlc3,
 							volume: r.volume,
+							rsi: r.rsi != null ? Number(r.rsi.toFixed(2)) : null,
 							vwap: r.vwap != null ? Number(r.vwap.toFixed(4)) : null,
 							vwap_upper: r.vwap_upper != null ? Number(r.vwap_upper.toFixed(4)) : null,
 							vwap_lower: r.vwap_lower != null ? Number(r.vwap_lower.toFixed(4)) : null,
 						}))
 					);
 				}
+
+				df = addRSI(df, Number(params.RSI_WINDOW));
 
 				// Get current and previous candles
 				const currentCandle = df[df.length - 1];  // [0] - The Queen
@@ -509,34 +514,18 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				});
 
 				// Condition 6: VWAP condition above upper or below lower
-				const vwapUpper = currentCandle.vwap_upper;
-				const vwapLower = currentCandle.vwap_lower;
-				const isVWAPAboveUpper = currentCandle.close > vwapUpper;
-				const isVWAPBelowLower = currentCandle.close < vwapLower;
-				if (isVWAPAboveUpper) {
-					conditionName = 'BEARISH';
-				}
-				else if (isVWAPBelowLower) {
-					conditionName = 'BULLISH';
-				}
-				else {
-					if (DEBUG) console.log(`VWAP not above upper or below lower ${vwapUpper} and ${vwapLower} for`, sym);
-					logStockDebug(sym, timestamp, 'VWAP', 'FAILED', {
-						vwapUpper: vwapUpper,
-						vwapLower: vwapLower,
-						isVWAPAboveUpper: isVWAPAboveUpper,
-						isVWAPBelowLower: isVWAPBelowLower,
-						notes: `VWAP ${currentCandle.close.toFixed(2)} is between ${vwapUpper.toFixed(2)} and ${vwapLower.toFixed(2)}`
-					});
-					return null;
-				}
+				const vwapUpper = currentCandle.vwap_upper || 0;
+				const vwapLower = currentCandle.vwap_lower || 0;
 
 				logStockDebug(sym, timestamp, 'VWAP', 'PASSED', {
-					vwapUpper: vwapUpper,
-					vwapLower: vwapLower,
-					isVWAPAboveUpper: isVWAPAboveUpper,
-					isVWAPBelowLower: isVWAPBelowLower,
+					vwapUpper: (vwapUpper || 0).toFixed(2),
+					vwapLower: (vwapLower || 0).toFixed(2),
 					notes: `VWAP ${currentCandle.close.toFixed(2)} between ${vwapUpper.toFixed(2)} and ${vwapLower.toFixed(2)}`
+				});
+
+				logStockDebug(sym, timestamp, 'RSI', 'PASSED', {
+					rsi: (currentCandle.rsi || 0).toFixed(2),
+					notes: `RSI ${(currentCandle.rsi || 0).toFixed(2)}`
 				});
 
 				// Condition 5: Breakout (bullish) or breakdown (bearish)
@@ -570,6 +559,9 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				
 				// All conditions met - return stock data
 				const resultDirection = isBothMode ? (isBullishCandle ? 'BULLISH' : isBearishCandle ? 'BEARISH' : 'UNKNOWN') : isBullishMode ? 'BULLISH' : 'BEARISH';
+
+				// console.timeEnd('batch' + sym + String(endDateNew));
+
 				return {
 					sym,
 					open: currentCandle.open,
@@ -604,6 +596,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					// 	sma: previousCandle.sma
 					// }
 				};
+
 			} catch (error) {
 				if (DEBUG) console.error(`Error processing ${sym}:`, error);
 				console.trace(error);
@@ -638,7 +631,7 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 }
 
 /**
- * Fetch INDIGO 3m from Yahoo (same pattern as scan), run VWAP, log a table.
+ * Fetch INDIGO from Yahoo (same pattern as scan), run RSI(14), log a table.
  * Run: node analytics/baxter.js
  */
 async function runBaxterVwapWithYahooSample() {
@@ -654,22 +647,20 @@ async function runBaxterVwapWithYahooSample() {
 		return;
 	}
 	df = df.filter((r) => r.close);
-	console.table(df.slice(-75,-65));
-	console.time('calculateVWAP');	
-	df = calculateVWAP(df, 'hlc3', 'volume');
-	console.timeEnd('calculateVWAP');
-	console.log(`INDIGO Yahoo + VWAP (last 45 of ${df.length} rows):`);
+	console.time('addRSI');
+	df = addRSI(df, 10);
+	console.timeEnd('addRSI');
+	const tail = df.slice(-75,-45);
+	console.log(`INDIGO Yahoo + RSI14 (last ${tail.length} of ${df.length} rows):`);
 	console.table(
-		df.slice(-75,-45).map((r) => ({
+		tail.map((r) => ({
 			time: getDateStringIND(r.time),
+			open: r.open,
 			high: r.high,
 			low: r.low,
 			close: r.close,
-			hlc3: r.hlc3 != null ? Number(Number(r.hlc3).toFixed(4)) : null,
 			volume: r.volume,
-			vwap: r.vwap != null ? Number(r.vwap.toFixed(4)) : null,
-			vwap_upper: r.vwap_upper != null ? Number(r.vwap_upper.toFixed(4)) : null,
-			vwap_lower: r.vwap_lower != null ? Number(r.vwap_lower.toFixed(4)) : null,
+			rsi: r.rsi != null ? Number(r.rsi.toFixed(2)) : null,
 		}))
 	);
 }
