@@ -22,9 +22,9 @@ const fs = require('fs');
 const path = require('path');
 
 
-const BAXTER_RISK_AMOUNT = 200;
+const BAXTER_RISK_AMOUNT = 100;
 const CANCEL_AFTER_MINUTES = 10;
-const MAX_ACTIVE_ORDERS = 5;
+const MAX_ACTIVE_ORDERS = 15;
 const UPDATE_SL_INTERVAL = 15;
 /** Lookback minutes for trailing SL when SL Interval column is missing/invalid. */
 const DEFAULT_TRAILING_SL_LOOKBACK_MINUTES = UPDATE_SL_INTERVAL;
@@ -36,7 +36,7 @@ const FAILED_STATUSES = ['REJECTED', 'CANCELLED'];
 
 // Limit for reentry
 const MAX_COMPLETED_TRIGGERS = 2;
-const HOURS_TO_CHECK_COMPLETED_TRIGGERS = 2;
+const HOURS_TO_CHECK_COMPLETED_TRIGGERS = 6;
 
 let orderDebugLogData = [];
 
