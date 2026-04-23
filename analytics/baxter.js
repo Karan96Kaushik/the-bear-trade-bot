@@ -350,9 +350,11 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 					no_data_stocks.push(sym);
 					return null;
 				}
+
+				df = df.filter(r => r.close);
 				
 				// Need at least 2 candles to compare [0] and [-1]
-				if (df.length < 45) { // Need at least 44 for SMA + 1 more
+				if (df.length < Number(params.MA_WINDOW) + 1) { // Need at least 44 for SMA + 1 more
 					if (DEBUG) console.log('Not enough data for', sym);
 					logStockDebug(sym, null, 'DATA_LENGTH', 'FAILED', { notes: `Only ${df.length} candles, need 45` });
 					return null;
@@ -360,7 +362,6 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 
 				// Add SMA
 				df = addMovingAverage(df, 'close', Number(params.MA_WINDOW), 'sma');
-				df = df.filter(r => r.close);
 
 				// Add VWAP to df
 				df = calculateVWAP(df, 'hlc3', 'volume');
