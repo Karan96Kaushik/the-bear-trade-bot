@@ -343,10 +343,10 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 				// console.log('scanning df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
 
 				const resolution = parseInt(interval)
-				console.time('getMoneyControlData' + sym + endDateNew.toISOString());
+				console.time('getMoneyControlData' + sym + endDate.toISOString());
 				df = await getMoneyControlData(sym, startDate, endDate, resolution, useCached);
 				df = processMoneycontrolData(df, interval, useCached);
-				console.timeEnd('getMoneyControlData' + sym + endDateNew.toISOString());
+				console.timeEnd('getMoneyControlData' + sym + endDate.toISOString());
 
 				// console.table(df.slice(-205).map(d => ({...d, time: getDateStringIND(d.time)})))
 
