@@ -334,19 +334,20 @@ async function scanBaxterStocks(stockList, endDateNew, interval = '5m', useCache
 
 				let df
 				
-				// console.time('getDataFromYahoo' + sym + endDateNew.toISOString());
-				// // Fetch 15-minute data
-				// df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
-				// // console.log('df before processing:', df.chart.result[0].timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
-				// df = processYahooData(df, interval, useCached);
-				// console.timeEnd('getDataFromYahoo' + sym + endDateNew.toISOString());
-				// console.log('scanning df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
+				console.time('getDataFromYahoo' + sym + endDate.toISOString());
+				// Fetch 15-minute data
+				df = await getDataFromYahoo(sym, 5, interval, startDate, endDate, useCached);
+				// console.log('df before processing:', df.chart.result[0].timestamp.slice(-2).map(t => getDateStringIND(t*1000)))
+				df = processYahooData(df, interval, useCached);
+				console.timeEnd('getDataFromYahoo' + sym + endDate.toISOString());
+				console.log('scanning df:', df.slice(-2).map(d => ({...d, time: getDateStringIND(d.time)})))
 
-				const resolution = parseInt(interval)
-				console.time('getMoneyControlData' + sym + endDate.toISOString());
-				df = await getMoneyControlData(sym, startDate, endDate, resolution, useCached);
-				df = processMoneycontrolData(df, interval, useCached);
-				console.timeEnd('getMoneyControlData' + sym + endDate.toISOString());
+				// const resolution = parseInt(interval)
+				// console.time('getMoneyControlData' + sym + endDate.toISOString());
+				// df = await getMoneyControlData(sym, startDate, endDate, resolution, useCached);
+				// df = processMoneycontrolData(df, interval, useCached);
+				// console.timeEnd('getMoneyControlData' + sym + endDate.toISOString());
+
 
 				// console.table(df.slice(-205).map(d => ({...d, time: getDateStringIND(d.time)})))
 
