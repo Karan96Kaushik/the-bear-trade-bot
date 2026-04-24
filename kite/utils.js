@@ -497,54 +497,159 @@ function processGrowwData(growwData) {
 
 const axiosMoneycontrol = memoize((...args) => axios.request(...args))
 
+function sameUtcCalendarDay(a, b) {
+    return (
+        a.getUTCFullYear() === b.getUTCFullYear() &&
+        a.getUTCMonth() === b.getUTCMonth() &&
+        a.getUTCDate() === b.getUTCDate()
+    )
+}
+
+function endOfUtcCalendarDay(d) {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 23, 59, 59, 999))
+}
+
+function startOfUtcCalendarDay(d) {
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0))
+}
+
+function mergeMoneycontrolResponses(chunks) {
+    const valid = chunks.filter((c) => c?.t?.length)
+    if (valid.length === 0) {
+        return chunks[0] || { t: [], o: [], h: [], l: [], c: [], v: [] }
+    }
+    if (valid.length === 1) return valid[0]
+
+    const byT = new Map()
+    for (const data of valid) {
+        for (let i = 0; i < data.t.length; i++) {
+            const t = data.t[i]
+            byT.set(t, {
+                o: data.o[i],
+                h: data.h[i],
+                l: data.l[i],
+                c: data.c[i],
+                v: data.v[i],
+            })
+        }
+    }
+    const t = [...byT.keys()].sort((a, b) => a - b)
+    const base = { ...valid[0] }
+    return {
+        ...base,
+        t,
+        o: t.map((x) => byT.get(x).o),
+        h: t.map((x) => byT.get(x).h),
+        l: t.map((x) => byT.get(x).l),
+        c: t.map((x) => byT.get(x).c),
+        v: t.map((x) => byT.get(x).v),
+    }
+}
+
 /**
  * Fetch stock data from Moneycontrol API
  * @param {string} sym - The stock symbol
  * @param {Date} from - Start date
  * @param {Date} to - End date
  * @param {number} [resolution=1] - Time resolution (1 for minute, 5 for 5 minutes, etc.)
-*/
-async function getMoneycontrolData(sym, from, to, resolution = 1, useCached = false) {
+ * @param {boolean} [useCached=false] - Use memoized client; normalize day window and trim to requested `to` (same idea as Yahoo).
+ */
+async function getMoneyControlData(sym, from, to, resolution = 1, useCached = false) {
+    const requestedToMs = new Date(to).getTime()
+    const fromDate = new Date(from)
+    const toDate = new Date(to)
 
-    if (useCached) {
-        from = new Date(from).setUTCHours(2,0,0,0)
-        to = new Date(to).setUTCHours(11,0,0,0)
-    }
-
-    let config = {
-        method: 'get',
-        maxBodyLength: Infinity,
-        url: `https://priceapi.moneycontrol.com/techCharts/indianMarket/stock/history?`, // ?symbol=${sym}&resolution=1&from=${from}&to=${to}&countback=${countback}&currencyCode=INR`,
-        params: {
-            symbol: sym,
-            resolution,
-            from: parseInt(+from / 1000),
-            to: parseInt(+to / 1000),
-            countback: 131,
-            currencyCode: 'INR'
+    async function fetchMoneycontrolRange(fromD, toD) {
+        const config = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: `https://priceapi.moneycontrol.com/techCharts/indianMarket/stock/history?`, // ?symbol=${sym}&resolution=1&from=${from}&to=${to}&countback=${countback}&currencyCode=INR`,
+            params: {
+                symbol: sym,
+                resolution,
+                from: Math.floor(fromD.getTime() / 1000),
+                to: Math.floor(toD.getTime() / 1000),
+                countback: 1205,
+                currencyCode: 'INR',
+            },
         }
-    };
+        const response = useCached ? await axiosMoneycontrol(config) : await axios.request(config)
+        return response.data
+    }
 
-    let response
+    function trimCachedToRequested(data) {
+        if (!useCached || !data?.t?.length) return data
+        const keep = data.t.map((t) => t * 1000 < requestedToMs)
+        return {
+            ...data,
+            t: data.t.filter((_, i) => keep[i]),
+            o: data.o.filter((_, i) => keep[i]),
+            h: data.h.filter((_, i) => keep[i]),
+            l: data.l.filter((_, i) => keep[i]),
+            c: data.c.filter((_, i) => keep[i]),
+            v: data.v.filter((_, i) => keep[i]),
+        }
+    }
 
+    if (!sameUtcCalendarDay(fromDate, toDate)) {
+        const rangeTasks = []
+        let dayCursor = startOfUtcCalendarDay(fromDate)
+        const lastDayStart = startOfUtcCalendarDay(toDate)
+
+        while (+dayCursor <= +lastDayStart) {
+            const y = dayCursor.getUTCFullYear()
+            const m = dayCursor.getUTCMonth()
+            const d = dayCursor.getUTCDate()
+            const isFirst = sameUtcCalendarDay(dayCursor, fromDate)
+            const isLast = sameUtcCalendarDay(dayCursor, toDate)
+
+            let sf
+            let st
+            if (useCached) {
+                sf = new Date(Date.UTC(y, m, d, 2, 0, 0, 0))
+                st = new Date(Date.UTC(y, m, d, 11, 0, 0, 0))
+            } else if (isFirst) {
+                sf = new Date(fromDate)
+                st = endOfUtcCalendarDay(fromDate)
+            } else if (isLast) {
+                sf = startOfUtcCalendarDay(toDate)
+                st = new Date(toDate)
+            } else {
+                sf = new Date(Date.UTC(y, m, d, 0, 0, 0, 0))
+                st = endOfUtcCalendarDay(dayCursor)
+            }
+
+            if (sf.getTime() <= st.getTime()) {
+                rangeTasks.push(fetchMoneycontrolRange(sf, st))
+            }
+            dayCursor.setUTCDate(dayCursor.getUTCDate() + 1)
+        }
+
+        const chunks = await Promise.all(rangeTasks)
+        const merged = mergeMoneycontrolResponses(chunks)
+        return trimCachedToRequested(merged)
+    }
+
+    let fromD = new Date(fromDate)
+    let toD = new Date(toDate)
     if (useCached) {
-        response = await axiosMoneycontrol(config);
-    }
-    else {
-        response = await axios.request(config);
+        fromD.setUTCHours(2, 0, 0, 0)
+        toD.setUTCHours(11, 0, 0, 0)
     }
 
-    // console.log(response.request.path)
-
-    return response.data;
+    const data = await fetchMoneycontrolRange(fromD, toD)
+    return trimCachedToRequested(data)
 }
 
 /**
  * Process Moneycontrol data into an ordered array of OHLCV objects
  * @param {Object} data - The raw data from Moneycontrol
+ * @param {number} [interval] - Bar size in minutes (live path only trims incomplete candles when not useCached)
+ * @param {boolean} [useCached=false] - When true, skip live incomplete-candle trim; optionally drop last row before 10:00 UTC (same as Yahoo).
+ * @param {boolean} [isPostMarket=false]
  * @returns {Array} An array of OHLCV objects
  */
-function processMoneycontrolData(data, interval) {
+function processMoneycontrolData(data, interval, useCached = false, isPostMarket = false) {
     let newData = data.t.map((t, index) => ({
         time: t * 1000,
         open: data.o[index],
@@ -554,7 +659,7 @@ function processMoneycontrolData(data, interval) {
         volume: data.v[index]
     }))
 
-    if (interval && typeof interval == 'number') {
+    if (interval && typeof interval == 'number' && !useCached && !isPostMarket) {
         let roundedTimeForReqCandle = Math.floor(newData[newData.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
         // If requested time is before market open at 3:45 AM UTC, adjust to prev day
         let reqCandleDate = new Date(roundedTimeForReqCandle);
@@ -576,6 +681,9 @@ function processMoneycontrolData(data, interval) {
         if (newData[newData.length - 1].time < roundedTimeForReqCandle) {
             throw new Error(`Last candle is not found`)
         }
+    }
+    else if (useCached && newData.length && new Date(newData[newData.length - 1].time).getUTCHours() < 10 && !isPostMarket) {
+        newData.pop()
     }
 
     return newData
@@ -878,7 +986,7 @@ module.exports = {
     getMcIndicators,
     getGrowwChartData,
     processGrowwData,
-    getMoneycontrolData,
+    getMoneyControlData,
     processMoneycontrolData,
     memoize,
     skipBackDateHolidays,
