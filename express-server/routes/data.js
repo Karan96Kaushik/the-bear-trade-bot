@@ -6,6 +6,7 @@ const { kiteSession } = require('../../kite/setup');
 const { readSheetData, processMISSheetData } = require('../../gsheets');
 const FunctionHistory = require('../../models/FunctionHistory');
 const { addMovingAverage } = require('../../analytics');
+const { runNseHistoricalToSheet, DEFAULT_SPREADSHEET_ID } = require('../../scripts/nse-historical-to-sheet');
 
 const INDIAN_TIMEZONE_OFFSET = 60 * 60 * 1000 * (process.env.NODE_ENV == 'production' ? 5.5 : 4.5);
 
@@ -178,6 +179,34 @@ router.post('/delete-function', async (req, res) => {
 	} catch (error) {
 		console.error('Error deleting function:', error);
 		res.status(500).json({ message: 'Server error' });
+	}
+});
+
+router.post('/nse-historical-to-sheet', async (req, res) => {
+	try {
+		const { symbol, spreadsheetId } = req.body;
+
+		if (!symbol || !String(symbol).trim()) {
+			return res.status(400).json({ message: 'Symbol is required' });
+		}
+
+		console.log(`[nse-historical-to-sheet] Request received for symbol=${symbol}`);
+
+		const result = await runNseHistoricalToSheet(symbol, spreadsheetId);
+
+		res.status(200).json({
+			success: true,
+			message: `Historical data for ${result.symbol} uploaded to Google Sheets`,
+			result,
+			defaultSpreadsheetId: DEFAULT_SPREADSHEET_ID,
+		});
+	} catch (error) {
+		console.error('[nse-historical-to-sheet] Error:', error);
+		res.status(500).json({
+			success: false,
+			message: error?.message || 'Failed to fetch NSE historical data',
+			error: error?.message,
+		});
 	}
 });
 

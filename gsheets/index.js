@@ -205,6 +205,73 @@ async function appendRowsToSheet(range, rowsToAppend, spreadsheetId=SPREADSHEET_
     }
 }
 
+/**
+ * Adds a new sheet (tab) to a spreadsheet.
+ * If the sheet already exists, returns the existing sheet metadata.
+ * @param {string} spreadsheetId
+ * @param {string} sheetTitle
+ * @returns {object} sheet properties
+ */
+async function addSheet(spreadsheetId, sheetTitle) {
+    try {
+        console.log(`[gsheets] Checking if sheet "${sheetTitle}" already exists in spreadsheet ${spreadsheetId}...`);
+        const meta = await sheets.spreadsheets.get({ spreadsheetId });
+        const existing = meta.data.sheets.find(
+            s => s.properties.title === sheetTitle
+        );
+        if (existing) {
+            console.log(`[gsheets] Sheet "${sheetTitle}" already exists (sheetId=${existing.properties.sheetId}). Reusing.`);
+            return existing.properties;
+        }
+
+        console.log(`[gsheets] Sheet "${sheetTitle}" not found. Creating new sheet...`);
+        const response = await sheets.spreadsheets.batchUpdate({
+            spreadsheetId,
+            requestBody: {
+                requests: [
+                    {
+                        addSheet: {
+                            properties: { title: sheetTitle },
+                        },
+                    },
+                ],
+            },
+        });
+        const newSheet = response.data.replies[0].addSheet.properties;
+        console.log(`[gsheets] Sheet "${sheetTitle}" created successfully (sheetId=${newSheet.sheetId}).`);
+        return newSheet;
+    } catch (error) {
+        console.error(`[gsheets] Error adding sheet "${sheetTitle}":`, error?.message || error);
+        throw error;
+    }
+}
+
+/**
+ * Clears a range and writes rows to it.
+ * @param {string} spreadsheetId
+ * @param {string} range  e.g. "SBIN!A1"
+ * @param {Array<Array>} values  2D array of values
+ */
+async function updateSheetData(spreadsheetId, range, values) {
+    try {
+        console.log(`[gsheets] Clearing range "${range}" in spreadsheet ${spreadsheetId}...`);
+        await sheets.spreadsheets.values.clear({ spreadsheetId, range });
+
+        console.log(`[gsheets] Writing ${values.length} rows to range "${range}"...`);
+        const result = await sheets.spreadsheets.values.update({
+            spreadsheetId,
+            range,
+            valueInputOption: 'USER_ENTERED',
+            requestBody: { values },
+        });
+        console.log(`[gsheets] Write complete. Updated range: ${result.data.updatedRange}, cells: ${result.data.updatedCells}`);
+        return result.data;
+    } catch (error) {
+        console.error(`[gsheets] Error writing to range "${range}":`, error?.message || error);
+        throw error;
+    }
+}
+
 module.exports = {
     bulkUpdateCells,
     readSheetData,
@@ -214,5 +281,7 @@ module.exports = {
     getOrderLoc,
     appendRowsToMISD,
     appendRowsToSheet,
-    processSheetWithHeaders
+    processSheetWithHeaders,
+    addSheet,
+    updateSheetData,
 }

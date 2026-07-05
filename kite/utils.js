@@ -660,8 +660,9 @@ function processMoneycontrolData(data, interval, useCached = false, isPostMarket
     }))
 
     if (interval && typeof interval == 'number' && !useCached && !isPostMarket) {
-        let roundedTimeForReqCandle = Math.floor(newData[newData.length - 1].time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
+        let roundedTimeForReqCandle = Math.floor((new Date()).time / (interval * 60 * 1000)) * (interval * 60 * 1000) - (interval * 60 * 1000)
         // If requested time is before market open at 3:45 AM UTC, adjust to prev day
+        console.log('roundedTimeForReqCandle:', roundedTimeForReqCandle)
         let reqCandleDate = new Date(roundedTimeForReqCandle);
         if (reqCandleDate.getUTCHours() < 3 || 
             (reqCandleDate.getUTCHours() === 3 && reqCandleDate.getUTCMinutes() < 45)) {

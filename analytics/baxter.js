@@ -678,7 +678,17 @@ async function runBaxterVwapWithYahooSample() {
 if (require.main === module) {
 	(async () => {
 		try {
-			await runBaxterVwapWithYahooSample();
+			const sym = 'INDIGO';
+			const interval = '5m';
+			const useCached = false;
+			const { startDate, endDate } = getDateRange();
+			const resolution = parseInt(interval)
+			console.time('getMoneyControlData' + sym + endDate.toISOString());
+			df = await getMoneyControlData(sym, startDate, endDate, resolution, useCached);
+			df = processMoneycontrolData(df, interval, useCached);
+			console.timeEnd('getMoneyControlData' + sym + endDate.toISOString());
+
+			console.table(df.slice(-205).map(d => ({time: getDateStringIND(d.time), close: d.close, sma: d.sma})))
 		} catch (err) {
 			console.error(err);
 			process.exitCode = 1;

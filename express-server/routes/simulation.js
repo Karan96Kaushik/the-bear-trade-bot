@@ -5,6 +5,7 @@ const { startLightyearSimulation, checkLightyearSimulationStatus } = require('..
 const { startBaileySimulation, checkBaileySimulationStatus } = require('../controllers/simulateBailey');
 const { startBenoitSimulation, checkBenoitSimulationStatus } = require('../controllers/simulateBenoit');
 const { startBaxterSimulation, checkBaxterSimulationStatus } = require('../controllers/simulateBaxter');
+const { startAthenaSimulation, checkAthenaSimulationStatus } = require('../controllers/simulateAthena');
 
 router.post('/simulate/v2/start', async (req, res) => {
     try {
@@ -18,6 +19,8 @@ router.post('/simulate/v2/start', async (req, res) => {
             startBenoitSimulation(req, res);
         } else if (req.body.simulation.type === 'baxter') {
             startBaxterSimulation(req, res);
+        } else if (req.body.simulation.type === 'athena') {
+            startAthenaSimulation(req, res);
         } else {
             throw new Error('Invalid simulation type');
         }
@@ -38,6 +41,8 @@ router.get('/simulate/v2/status/:jobId', (req, res) => {
             checkBaileySimulationStatus(req, res);
         } else if (req.query.type === 'baxter') {
             checkBaxterSimulationStatus(req, res);
+        } else if (req.query.type === 'athena') {
+            checkAthenaSimulationStatus(req, res);
         } else if (req.query.type === 'benoit') {
             checkBenoitSimulationStatus(req, res);
         } else {

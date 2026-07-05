@@ -14,6 +14,10 @@ const ALLOWED_FILES = [
 	'baxter_orders_debug.csv',
 	'baxter_orders.csv',
 	'sample_export.csv',
+	'athena_debug.csv',
+	'athena_trades.csv',
+	'athena_orders_debug.csv',
+	'athena_orders.csv',
 ];
 
 /**
